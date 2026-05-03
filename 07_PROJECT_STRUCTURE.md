@@ -57,7 +57,7 @@ my-game/
 │   ├── 06_LUAU_REFERENCE.md
 │   ├── 07_PROJECT_STRUCTURE.md
 │   ├── 08_MCP_SETUP.md
-│   └── 09_BRAINSTORM.md
+│   └── finalized-brainstorm.md
 │
 ├── src/
 │   ├── server/                    → ServerScriptService

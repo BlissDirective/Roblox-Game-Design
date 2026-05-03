@@ -672,9 +672,9 @@ We are starting Phase 3 — build mode.
 Read in this order:
 1. docs/01_AGENT.md (your identity and principles)
 2. docs/10_BUILD_PROTOCOL.md (this build workflow)
-3. docs/09_BRAINSTORM.md (the locked concept — Outpost-7)
+3. docs/finalized-brainstorm.md (the locked concept — Outpost-7)
 
-Verify all required fields are present in 09_BRAINSTORM.md per the input
+Verify all required fields are present in finalized-brainstorm.md per the input
 checklist in 10_BUILD_PROTOCOL.md (§9 of the doc confirms all are present).
 Proceed without asking permission.
 

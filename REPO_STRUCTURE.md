@@ -46,7 +46,7 @@ outpost-7/
 │   ├── 06_LUAU_REFERENCE.md
 │   ├── 07_PROJECT_STRUCTURE.md       ← This document references that one
 │   ├── 08_MCP_SETUP.md
-│   ├── 09_BRAINSTORM.md
+│   ├── finalized-brainstorm.md
 │   ├── 10_BUILD_PROTOCOL.md
 │   ├── finalized-brainstorm.md       ← Locked Outpost-7 concept doc
 │   │

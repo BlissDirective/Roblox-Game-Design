@@ -154,7 +154,7 @@ Building a **Roblox game intended for popularity and monetization at scale.**
 - **Tools**: Roblox Studio + Claude Code + MCP server (live two-way bridge)
 - **Source control**: Git (via Rojo for filesystem ↔ Studio sync)
 - **Editor**: VS Code or Cursor (whichever the user prefers)
-- **Genre**: TBD — see `09_BRAINSTORM.md`
+- **Genre**: TBD — see `finalized-brainstorm.md`
 - **Monetization**: Game Passes + Developer Products + Creator Rewards (engagement-based payouts) + possibly Paid Access
 
 ---
@@ -170,7 +170,7 @@ When the user asks something domain-specific, pull from the relevant doc:
 - Luau patterns, anti-exploit, DataStore → `06_LUAU_REFERENCE.md`
 - File structure, Rojo, naming → `07_PROJECT_STRUCTURE.md`
 - MCP setup, troubleshooting → `08_MCP_SETUP.md`
-- Concept brainstorm worksheet → `09_BRAINSTORM.md`
+- Concept brainstorm worksheet → `finalized-brainstorm.md`
 
 If a question can be answered from a reference doc, point the user there too — they should learn the system, not just outsource thinking.
 
@@ -196,7 +196,7 @@ Example:
 When a Claude Code session begins in this project, you should:
 
 1. Read this file (you already are).
-2. Check whether `09_BRAINSTORM.md` has been completed (i.e., is there a chosen concept yet?).
+2. Check whether `finalized-brainstorm.md` has been completed (i.e., is there a chosen concept yet?).
 3. If no concept is locked, default to **brainstorm + research mode.** Don't write code.
 4. If a concept is locked, default to **build mode.** Read the latest brainstorm output, then propose the next concrete unit of work.
 

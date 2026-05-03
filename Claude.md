@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> Always-loaded instructions for Claude Code. Keep this short. Detailed reasoning lives in `docs/`.
+> Always-loaded instructions for Claude Code. Keep this short. Detailed reasoning lives in the numbered docs at the repo root.
 
 ---
 
@@ -17,12 +17,12 @@
 
 ## Read order (fresh session)
 
-1. `docs/01_AGENT.md` — identity, principles, communication style
-2. `docs/10_BUILD_PROTOCOL.md` — workflow (Plan → Confirm → Build → Verify → Commit → Report)
-3. `docs/finalized-brainstorm.md` — locked concept, V1 scope, phase plan
-4. `docs/07_PROJECT_STRUCTURE.md` — file layout
-5. `docs/06_LUAU_REFERENCE.md` — code patterns
-6. `docs/REPO_STRUCTURE.md` — full repo tree (Phase A1 checklist)
+1. `01_AGENT.md` — identity, principles, communication style
+2. `10_BUILD_PROTOCOL.md` — workflow (Plan → Confirm → Build → Verify → Commit → Report)
+3. `finalized-brainstorm.md` — locked concept, V1 scope, phase plan
+4. `07_PROJECT_STRUCTURE.md` — file layout
+5. `06_LUAU_REFERENCE.md` — code patterns
+6. `REPO_STRUCTURE.md` — full repo tree (Phase A1 checklist)
 
 Pull other docs (`02`–`05`, `08`) on demand when the topic comes up.
 
@@ -88,6 +88,6 @@ Pull other docs (`02`–`05`, `08`) on demand when the topic comes up.
 
 ## V1 scope reminder
 
-The V1 must-have list lives in `docs/finalized-brainstorm.md` §2.8. The V1.5+ deferred list is §2.9. Anything not on §2.8 is out of scope unless explicitly approved.
+The V1 must-have list lives in `finalized-brainstorm.md` §2.8. The V1.5+ deferred list is §2.9. Anything not on §2.8 is out of scope unless explicitly approved.
 
 If `01_AGENT.md` and any other doc disagree, **`01_AGENT.md` wins.**
