@@ -1,0 +1,74 @@
+# Addition: Demand-Supply Ratio (small edits to two files)
+
+The "demand-supply ratio" is a useful concept-validation heuristic the article surfaces. It's specific, falsifiable, and doesn't overlap with what we already track. Adding it to two places — the viral-mechanics 8-question check and the brainstorm worksheet's concept-generation prompt.
+
+---
+
+## Edit 1 — `04_VIRAL_MECHANICS.md`
+
+**Where:** In the "build a hit" checklist near the end, modify question 8 and add a brief explainer paragraph immediately after the checklist.
+
+### Current text (question 8 only):
+
+```
+8. ✅ Is the saturation in this niche tolerable? *(If the top 1–2 take 80%+ of revenue, find a sub-niche.)*
+```
+
+### Replace with:
+
+```
+8. ✅ Is the demand-supply ratio in this niche favorable? *(See "the demand-supply ratio" below. If the top 1–2 already take 80%+ of revenue and short-form interest is satisfied by them, find a sub-niche.)*
+```
+
+### Then add this paragraph immediately after the checklist:
+
+---
+
+### The demand-supply ratio (a more concrete saturation check)
+
+"Saturation" is fuzzy. A more concrete version is the **demand-supply ratio**:
+
+> **Total short-form views in your niche ÷ viable competing Roblox games**
+
+The numerator: search TikTok and YouTube Shorts for your niche's keywords (e.g., "fishing roblox", "horror roblox forest", "tycoon coffee shop"). Sum the views on the top 50–100 videos.
+
+The denominator: count the Roblox games currently competing in that exact niche on the front page or in the top 100 of "Top Playing Now."
+
+A ratio above **10:1** (10 million views worth of demand chasing every viable game) signals genuine open lane — you can ship and the algorithmic + organic discovery surfaces have room for you. Below 5:1 means the existing games are absorbing most of the available attention, and you're better off finding a sub-niche or a fresh angle.
+
+This is rough math, not science — but it's a useful gate. If you can't articulate the ratio for your concept, you don't yet understand the niche well enough to bet 4–8 weeks on it.
+
+---
+
+## Edit 2 — `09_BRAINSTORM.md`
+
+**Where:** In Step 3's Claude prompt, add a 13th item to the per-concept output list.
+
+### Current Step 3 prompt list (items 1–12):
+
+```
+9. **Saturation note** — who else is in this lane and how I'd differentiate
+```
+
+### Add a new item after item 9:
+
+```
+9b. **Demand-supply ratio estimate** — rough TikTok/YouTube Shorts views in this niche ÷ competing Roblox games. Above 10:1 is a real gap; below 5:1 is a crowded lane. Estimate, then explain how you got there.
+```
+
+(Renumber the rest if desired, or just slot it as 9b — either works.)
+
+---
+
+## Why this fits
+
+- It's **concrete and falsifiable** in a way "saturation 1–5" isn't. You can defend or attack a number; you can't really attack a 3/5 vibes-rating.
+- It uses data the user can actually pull (TikTok search, Roblox charts) — both already mentioned elsewhere in the docs.
+- It nudges the user toward research before commitment, which is the whole point of the brainstorm phase.
+- It doesn't replace the existing saturation check — it's the more rigorous version of it. The 1–5 score still has its place for fast comparative scoring across 7 concepts; the ratio is for the final shortlist of 2.
+
+---
+
+## Note for the user reviewing this
+
+The article framed the demand-supply ratio as a one-line metric. In practice, "total short-form views in your niche" is fuzzy — what counts as "your niche," which platforms, which time window. We're keeping the wording loose ("rough math, not science") so the user uses it as a gate, not a precise instrument. If you want me to tighten it (e.g., "top 100 TikToks in the last 30 days under your top 3 keywords"), say the word and I'll revise.
