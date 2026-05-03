@@ -1,0 +1,291 @@
+# 03 — GAME_GENRES.md
+
+> A field guide to Roblox genres in 2026 — what they are, who plays them, what they earn, how hard they are to build, and where the opportunities are.
+
+---
+
+## How to read this doc
+
+Each genre below has the same fields:
+
+- **What it is** — one-sentence definition
+- **Audience** — who actually plays
+- **Session shape** — how long, how often, what the loop is
+- **Monetization fit** — what sells inside this genre
+- **Build difficulty (1–5)** — for a solo dev with AI
+- **Saturation (1–5)** — how many strong incumbents are already there
+- **Realistic earnings ceiling for a solo dev** — best plausible outcome
+- **Examples** — top games in the genre
+- **Verdict** — should a beginner build here?
+
+Then at the end: a pick-your-lane table, and a section on **genre blending** (which is what the smartest 2026 games actually do).
+
+---
+
+## TYCOON
+
+**What it is:** You start with empty land. You buy stations / dropper / production units. They generate currency. You reinvest. You expand. Eventually you "rebirth" (reset progress for a permanent boost).
+
+**Audience:** Skews young (8–14) but has crossover up to 18+. Latin America, US, Europe. Highly sticky.
+
+**Session shape:** 30–90 minutes per session, 1–3 sessions/day. Sessions are dominated by waiting + reinvesting + occasionally socializing. Pure idle progression appeal.
+
+**Monetization fit:** **Best in class.** Multiplier passes (2x cash), auto-collect, VIP areas, premium starter currency, rebirth boosters, exclusive cosmetics. Players accept these because they map directly to "feel of progress."
+
+**Build difficulty:** **2/5.** This is the genre most easily built by a solo dev with AI. The systems are well-understood: currency manager, dropper/buyer logic, upgrade tree, rebirth system, DataStore.
+
+**Saturation:** **5/5.** Tycoons are the most saturated genre on Roblox. The top 1–2 in any sub-theme take 80%+ of revenue. *Steal a Brainrot* is technically a tycoon variant.
+
+**Realistic earnings ceiling for a solo dev:** $500–$5,000/month for an established game. Top 10% reaches $5,000–$50,000/month. Viral breakouts (like Steal a Brainrot) can hit $100K+/month but are extreme outliers.
+
+**Examples:** *Steal a Brainrot*, *Restaurant Tycoon 2*, *Retail Tycoon*, *Military Tycoon*
+
+**Verdict:** Easy to build, hard to stand out. Only build a tycoon if you have a **specific cultural hook** that makes it different (a brainrot moment, a trending niche, a meme audience). Generic "X Tycoon" is dead.
+
+---
+
+## SIMULATOR
+
+**What it is:** Click/swing/farm a thing → get currency → buy upgrades → click faster/harder → rebirth → repeat with multipliers. *Pet Simulator*, *Bee Swarm*, *Fishing Simulator*, *Mining Simulator* — all variants of the same skeleton.
+
+**Audience:** Broad. 8–18 dominant, but adult fanbases exist for niche themes. Highly tolerant of grind. Heavy spenders if hooked.
+
+**Session shape:** 20–60 min per session, 2–4 sessions/day. **Roblox's most consistently profitable genre** because the loop is short, the daily return is built in, and the monetization is natural.
+
+**Monetization fit:** **Best in class.** Pets (rarity-driven, collectible), 2x luck, 2x currency, auto-clicker, exclusive areas, eggs/loot crates (gambling-adjacent — careful with regulation). Limited-time pets drive whales.
+
+**Build difficulty:** **3/5.** Core loop is simple, but pet collection systems, rarity tiers, and a steady content cadence (new pets weekly) make this a sustained-effort genre. The grind is in the pipeline.
+
+**Saturation:** **4/5.** Saturated, but new themes still break through. Pet simulators are crowded. Niche-themed simulators (specific aesthetic, specific community) still have room.
+
+**Realistic earnings ceiling for a solo dev:** $3,000–$30,000/month for an established game. Top simulators (Pet Sim 99, Blox Fruits) earn millions/month — but those are studios with content teams.
+
+**Examples:** *Pet Simulator 99*, *Bee Swarm Simulator*, *Blox Fruits* (RPG-simulator hybrid), *Case Simulator RNG*
+
+**Verdict:** Strong genre. Your job is theme, content cadence, and a tight 5-minute loop. **Sustained content updates are the real moat** — if you can't ship weekly, this is a hard lane.
+
+---
+
+## RPG (Role-Playing Game)
+
+**What it is:** Character has stats, levels, gear, abilities. Players progress through quests, dungeons, PvP, or open-world adventure. Often anime-themed.
+
+**Audience:** Older skew (12–25). Heavily male. Anime RPGs are a sub-niche dominated by Asia-Pacific players.
+
+**Session shape:** 45–120 min per session. Long. Deep. Hardcore. Players grind for weeks for a rare item.
+
+**Monetization fit:** **Strong.** Cosmetic gear, exclusive characters, fast travel, expanded inventory, season passes. Higher price tolerance because players invest more time. Cosmetics can be priced at 500–2,000 Robux.
+
+**Build difficulty:** **5/5.** **Hardest genre on this list.** Combat networking, animation blending, hitbox sync, balance, content (quests/dungeons/maps). Solo dev with AI can build a *small* RPG — not a top-chart RPG. RPGs win on content depth, which takes a team or 2+ years.
+
+**Saturation:** **3/5.** Roblox itself flagged RPGs as **underrepresented relative to demand** (Incubator/Jumpstart 2026). The 18+ audience wants more. Quality bar is high but the lane is genuinely open.
+
+**Realistic earnings ceiling for a solo dev:** $1,000–$10,000/month if you can ship something genuinely fresh. Long ramp-up.
+
+**Examples:** *Blox Fruits*, *Deepwoken*, *Anime Adventures*, *Type Soul*
+
+**Verdict:** **High ceiling, high risk for solo.** Only attempt if (a) you genuinely love the genre and will iterate for 6+ months, or (b) you scope micro — single map, single combat system, deep enough to be sticky. The Roblox Incubator program could fund this if you have a unique angle.
+
+---
+
+## OBBY (Obstacle Course)
+
+**What it is:** Jump-and-die platformer. Reach the end. Sometimes there are 1,000+ stages. *Tower of Hell* etc.
+
+**Audience:** Young (6–12), casual, drop-in/drop-out.
+
+**Session shape:** 10–25 minutes per session, often 1 session/day. Single-session genre.
+
+**Monetization fit:** Limited. Stage skips, cosmetic trails, gear cosmetics, VIP. Avoid pay-to-win on the obstacles themselves.
+
+**Build difficulty:** **1/5.** The easiest genre to ship V1. Build stages, ship.
+
+**Saturation:** **5/5.** Saturated and revenue-capped because session times are short and Creator Rewards favor longer engagement.
+
+**Realistic earnings ceiling for a solo dev:** $50–$500/month for most. Rare breakouts (themed obbies, viral mechanic) can hit $1–5K/month.
+
+**Verdict:** **Don't build this for revenue.** Build it as a learning project. Or as a B-game while your A-game is in production.
+
+---
+
+## SOCIAL / ROLEPLAY (RP) / HANGOUT
+
+**What it is:** Open-world social space. No goal. Players hang out, dress up, roleplay, chat. *Brookhaven*, *Adopt Me!* (technically pet-RP hybrid), most "town" games.
+
+**Audience:** Young to teen, leans female, group-play heavy.
+
+**Session shape:** **30–60+ min per session, deeply repeat-friendly.** This is where the longest sessions on Roblox happen. Voice chat (Spatial Voice) supercharges retention here.
+
+**Monetization fit:** **Cosmetics dominate.** Outfits, accessories, emotes, housing, custom chat effects. High volume of small purchases. Lower per-purchase value, much higher purchase frequency.
+
+**Build difficulty:** **3/5 architecturally**, **5/5 to actually retain players**. The *systems* are simple (chat, animations, housing); the *content cadence and community management* are the hard part.
+
+**Saturation:** **5/5.** Brookhaven owns the lane. Adopt Me! owns the pet-RP lane. Trying to clone these is suicide.
+
+**Realistic earnings ceiling for a solo dev:** $500–$5,000/month if you find a fresh angle (specific theme: "Coffee Shop RP", "Mall RP", "Hospital RP" — all exist and have communities).
+
+**Verdict:** Hard to break in cold, but a niche themed RP (specific aesthetic + specific community) can carve out 1–10k DAU sustainably. Voice chat is the unfair advantage in 2026.
+
+---
+
+## SHOOTER / FPS
+
+**What it is:** First-person or third-person combat. PvP-focused. *RIVALS*, *Phantom Forces*, various Fortnite-clones.
+
+**Audience:** **17–25 male skew.** The lane Roblox has historically struggled to retain — but 2026 is changing that.
+
+**Session shape:** 15–25 min sessions. Match-based. Multiple matches per session.
+
+**Monetization fit:** Cosmetics, weapon skins, battle pass, character unlocks. Avoid pay-to-win weaponry like the plague. Top FPS games make most revenue from cosmetics + battle pass.
+
+**Build difficulty:** **5/5.** Networking, hit detection, anti-cheat, balance, animation. Brutal solo. Roblox's networking model fights you here.
+
+**Saturation:** **2/5.** Roblox Incubator/Jumpstart explicitly named shooters as underrepresented relative to demand. *RIVALS* broke through in 2026 by targeting this audience cleanly.
+
+**Realistic earnings ceiling for a solo dev:** $500–$5,000/month for a niche shooter. Top shooters earn $100K+/month, but those are funded teams.
+
+**Verdict:** **Don't build this as a first game.** The technical bar is too high and exploits will eat you alive. If shooters are your passion, plan a 12-month build with significant networking investment, and apply for Incubator.
+
+---
+
+## HORROR / SURVIVAL
+
+**What it is:** Atmospheric tension. Survive against a threat. *99 Nights in the Forest*, *Doors*, *Specter*.
+
+**Audience:** Older skew (12–22), gender-balanced, streamer-friendly.
+
+**Session shape:** 20–60 min sessions. Highly streamable — TikTok and Twitch creators love this genre, which means **organic free traffic**.
+
+**Monetization fit:** Limited but specific. Cosmetic gear (flashlights, character skins), early access to new chapters, VIP servers. Don't sell power.
+
+**Build difficulty:** **3/5.** Atmosphere is the hard part — it requires lighting, audio, and pacing. Code is mid. Audio design and lighting are what make or break this genre.
+
+**Saturation:** **3/5.** Less saturated than tycoons or simulators. *Doors* dominated for a while; *99 Nights* broke through in 2026.
+
+**Realistic earnings ceiling for a solo dev:** $1,000–$10,000/month if the atmosphere is genuinely good and a clip goes viral.
+
+**Verdict:** **Strong contender for a solo dev with aesthetic taste.** The genre rewards mood over mechanics, and TikTok/YouTube clips drive discovery. Lower technical bar than RPG/FPS, higher creative bar than tycoon.
+
+---
+
+## STRATEGY
+
+**What it is:** Tower defense, base-building, RTS-lite, deck-builder. *All Star Tower Defense*, *World // Zero*-adjacent strategy hybrids.
+
+**Audience:** Older (15–30), broader globally, deeply committed when they bite.
+
+**Session shape:** 20–45 min sessions, often co-op.
+
+**Monetization fit:** Strong. New characters/towers, cosmetic skins, season passes, exclusive units. Strategy players will pay for breadth of options.
+
+**Build difficulty:** **4/5.** AI/pathfinding, balance, content (units/maps), networking for co-op. Doable solo with patience.
+
+**Saturation:** **2/5.** Roblox flagged this as **underrepresented**. Tower defense has incumbents but the broader strategy lane is open.
+
+**Realistic earnings ceiling for a solo dev:** $1,000–$15,000/month. Tower defenses with anime/IP themes can push higher.
+
+**Verdict:** **Underrated lane.** If you have strategy-game taste and are willing to invest in balance/content, this is a strong solo opportunity in 2026.
+
+---
+
+## IDLE / INCREMENTAL
+
+**What it is:** Passive progression. Numbers go up while you're offline. *Grow a Garden* is the dominant example. Adjacent to simulator, but the offline-progression mechanic is the differentiator.
+
+**Audience:** **Surprisingly broad — including adults.** "Cozy" players, low-stress fans, working adults who can't sustain attention but want to "check in."
+
+**Session shape:** **5–15 min per session, 3–8 sessions/day.** This is the algorithm-perfect shape for 2026 Roblox. Short, frequent, return-driven.
+
+**Monetization fit:** Excellent. Speed-up boosts, premium seeds/units, cosmetics, expanded plot/inventory, exclusive offline-progression rates.
+
+**Build difficulty:** **2/5.** Server-side timer logic + DataStore = most of the work. Visual polish is the moat.
+
+**Saturation:** **3/5.** *Grow a Garden* defined the modern lane. There's room for themed variants (not garden — different cozy world).
+
+**Realistic earnings ceiling for a solo dev:** $1,000–$10,000/month. Massive viral upside if a theme catches a moment.
+
+**Verdict:** **One of the strongest fits for a solo beginner with AI.** Tight loop, perfect for the 2026 algorithm, mobile-friendly, monetization is clean, build difficulty is moderate. **Strong recommendation candidate.**
+
+---
+
+## VIRAL / MEME-CULTURE GAMES
+
+**What it is:** A game built around a fleeting cultural moment. *Steal a Brainrot* is the archetype. *Squid Game*-themed games. Anything that rides a meme to virality.
+
+**Audience:** Whoever's in the meme. Often kids, teens, social-media-native.
+
+**Session shape:** Highly variable. Often short, social, chaotic.
+
+**Monetization fit:** Varies. *Steal a Brainrot* monetized via tycoon mechanics + admin abuse passes (controversial). The meme is the marketing; the loop is the retention.
+
+**Build difficulty:** **2/5 to ship a V1.** **5/5 to time it correctly.** The hard part is recognizing the cultural moment **early enough to ship before it peaks** and **late enough to ride the wave**.
+
+**Saturation:** **N/A.** Each meme is its own land grab. Once a meme is taken, it's taken.
+
+**Realistic earnings ceiling for a solo dev:** **$0 to $1M+/month.** This is the lottery lane. Most attempts fail; the rare hit is life-changing.
+
+**Verdict:** **Don't bet your first project on this.** If you have a clear meme insight and 4 weeks to spare, ride it as a *side* experiment alongside your main game. Don't make a meme game your only shot.
+
+---
+
+## GENRE BLENDS (where the smartest 2026 games are)
+
+The biggest insight from the 2026 charts: **the games that are winning are not pure-genre. They're hybrids.**
+
+Some examples that prove the pattern:
+
+- **Fisch** = Fishing simulator + RPG progression + social hangout. ~1.5B visits.
+- **Steal a Brainrot** = Tycoon + PvP social + meme aesthetic.
+- **Grow a Garden** = Idle/simulator + farming + light-social (visiting friends' gardens).
+- **Adopt Me!** = Pet collection + roleplay + social + trading economy.
+- **Bee Swarm Simulator** = Simulator + quest-based RPG + collection.
+- **99 Nights in the Forest** = Horror + survival + progression-unlock.
+
+The pattern: **take a genre with proven monetization (simulator, tycoon, RPG) and bolt on a genre with proven retention (social, idle, horror).** The result keeps players in two reward loops at once: short-term mechanical and long-term emotional.
+
+A blender thought-exercise: **"My game is a [profitable genre] but with [retention genre] mechanics, themed around [cultural moment / aesthetic]."**
+
+Examples to play with:
+- "A simulator with horror mechanics, themed around a haunted hotel" → progression-unlock + tension
+- "A tycoon with idle progression, themed around a cozy bookshop" → easy daily return + visual cuteness
+- "An RPG with social hangout space, themed around a fashion academy" → female-skewed, voice-chat ready
+- "A strategy game with collection mechanics, themed around mythological pets"
+
+`09_BRAINSTORM.md` is where you'll actually generate concepts using this thinking.
+
+---
+
+## The big picture: pick-your-lane table
+
+Sorted by "should a solo beginner with AI build here?"
+
+| Genre | Build difficulty | Saturation | Algorithm fit (2026) | Solo verdict |
+|---|---|---|---|---|
+| Idle / Incremental | 2/5 | 3/5 | **Excellent** | ⭐ Strong recommend |
+| Simulator (themed niche) | 3/5 | 4/5 | Good | ⭐ Strong recommend if you can sustain content |
+| Horror / Survival | 3/5 | 3/5 | Good | ⭐ Strong recommend if you have aesthetic taste |
+| Strategy | 4/5 | 2/5 | Good | Recommend if you love strategy |
+| Tycoon (with cultural hook) | 2/5 | 5/5 | Decent | Conditional — only with a unique hook |
+| Social / RP (themed niche) | 3/5 | 5/5 | Good | Conditional — needs voice chat + niche theme |
+| Viral / meme | 2/5 | N/A | Variable | Side bet only, not main project |
+| RPG | 5/5 | 3/5 | Decent | Long ramp; consider Incubator |
+| FPS / Shooter | 5/5 | 2/5 | Variable | Don't recommend for first game |
+| Obby | 1/5 | 5/5 | Poor | Learning project only |
+
+---
+
+## What this all converges on
+
+For a **solo, beginner, AI-paired developer in 2026**, the highest-EV genres are:
+
+1. **Idle / incremental** with a fresh theme
+2. **Themed simulator** with a tight 5-minute loop and monetizable progression
+3. **Atmospheric horror** with strong audio + lighting design
+4. **Strategy** if you have the genre taste
+5. **Tycoon** ONLY with a clear cultural hook
+
+And the highest-EV move for any of those is to **blend in a retention genre** (social, idle, collection) rather than ship a pure-genre game.
+
+---
+
+**Next: `04_VIRAL_MECHANICS.md` — what actually makes a game blow up.**
