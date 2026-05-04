@@ -111,7 +111,7 @@ function DataManager.LoadPlayer(player: Player)
 		return
 	end
 
-	-- Bookkeeping fields prove round-trip persistence to the A2 audit:
+	-- Bookkeeping fields prove round-trip persistence to the A audit:
 	-- firstJoinAt is sticky; lastJoinAt + sessionsPlayed advance every load.
 	local now = os.time()
 	profile.Data.firstJoinAt = profile.Data.firstJoinAt or now
@@ -120,6 +120,16 @@ function DataManager.LoadPlayer(player: Player)
 
 	profiles[player] = profile
 	fireLoaded(player)
+
+	print(
+		string.format(
+			"[DataManager] Loaded %s — session #%d, credits=%d, firstJoinAt=%d",
+			player.Name,
+			profile.Data.sessionsPlayed,
+			profile.Data.credits,
+			profile.Data.firstJoinAt or 0
+		)
+	)
 end
 
 function DataManager.SavePlayer(player: Player)
@@ -128,6 +138,7 @@ function DataManager.SavePlayer(player: Player)
 		return
 	end
 	intentionalEnd[player] = true
+	print(string.format("[DataManager] Saving %s (sessions=%d)", player.Name, profile.Data.sessionsPlayed))
 	profile:EndSession()
 end
 
@@ -165,15 +176,19 @@ function DataManager.Init()
 	end)
 
 	game:BindToClose(function()
+		local activeCount = 0
 		for player in pairs(profiles) do
+			activeCount += 1
 			task.spawn(DataManager.SavePlayer, player)
 		end
+		print(string.format("[DataManager] BindToClose: flushing %d profile(s)", activeCount))
 		-- Wait until every active session has fully ended, or the
 		-- timeout in Constants (25s; below BindToClose's 30s ceiling).
 		local deadline = os.clock() + Constants.DATASTORE.BindToCloseTimeoutSeconds
 		while next(profiles) ~= nil and os.clock() < deadline do
 			task.wait(0.5)
 		end
+		print("[DataManager] BindToClose: flush complete")
 	end)
 end
 

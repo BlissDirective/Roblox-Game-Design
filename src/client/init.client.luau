@@ -1,8 +1,24 @@
 --!strict
 -- Outpost-7 — client bootstrap.
 --
--- Phase A1: empty scaffold. Replicates and prints on join.
--- Phase A4 wires the controller Init() chain (Camera → HUD → Build → Combat → ...).
--- Keep this file 5–30 lines. All real logic lives in Modules/.
+-- Thin requires-and-Init() bootstrapper. Real logic lives in Modules/.
+-- A4: requires the shared modules to verify replication. The print is
+-- the audit signal — if it lands in Studio's Output, ReplicatedStorage
+-- is replicating the Shared tree to the client.
 
-print("[Outpost-7] Client bootstrap loaded. (Phase A1 scaffold.)")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
+local Enums = require(Shared:WaitForChild("Enums"))
+
+print(
+	string.format(
+		"[Outpost-7] Client bootstrap complete. tickRate=%ds, gridSize=%d, defaultRateLimit=%d, defaultMode=%s, defaultBiome=%s",
+		Constants.TICK.Currency,
+		Constants.GRID.Size,
+		Constants.RATE_LIMITS.Default,
+		Enums.Mode.Build,
+		Enums.Biome.Jungle
+	)
+)

@@ -5,8 +5,18 @@
 -- Order matters: persistence (DataManager) initializes before any module
 -- that reads/writes player data.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
+
 local DataManager = require(script.Modules.Player.DataManager)
 
 DataManager.Init()
 
-print("[Outpost-7] Server bootstrap complete.")
+print(
+	string.format(
+		"[Outpost-7] Server bootstrap complete. store=%s, bindToCloseTimeout=%ds",
+		Constants.DATASTORE.StoreName,
+		Constants.DATASTORE.BindToCloseTimeoutSeconds
+	)
+)

@@ -212,6 +212,141 @@ is done and we propose the Phase B kickoff.
 
 ---
 
-## A4 — Bootstrap wiring + Phase A audit ⏳
+## A4 — Bootstrap wiring + Phase A audit ⏳ (sandbox-side complete; awaiting Studio audit)
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### What was built
+
+- `src/server/init.server.luau` — boot print now includes
+  `Constants.DATASTORE.StoreName` and `BindToCloseTimeoutSeconds` so the
+  audit gets a one-line "did the server load and see Constants" signal.
+- `src/client/init.client.luau` — replaced the placeholder print with a
+  diagnostic that requires `Constants` + `Enums` from
+  `ReplicatedStorage.Shared` and prints values from each. If this line
+  doesn't land in Studio's Output, replication is broken.
+- `src/server/Modules/Player/DataManager.luau` — added lifecycle prints:
+  - on successful `LoadPlayer`: player name, session count, credits,
+    firstJoinAt
+  - on `SavePlayer`: player name, session count
+  - on `BindToClose` start: count of profiles flushing
+  - on `BindToClose` complete: confirmation
+  These prints are intentionally always-on (not Studio-gated) — the
+  signal is valuable in production for tracing data-related issues.
+
+### Phase A audit gate (you run this in Studio)
+
+The audit gate cannot run in this sandbox. **Execute in Studio when you
+sync the branch via Rojo.** Pass = all four steps log the expected
+output without errors.
+
+#### Pre-flight
+
+1. `aftman install && wally install` from the project root (first time
+   only; or after `wally.toml` changed).
+2. `rojo serve` in a terminal.
+3. Open a fresh Roblox Studio place. Click the Rojo plugin → **Connect**.
+4. **Game Settings → Security → Enable Studio Access to API Services** (so
+   ProfileStore can use the live DataStore for the round-trip test;
+   ProfileStore's `Mock` is also auto-engaged in Studio per
+   `DataManager` line 41 — either path is fine for A audit).
+
+#### Step 1 — Place loads, no errors
+
+Press F5 (Play). In **View → Output**, expect the following lines, in
+roughly this order, with no red error lines anywhere:
+
+```
+[Outpost-7] Server bootstrap complete. store=PlayerData_v1, bindToCloseTimeout=25s
+[DataManager] Loaded <YourName> — session #1, credits=0, firstJoinAt=<unix-ts>
+[Outpost-7] Client bootstrap complete. tickRate=1s, gridSize=4, defaultRateLimit=10, defaultMode=Build, defaultBiome=Jungle
+```
+
+If the client line is missing, replication is broken. If the
+`[DataManager] Loaded` line is missing, persistence is broken. If the
+server line is missing, the bootstrap didn't run.
+
+#### Step 2 — Mid-session mutation
+
+In Studio's **Command Bar** (in Server context), run:
+
+```luau
+local DataManager = require(game:GetService("ServerScriptService"):WaitForChild("Server"):WaitForChild("Modules"):WaitForChild("Player"):WaitForChild("DataManager"))
+local player = game:GetService("Players"):GetPlayers()[1]
+local data = DataManager.GetData(player)
+data.credits = 12345
+print("[Audit] credits set to", data.credits)
+```
+
+Expect: `[Audit] credits set to 12345`.
+
+#### Step 3 — Round-trip persistence
+
+Stop play (Shift+F5). Press F5 again. In Output, expect:
+
+```
+[DataManager] Loaded <YourName> — session #2, credits=12345, firstJoinAt=<same-unix-ts-as-step-1>
+```
+
+`session` should be `#2` (incremented), `credits` should be `12345` (the
+mid-session mutation persisted), `firstJoinAt` should match step 1
+(sticky). **This is the core A audit gate.**
+
+#### Step 4 — `BindToClose` flush
+
+While playing in Studio, run in the Command Bar (Server context):
+
+```luau
+print("[Audit] requesting shutdown...")
+game:Shutdown()
+```
+
+In Output, expect:
+
+```
+[DataManager] Saving <YourName> (sessions=2)
+[DataManager] BindToClose: flushing 1 profile(s)
+[DataManager] BindToClose: flush complete
+```
+
+Press F5 one more time to confirm `session #3` loads with the same
+`credits=12345`. Final pass: that load happens cleanly.
+
+#### Multi-client basic check (optional, recommended)
+
+In Studio: **Test → Local Server → 2 clients**. Each client should print
+its own `[Outpost-7] Client bootstrap complete` line; server should
+print one `[DataManager] Loaded` per player. Stopping the test should
+surface `[DataManager] BindToClose: flushing 2 profile(s)`.
+
+### Architectural decisions made
+
+None. A4 is integration work on top of A1–A3.
+
+### Tech debt logged
+
+- The Studio Command Bar audit (Step 2) is verbose. Once we have a real
+  in-game UI in Phase B, the audit will be runnable through gameplay
+  (place a building → buy something → leave → rejoin). Until then, the
+  Command Bar recipe is the canonical Phase A audit.
+- No `tests/integration/datastore_roundtrip.spec.luau` yet — TestEZ is
+  not wired (no `[dev-dependencies]` in `wally.toml`). Add when we wire
+  TestEZ; for now the manual audit recipe is sufficient.
+
+### Phase A status
+
+**Sandbox-side: complete.** All four sub-phases shipped, committed, and
+pushed. CI on the PR will run Selene + StyLua + `rojo build`.
+
+**Studio audit: pending the user's run** of the four-step recipe above.
+On audit pass, Phase A is closed. On audit fail, log findings here under
+"Audit failures" and we triage per `10_BUILD_PROTOCOL.md`'s
+three-attempts-then-escalate rule.
+
+### What's next
+
+Phase B kickoff. The hybrid extractor system + currency tick + persistent
+base state + build-mode UI + camera transition. I'll do the Phase B
+research pass before the sub-phase plan (per build protocol — phase-level
+research, not sub-phase).
