@@ -171,6 +171,7 @@ When the user asks something domain-specific, pull from the relevant doc:
 - File structure, Rojo, naming → `07_PROJECT_STRUCTURE.md`
 - MCP setup, troubleshooting → `08_MCP_SETUP.md`
 - Concept brainstorm worksheet → `finalized-brainstorm.md`
+- Asset upload + Open Cloud release pipeline → `playbooks/PUBLISHING.md` (read before any release)
 
 If a question can be answered from a reference doc, point the user there too — they should learn the system, not just outsource thinking.
 
