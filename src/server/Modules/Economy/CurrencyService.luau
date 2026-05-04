@@ -29,9 +29,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local BuildableRegistry =
+	require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("BuildableRegistry"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
-local BuildableRegistry = require(script.Parent.Parent.Build.BuildableRegistry)
+local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
 
 type Buildable = BuildableRegistry.Buildable
 
@@ -107,6 +109,8 @@ function CurrencyService.TrySpend(player: Player, amount: number): boolean
 	end
 	data.credits -= amount
 	fireChanged(player, data.credits)
+	-- C3: emit quest progress for "spend_credits" objectives.
+	QuestObjectives.Emit("spend_credits", player, amount)
 	return true
 end
 
@@ -120,7 +124,32 @@ function CurrencyService.Add(player: Player, amount: number): boolean
 	end
 	data.credits += amount
 	fireChanged(player, data.credits)
+	-- C3: emit quest progress for "earn_credits" objectives. Includes
+	-- credits granted from quest rewards themselves — a small cascade
+	-- bonus for active completers, intentional and balanced in Phase G.
+	QuestObjectives.Emit("earn_credits", player, amount)
 	return true
+end
+
+-- Cores are V1's premium currency. Granted by quest rewards (C3) and
+-- monetization developer products (D2). Spent in Phase D's cosmetic
+-- shop. There's no CoresChanged Remote yet — Phase D adds the HUD
+-- readout and the paired event.
+function CurrencyService.AddCores(player: Player, amount: number): boolean
+	if amount <= 0 then
+		return false
+	end
+	local data = DataManager.GetData(player)
+	if not data then
+		return false
+	end
+	data.cores += amount
+	return true
+end
+
+function CurrencyService.GetCores(player: Player): number
+	local data = DataManager.GetData(player)
+	return if data then data.cores else 0
 end
 
 function CurrencyService.SetMultiplier(player: Player, value: number)

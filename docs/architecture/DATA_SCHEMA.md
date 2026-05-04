@@ -28,6 +28,9 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     -- Phase C2 — Retention / restocking shop:
     shopRotationSeen     = nil :: number?, -- last rotation index seen
     shopBuysThisRotation = {},             -- { [blueprintId]: true } bought-this-rotation flags
+    -- Phase C3 — Retention / daily quests:
+    dailyQuests          = {},             -- { [questId]: { progress = 0, claimed = false } }
+    lastQuestReset       = nil :: string?, -- "YYYY-MM-DD" UTC of last quest roll
 }
 ```
 

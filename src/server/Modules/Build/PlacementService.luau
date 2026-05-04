@@ -43,6 +43,7 @@ local BuildableRegistry =
 local PlotManager = require(script.Parent.Parent.World.PlotManager)
 local BaseSerializer = require(script.Parent.BaseSerializer)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
+local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
 
 type Buildable = BuildableRegistry.Buildable
 type PlotInfo = PlotManager.PlotInfo
@@ -171,6 +172,10 @@ function PlacementService.TryPlace(
 	-- skip because the entry is already in the saved layout.
 	if not trusted then
 		BaseSerializer.Append(player, buildable.id, cellX, cellZ)
+		-- Quest progress emissions: a specific event per buildable kind
+		-- + a generic "place_any" so quest authors can target either.
+		QuestObjectives.Emit("place_" .. buildable.id, player, 1)
+		QuestObjectives.Emit("place_any", player, 1)
 	end
 
 	if trusted then

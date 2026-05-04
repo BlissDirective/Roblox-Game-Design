@@ -29,6 +29,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local CurrencyService = require(script.Parent.CurrencyService)
 local BlueprintRegistry = require(script.Parent.BlueprintRegistry)
+local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
 
 type Blueprint = BlueprintRegistry.Blueprint
 
@@ -208,6 +209,9 @@ function ShopService.TryBuy(player: Player, blueprintId: string): BuyResult
 
 	-- Record the purchase so the slot turns "Sold Out" until restock.
 	data.shopBuysThisRotation[blueprintId] = true
+
+	-- C3: emit for "buy_shop_item" quest objectives.
+	QuestObjectives.Emit("buy_shop_item", player, 1)
 
 	print(
 		string.format(

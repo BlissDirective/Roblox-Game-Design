@@ -260,9 +260,133 @@ seed by UTC day. Schema gets `dailyQuests`. New module
 
 ---
 
-## C3 — Daily quests ⏳
+## C3 — Daily quests ✅
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### What was built
+
+- **`ProfileSchema.luau`** — `dailyQuests: { [string]: QuestProgress }`
+  + `lastQuestReset: string?`. New `QuestProgress` type
+  (`{ progress, claimed }`). Additive; stale quest sets reset
+  lazily on the first GetState/TryClaim of a new UTC day.
+- **`Retention/QuestObjectives.luau`** — singleton pub-sub. Services
+  emit via `QuestObjectives.Emit(event, player, amount)`;
+  DailyQuestManager subscribes once and dispatches to active
+  quests. Decoupled — emitters don't import DailyQuestManager
+  (avoids cycles); manager doesn't enumerate emitters.
+- **`Retention/DailyQuestManager.luau`** — V1 quest pool of 10:
+  Construction Crew, Fortifier, Builder's Dozen, Big Spender,
+  Frugal Engineer, Tycoon Surge, Smart Shopper, Bargain Hunter,
+  Checked In, Time on Planet. Three picked deterministically per
+  UTC day via Fisher-Yates with `Random.new(daySeed)` where
+  `daySeed = floor(os.time() / 86400)`. Pool is `table.sort`'d
+  before shuffle so iteration-order non-determinism in the table
+  doesn't break cross-server alignment.
+- **`Economy/CurrencyService.luau`** — added `AddCores` +
+  `GetCores` (Cores = V1 premium currency, granted by quest
+  rewards now and dev products in D2). Also fixed a leftover
+  bug from the B4 BuildableRegistry move: import path was still
+  pointing at `script.Parent.Parent.Build.BuildableRegistry`
+  which no longer exists; corrected to
+  `Shared.Modules.Registry.BuildableRegistry`. **Would have failed
+  at first runtime use.**
+- **Quest event emissions wired**:
+  - `PlacementService.TryPlace` (fresh, non-trusted) →
+    `place_<buildableId>` + `place_any`
+  - `CurrencyService.TrySpend` → `spend_credits` (amount)
+  - `CurrencyService.Add` → `earn_credits` (amount)
+  - `ShopService.TryBuy` → `buy_shop_item` (1)
+  - `DailyLoginManager.TryClaim` → `claim_daily` (1)
+  - `DailyQuestManager` per-minute tick → `play_session` (1)
+- **`Remotes.luau`** — `DailyQuestState` (Server → Client Event) +
+  `ClaimQuest` (Client → Server RemoteFunction).
+- **`init.server.luau`** — wired `DailyQuestManager.Init()` after
+  `ShopService.Init()`.
+- **`Retention/DailyQuestsPanel.luau`** — slide-in centered panel
+  with 3 quest rows. Each row: name, description, progress bar
+  (live-updating via state pushes), reward preview, Claim button.
+  Stroke colors per state (active / complete / claimed).
+- **`init.client.luau`** — wired `DailyQuestsPanel.Init()` last.
+  Adds a top-row "Quests" toggle button (next to "Shop").
+
+### Audit (C3-scope, sandbox-side)
+
+- 35 `.luau` files — `--!strict` on all
+- `stylua --check` clean
+- `rojo build` produces a `.rbxl` with the new tree
+- Determinism check (manual): `Random.new(daySeed)` with the same
+  seed produces the same Fisher-Yates result; pool is sorted
+  pre-shuffle so iteration order doesn't drift between servers.
+
+### Audit (C3-scope, Studio-side — pending your local run)
+
+After F5:
+
+1. **Quests button visible** — top-row, right of "Shop".
+2. **Open panel** — 3 quest rows show. All show `0 / N` progress,
+   buttons read the reward (`+N ¢ +M ♦`), buttons are disabled.
+3. **Make progress on a quest.** If "Construction Crew" (place 3
+   extractors) is in today's roll:
+   - Add credits (`CurrencyService.Add` from Command Bar) and place
+     extractors via the build palette.
+   - Watch the progress bar tick `1/3`, `2/3`, `3/3` in real time.
+   - Button switches to green "Claim" once complete.
+4. **Claim** — button reads "Claimed", greyed out. Credits + Cores
+   granted (Credits visible in HUD; Cores tracked in profile —
+   no HUD readout yet, lands in D).
+5. **Cross-quest cascade.** If "Tycoon Surge" (earn 2500) is in
+   today's set, claiming "Big Spender" (which grants 800 Credits
+   via CurrencyService.Add → emits `earn_credits`) advances Tycoon
+   Surge's progress bar. Intentional — engaged completers get a
+   modest cascade. Phase G tunes if too generous.
+6. **Determinism test (two-client local server).** Both players
+   see the **same 3 quests** today. Different per-player progress
+   + claim flags after independent play.
+7. **Day rollover (manual sim).** In Server Command Bar:
+   ```luau
+   local DM = require(game.ServerScriptService.Server.Modules.Player.DataManager)
+   local QM = require(game.ServerScriptService.Server.Modules.Retention.DailyQuestManager)
+   local p = game.Players:GetPlayers()[1]
+   DM.GetData(p).lastQuestReset = "2020-01-01"
+   print(QM.GetState(p)) -- triggers ensureFreshDay; new 3 quests rolled
+   ```
+   Re-open the panel — fresh 3 quests with 0 progress.
+
+### Tech debt / deferred
+
+- **No Cores HUD readout.** `AddCores` works server-side; client
+  has no display until Phase D ships the cosmetic shop with the
+  paired `CoresChanged` Remote.
+- **No quest icons / category tags.** All 10 V1 quests show a
+  plain text description. Phase G adds icon + Build / Defend /
+  Raid category coloring per `finalized-brainstorm.md` §2.4.
+- **10 quests, not 30.** Brainstorm targets ~30 quest variants for
+  V1 launch ("variety = retention"). C3 ships 10 to validate the
+  system; expansion is a content-only change in Phase G (or sooner
+  if quest rotation feels stale during playtests).
+- **No combat / raid quests.** The pool only contains
+  Build / Economy objectives because Combat (E2) and Raids (E1)
+  don't exist yet. Phase E adds `survive_wave`, `raid_won`,
+  `raid_attended` events + matching quests.
+- **`play_session` is in-memory only.** Resets each rejoin. A
+  player could "Time on Planet: 15 minutes" by joining for 15
+  minutes once; if they leave at 14 minutes, restart, they need
+  another 15. Acceptable for V1; F1 may persist the session
+  counter inside the day.
+- **No live countdown tick** on the panel (matches ShopPanel).
+  Phase G adds.
+
+### What's next
+
+C4 — offline progression. On rejoin, compute
+`elapsed = os.time() - lastJoinAt` capped at 12 hours, multiply by
+the player's per-second income (read from BuildRestorer post-restore
+extractors), grant Credits, and fire a "Welcome Back" popup. Closes
+Phase C; the four-mechanic retention stack is then complete.
+
+---
 
 ## C4 — Offline progression ⏳
 

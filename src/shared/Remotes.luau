@@ -82,6 +82,15 @@ local Remotes = {
 	-- Client → Server (RemoteFunction). Args: (blueprintId: string).
 	-- Returns ShopService.BuyResult.
 	BuyShopItem = getOrCreate("BuyShopItem", "RemoteFunction") :: RemoteFunction,
+
+	-- Phase C3 — Retention / daily quests:
+	-- Server → Client. Args: (state: DailyQuestManager.State).
+	-- Pushed on join, on every quest progress advance, after each
+	-- claim, and on UTC day rollovers.
+	DailyQuestState = getOrCreate("DailyQuestState", "RemoteEvent") :: RemoteEvent,
+	-- Client → Server (RemoteFunction). Args: (questId: string).
+	-- Returns DailyQuestManager.ClaimResult.
+	ClaimQuest = getOrCreate("ClaimQuest", "RemoteFunction") :: RemoteFunction,
 }
 
 return Remotes

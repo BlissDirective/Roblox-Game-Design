@@ -22,6 +22,7 @@ local PlacementService = require(script.Modules.Build.PlacementService)
 local BuildRestorer = require(script.Modules.Build.BuildRestorer)
 local DailyLoginManager = require(script.Modules.Retention.DailyLoginManager)
 local ShopService = require(script.Modules.Economy.ShopService)
+local DailyQuestManager = require(script.Modules.Retention.DailyQuestManager)
 
 ServerAuthorityBootstrap.Apply()
 DataManager.Init()
@@ -32,6 +33,7 @@ PlacementService.Init()
 BuildRestorer.Init()
 DailyLoginManager.Init()
 ShopService.Init()
+DailyQuestManager.Init()
 
 print(
 	string.format(

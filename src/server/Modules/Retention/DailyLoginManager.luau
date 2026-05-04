@@ -35,6 +35,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
+local QuestObjectives = require(script.Parent.QuestObjectives)
 
 local DailyLoginManager = {}
 
@@ -153,6 +154,9 @@ function DailyLoginManager.TryClaim(player: Player): ClaimResult
 	data.dailyStreak = nextDay
 	data.lastDailyClaim = utcDateString(os.time())
 	CurrencyService.Add(player, reward)
+
+	-- C3: emit for "claim_daily" quest objectives.
+	QuestObjectives.Emit("claim_daily", player, 1)
 
 	print(string.format("[DailyLoginManager] %s claimed day %d (+%d credits)", player.Name, nextDay, reward))
 	return { ok = true, reward = reward, day = nextDay }

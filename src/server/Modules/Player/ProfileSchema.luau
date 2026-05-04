@@ -15,6 +15,9 @@
 	Phase C2: adds `shopRotationSeen` + `shopBuysThisRotation` for the
 	restocking blueprint shop. Additive — older saves get nil + {} on
 	next load. Stale rotations reset lazily inside ShopService.
+	Phase C3: adds `dailyQuests` + `lastQuestReset` for the daily-quest
+	system. Additive. Stale quest sets reset lazily inside
+	DailyQuestManager when the UTC day changes.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -34,6 +37,11 @@ export type SerializedBuilding = {
 	z: number, -- snap-grid cell Z
 }
 
+export type QuestProgress = {
+	progress: number,
+	claimed: boolean,
+}
+
 export type PlayerData = {
 	_version: number,
 	credits: number,
@@ -48,6 +56,9 @@ export type PlayerData = {
 	-- Phase C2 — Retention / restocking shop
 	shopRotationSeen: number?, -- last rotation index the player saw
 	shopBuysThisRotation: { [string]: boolean }, -- item ids bought
+	-- Phase C3 — Retention / daily quests
+	dailyQuests: { [string]: QuestProgress }, -- 3 keys per active day
+	lastQuestReset: string?, -- "YYYY-MM-DD" UTC of last roll
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -62,6 +73,8 @@ ProfileSchema.DEFAULT_DATA = {
 	dailyStreak = 0,
 	shopRotationSeen = nil,
 	shopBuysThisRotation = {},
+	dailyQuests = {},
+	lastQuestReset = nil,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.
