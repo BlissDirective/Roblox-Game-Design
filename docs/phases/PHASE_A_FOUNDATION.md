@@ -154,9 +154,63 @@ shared types, and seed `Enums.luau` with `Mode` (Build / Combat).
 
 ---
 
-## A3 — Shared scaffolds (Remotes, Constants, Types, Enums) ⏳
+## A3 — Shared scaffolds (Remotes, Constants, Types, Enums) ✅
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### What was built
+
+- `src/shared/Constants.luau` — expanded structurally:
+  - `FEATURES` (already present)
+  - `DATASTORE` — `StoreName`, `BindToCloseTimeoutSeconds`
+  - `RATE_LIMITS` — `Default`, `Placement`, `Purchase` (Phase F1 tunes)
+  - `TICK` — `Currency` (Phase B2)
+  - `GRID` — `Size` (Phase B4)
+- `src/shared/Types.luau` — added `Result<T>` (universal success/failure
+  shape for Remotes and any operation that fails in a typed way).
+- `src/shared/Remotes.luau` — `getOrCreate` helper + `ensureContainer`
+  pattern. Lazy folder creation under `ReplicatedStorage.OutpostRemotes`.
+  Empty registry at the bottom; phases B+ register Remotes by appending.
+  `selene: allow(unused_variable)` directive on the helper since no caller
+  exists yet (resolves naturally on first registration).
+- `src/shared/Enums.luau` — `Mode { Build, Combat, Raid }`,
+  `Biome { Jungle, Volcanic, Ice }`. String identity intentional for
+  Remote-safe transport.
+- `src/server/Modules/Player/DataManager.luau` — refactored to read
+  `STORE_NAME` and `BindToCloseTimeoutSeconds` from `Constants`. No
+  hardcoded magic numbers in the persistence module anymore.
+
+### Audit (A3-scope, sandbox-side)
+
+- All 8 `.luau` files start with `--!strict`
+- `default.project.json` valid JSON
+- Tab-indented per `stylua.toml`
+- DataManager grep confirms the two old hardcoded values (`"PlayerData_v1"`,
+  `25`) are gone — both call sites read `Constants.DATASTORE.*`
+
+### Architectural decisions made
+
+None — A3 was structural follow-through on ADR-002 (no magic numbers in
+modules) and ADR-003 (DataManager façade stays narrow).
+
+### Tech debt logged
+
+- `Remotes.getOrCreate` is unused locally (warns under selene's default
+  `unused_variable`). The `selene: allow` directive suppresses it; first
+  Remote registration in Phase B will remove the directive.
+- `Types.Result<T>` introduced ahead of any caller — flagged. Used in B+ as
+  Remote response type. Acceptable per the "shared scaffolds" purpose of A3.
+
+### What's next
+
+A4 — wire bootstraps end-to-end. Bootstraps already require modules; A4's
+job is to **run the Phase A audit** (Studio load, DataStore round-trip,
+`BindToClose` flush, multi-client basic check) and add a thin
+`init.client.luau` flow that proves replication. If audits pass, Phase A
+is done and we propose the Phase B kickoff.
+
+---
 
 ## A4 — Bootstrap wiring + Phase A audit ⏳
 

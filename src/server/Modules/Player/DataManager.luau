@@ -19,11 +19,13 @@
 --]]
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local ProfileStore = require(ServerScriptService:WaitForChild("ServerPackages"):WaitForChild("ProfileStore"))
 local ProfileSchema = require(script.Parent.ProfileSchema)
+local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 
 type PlayerData = ProfileSchema.PlayerData
 
@@ -32,11 +34,9 @@ type Profile = any
 
 local DataManager = {}
 
-local STORE_NAME = "PlayerData_v1"
-
 -- One ProfileStore instance for V1. `.Mock` in Studio so the audit loop
 -- exercises the same join → mutate → leave → rejoin shape as live.
-local profileStore = ProfileStore.New(STORE_NAME, ProfileSchema.DEFAULT_DATA)
+local profileStore = ProfileStore.New(Constants.DATASTORE.StoreName, ProfileSchema.DEFAULT_DATA)
 if RunService:IsStudio() then
 	profileStore = profileStore.Mock
 end
@@ -168,9 +168,9 @@ function DataManager.Init()
 		for player in pairs(profiles) do
 			task.spawn(DataManager.SavePlayer, player)
 		end
-		-- Wait until every active session has fully ended (or 25s timeout —
-		-- BindToClose's hard ceiling is 30s).
-		local deadline = os.clock() + 25
+		-- Wait until every active session has fully ended, or the
+		-- timeout in Constants (25s; below BindToClose's 30s ceiling).
+		local deadline = os.clock() + Constants.DATASTORE.BindToCloseTimeoutSeconds
 		while next(profiles) ~= nil and os.clock() < deadline do
 			task.wait(0.5)
 		end
