@@ -3,20 +3,30 @@
 > Versioned `PlayerData` schema and migration log. Source of truth for what's
 > persisted per player. Read before touching `DataManager` or `ProfileSchema`.
 
-**Status:** Stub. Populated by Phase A2.
+**Status:** Live. v1.0 ships in Phase A2 with the minimum fields needed to
+audit round-trip persistence. Subsequent phases add fields freely (additive
+changes are safe — `ProfileStore:Reconcile()` merges defaults).
 
 ---
 
 ## Current schema version
 
-`v1.0` — TBD when Phase A2 lands. Saved blob shape:
+`v1.0` — implemented in `src/server/Modules/Player/ProfileSchema.luau`.
 
 ```luau
 {
-    _version = 1,
-    -- fields land here as systems require persistence
+    _version    = 1,             -- schema version, bumped per migration
+    credits     = 0,             -- soft currency (Phase B fills the curve)
+    cores       = 0,             -- premium currency (Phase D)
+    firstJoinAt = nil :: number?, -- os.time() of first profile creation
+    lastJoinAt  = nil :: number?, -- os.time() of most recent load
+    sessionsPlayed = 0,          -- ++ on every successful LoadPlayer
 }
 ```
+
+The bookkeeping fields (`firstJoinAt`, `lastJoinAt`, `sessionsPlayed`) exist
+specifically so the A2 audit can verify a value mutated mid-session
+round-trips through DataStore on rejoin.
 
 ## Migration log
 
@@ -28,12 +38,28 @@
 
 ## Field add/remove protocol
 
-- **Adding a field:** safe. Default it in `ProfileSchema.luau`, no migration
-  needed. Old saves auto-fill on next `LoadPlayer`.
+- **Adding a field:** safe. Default it in `ProfileSchema.DEFAULT_DATA`, no
+  migration needed. Older saves auto-fill on next `LoadPlayer` via
+  `ProfileStore:Reconcile()`.
 - **Removing a field:** soft-deprecate first (stop writing, leave reads
-  ignoring). Hard-remove in a versioned migration.
+  ignoring). Hard-remove in a versioned migration once the deprecation has
+  shipped.
 - **Renaming a field:** never rename in place. Add new, dual-write for one
   release, migrate old saves, drop old in next release.
+- **Type-changing a field:** versioned migration only.
 
-Per `10_BUILD_PROTOCOL.md`: any rename/remove after Phase A escalates to
-human approval before merging.
+Per `10_BUILD_PROTOCOL.md`: any rename / remove / retype after Phase A
+escalates to human approval before merging.
+
+## How migrations run
+
+1. `ProfileStore:StartSessionAsync` returns a profile.
+2. `profile:Reconcile()` merges any new template defaults — handles
+   *additive* schema changes invisibly.
+3. `ProfileSchema.Migrate(profile.Data)` walks the `MIGRATIONS` table from
+   `_version` up to `CURRENT_SCHEMA_VERSION` — handles *structural* schema
+   changes (renames, removes, retypes).
+4. `_version` is stamped to current.
+
+Migrations run lazily on first load after a schema bump. There is **no**
+batch sweep — players who never log in stay on their old version until they do.

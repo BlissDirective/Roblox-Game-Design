@@ -9,21 +9,18 @@
 ## ADR-001: Hand-rolled DataStore wrapper, not ProfileService
 
 - **Date:** 2026-05-04 (Phase A1)
-- **Status:** Accepted
-- **Context:** V1 needs durable per-player saves. ProfileService is the
-  community standard; a hand-rolled wrapper requires more discipline.
-- **Decision:** Implement a thin ProfileService-style wrapper inside
-  `src/server/Modules/Player/DataManager.luau` (Phase A2). Use
-  `pcall + UpdateAsync + retry-with-backoff + session lock`. Versioned schema
-  header from day one.
-- **Alternatives considered:**
-  - **ProfileService (Wally dep)** — battle-tested but adds an external
-    dependency surface and obscures the persistence model from a beginner
-    learning Roblox. Rejected for V1; revisit at V2 if the wrapper accrues
-    bug debt.
-- **Consequences:** We own every line of the persistence path. If
-  Roblox changes DataStore semantics, we update one module. If we need a
-  ProfileService feature later, we either port it or migrate.
+- **Status:** ⛔ **Superseded by ADR-003** (2026-05-04, Phase A2 research pass).
+- **Context:** V1 needs durable per-player saves. ProfileService was the
+  community standard at the time of ADR; a hand-rolled wrapper looked
+  appealing for control + learning value.
+- **Decision (now superseded):** Implement a thin ProfileService-style
+  wrapper inside `src/server/Modules/Player/DataManager.luau`.
+- **Why superseded:** Phase A2 research surfaced that **ProfileService is
+  no longer maintained**, and its successor **ProfileStore** (same author)
+  is the recommended modern path with materially better cross-server
+  conflict handling via `MessagingService`. The "hand-rolled for control"
+  rationale weakens once you realize the thing being rolled is
+  ProfileStore's session-lock dance, badly. See ADR-003.
 
 ---
 
@@ -40,3 +37,39 @@
     debt. Rejected.
 - **Consequences:** Production code carries dead-on-default branches until
   a flag flips. We pay this cost in exchange for never paying merge tax.
+
+---
+
+## ADR-003: Adopt ProfileStore (Wally) as DataStore wrapper
+
+- **Date:** 2026-05-04 (Phase A2)
+- **Status:** Accepted. Supersedes ADR-001.
+- **Context:** Phase A2 pre-coding research surfaced two facts that
+  changed the calculus from ADR-001:
+  1. **ProfileService is no longer supported** — the project's own README
+     directs new users to ProfileStore.
+  2. **2026 per-Experience DataStore limits** are rolling out; ProfileStore's
+     5-minute auto-save default produces ~10× fewer DataStore calls than
+     ProfileService's 30s default, which buys real headroom under the new
+     quota model.
+- **Decision:** Add `lm-loleris/profilestore@1.0.3` to
+  `wally.toml [server-dependencies]`. Wrap it in a thin `DataManager.luau`
+  façade that exposes `Init / LoadPlayer / SavePlayer / GetData /
+  WaitForData` to the rest of the codebase.
+- **Alternatives considered:**
+  - **Hand-rolled wrapper (ADR-001)** — full control, but we'd be
+    re-implementing ProfileStore's MessagingService-based session-lock
+    conflict resolution. High risk of subtle dataloss bugs. Rejected.
+  - **Hand-rolled with ProfileStore as fallback** — worst of both worlds
+    for a solo dev. Rejected.
+- **Consequences:**
+  - One external dependency on a community-maintained library. We own
+    `ProfileSchema.luau` and `tools/migrations/`, so swapping out
+    ProfileStore later (if it falls out of maintenance) is a façade-only
+    rewrite.
+  - The `DataManager` public API stays narrow on purpose. Other modules
+    never call ProfileStore directly — they go through the façade. Keeps
+    the swap path open.
+  - Schema additions stay free (ProfileStore `:Reconcile()` merges
+    template defaults). Renames/removals still require versioned
+    migrations and human approval per build protocol.
