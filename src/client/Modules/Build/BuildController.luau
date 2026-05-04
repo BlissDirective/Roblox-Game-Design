@@ -2,10 +2,10 @@
 --[[
 	Outpost-7 — build mode orchestrator (client).
 
-	Phase B4. Wires the three pieces of the build loop together:
-	  - BuildPalette emits selection changes
-	  - PlacementPreview renders + tracks the snapped cell
-	  - Tap/click on the world fires the PlaceBuilding Remote
+	Phase B4 wires palette + preview + input → PlaceBuilding Remote.
+	Phase B5 adds mode-awareness: out of Build mode the palette hides,
+	any in-progress selection clears, and the preview tears down. No
+	build-mode-only Remotes are sent during Combat / Raid.
 
 	Server validates everything authoritatively (PlacementService);
 	we send the snap coords without trusting the advisory client-side
@@ -17,14 +17,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Enums = require(Shared:WaitForChild("Enums"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local BuildPalette = require(script.Parent.BuildPalette)
 local PlacementPreview = require(script.Parent.PlacementPreview)
+local ModeController = require(script.Parent.Parent.Core.ModeController)
 
 local BuildController = {}
 
 local function tryFireRemote()
+	-- Mode gate: only Build mode sends placement Remotes.
+	if ModeController.GetMode() ~= Enums.Mode.Build then
+		return
+	end
 	local selected = BuildPalette.GetSelected()
 	if not selected then
 		return
@@ -50,6 +56,17 @@ function BuildController.Init()
 			PlacementPreview.Show(buildableId)
 		else
 			PlacementPreview.Hide()
+		end
+	end)
+
+	-- Hide the palette when the player isn't in Build mode. Selection
+	-- clearing also hides the preview (via OnSelectionChanged → Hide).
+	ModeController.OnModeChanged(function(newMode: string, _oldMode: string)
+		if newMode == Enums.Mode.Build then
+			BuildPalette.Show()
+		else
+			BuildPalette.SetSelected(nil)
+			BuildPalette.Hide()
 		end
 	end)
 

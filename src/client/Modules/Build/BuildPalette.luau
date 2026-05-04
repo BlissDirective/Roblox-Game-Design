@@ -26,6 +26,7 @@ export type SelectionChangedHandler = (buildableId: string?) -> ()
 local selected: string? = nil
 local buttons: { [string]: TextButton } = {}
 local handlers: { SelectionChangedHandler } = {}
+local screenGui: ScreenGui? = nil
 
 -- Order matters for the palette's left-to-right layout. V1 ships with
 -- two entries; Phase B+ adds turret, drone-bay, etc.
@@ -62,6 +63,7 @@ local function build()
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.Parent = playerGui
+	screenGui = gui
 
 	local container = Instance.new("Frame")
 	container.Size = UDim2.new(0, 320, 0, 80)
@@ -120,6 +122,18 @@ end
 
 function BuildPalette.OnSelectionChanged(handler: SelectionChangedHandler)
 	table.insert(handlers, handler)
+end
+
+function BuildPalette.Show()
+	if screenGui then
+		screenGui.Enabled = true
+	end
+end
+
+function BuildPalette.Hide()
+	if screenGui then
+		screenGui.Enabled = false
+	end
 end
 
 function BuildPalette.Init()

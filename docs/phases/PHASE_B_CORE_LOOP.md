@@ -540,6 +540,112 @@ Soft V1 falls back to TP-only with FP zoom for combat.
 
 ---
 
-## B5 — Camera transition (TP↔FP) ⏳
+## B5 — Camera transition (TP↔FP) ✅ (prototype) — **GO/NO-GO GATE PENDING YOUR FEEL TEST**
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### What was built
+
+- **`Core/ModeController.luau`** — client-only state machine. Holds
+  current mode (`Enums.Mode.Build` default), exposes
+  `GetMode / SetMode / OnModeChanged`. Validates mode strings;
+  isolates handler errors via `task.spawn` so one bad subscriber
+  can't block others. Server doesn't care about client mode — only
+  about which Remotes the client sends — so this stays purely
+  client-side.
+- **`Core/CameraController.luau`** — TweenService-based transition,
+  ~0.3s `Quad.Out`. On mode change:
+  1. Cancels any in-flight tween
+  2. Sets `Camera.CameraType = Scriptable`
+  3. Tweens `Camera.CFrame` to the target view (TP: 16 studs back,
+     6 above HRP, looking at center; FP: head position looking
+     forward along HRP)
+  4. On completion, sets `LocalPlayer.CameraMode` (Classic for TP,
+     LockFirstPerson for FP) + `CameraType = Custom`
+  Re-applies on `CharacterAdded` (after a 0.5s settle) so respawns
+  don't snap from FP→TP→FP.
+- **`Core/InputRouter.luau`** — single binding for B5: **M** key
+  cycles Build ↔ Combat. Gated by
+  `Constants.FEATURES.debugModeToggle = true` (will flip false in
+  Phase F4 once Combat content makes the toggle a real gameplay
+  decision).
+- **`Build/BuildPalette.luau`** — gained `Show()` / `Hide()` methods
+  via `ScreenGui.Enabled`. Selection-clear path unchanged.
+- **`Build/BuildController.luau`** — subscribes to ModeController.
+  Out of Build mode: `SetSelected(nil)` (clears preview through
+  existing OnSelectionChanged chain) → `BuildPalette.Hide()`. Also
+  gates `tryFireRemote` on Build mode so the placement Remote
+  can't fire during Combat / Raid.
+- **`init.client.luau`** — wired `CameraController.Init()` +
+  `InputRouter.Init()` between HUD and BuildController. Boot print
+  appends the `debugModeToggle` flag for audit visibility.
+
+### The go/no-go gate (you run this in Studio)
+
+This is the **prototype risk gate** per `finalized-brainstorm.md`
+§3.4 risk #2. Press F5, then:
+
+1. **Initial state.** You spawn on your plot in TP. HUD top-right.
+   Build palette bottom-center. The boot print shows
+   `debugModeToggle=true`.
+2. **Toggle to Combat.** Press **M**. Camera tweens forward+down
+   into FP over ~0.3s. Build palette disappears. HUD persists.
+3. **Look around in FP.** Mouse-look works. Roblox's
+   `LockFirstPerson` keeps you in head view.
+4. **Toggle back to Build.** Press **M**. Camera tweens back to TP
+   over ~0.3s. Palette reappears. You can place again.
+5. **Rapid-toggle stress.** Press M five times quickly. Tweens cancel
+   and chain cleanly. No camera lock-up; final mode is whatever
+   the last press selected.
+6. **Respawn test.** Type `game.Players.LocalPlayer:LoadCharacter()`
+   in client Command Bar. Character respawns; mode persists; camera
+   re-applies after the 0.5s settle.
+
+**Pass criteria** (all must be true):
+- ✅ Transition is smooth — no jitter, no obvious teleport
+- ✅ No nausea — 0.3s feels right (tune duration in
+  `CameraController.TRANSITION_SECONDS` if not)
+- ✅ Camera doesn't go through the character mesh during transition
+- ✅ Mobile: tested on iPhone SE / Android equivalent — TP↔FP
+  works without jank (mobile uses Roblox's default touch camera
+  in TP and FP, which is solid)
+- ✅ Palette correctly hides in Combat and reappears in Build
+
+**Fail → fall back to Soft V1** (TP-only, FP zoom for combat). The
+ModeController stays — combat just doesn't flip the camera.
+ADR will be logged.
+
+### Tech debt / deferred
+
+- **Mobile mode-toggle button** — desktop has the M key, mobile has
+  no path to toggle yet. Phase B5+ may add a small corner button
+  gated behind `debugModeToggle`. For B5 audit, mobile users use
+  Studio's Test → Mobile → with keyboard.
+- **No FOV tween.** TP and FP both use the default 70° FOV. A FOV
+  tween (e.g., 70° → 80° in FP) might add punch but adds nausea
+  risk. Held for Phase G aesthetic.
+- **No camera shake.** Combat-mode entry could shake briefly to
+  signal the mode change. Phase G or F4 polish.
+- **`CameraMaxZoomDistance`** is 32 in Build. Some plots (especially
+  edge plots in the 2x2 grid) may be tight at full zoom-out. Tune
+  in Phase G when biomes ship.
+- **Server doesn't enforce mode.** A modded client could send
+  `PlaceBuilding` while in Combat. PlacementService will still
+  validate plot/cell/cost, so no exploit — but the wire isn't
+  symmetric. Phase F1 anti-exploit may add a "client claims to be
+  in mode X" check via the server-side TrustBoundary helpers.
+
+### Phase B is now complete (server + client)
+
+All five B sub-phases shipped. The full audit gate is the recipe in
+B4 §"Audit (B4-scope, Studio-side)" — two-client playtest with the
+build loop end-to-end. B5 adds the mode toggle as an audit step
+(press M and feel the swap).
+
+### What's next
+
+**Phase B audit gate verification on your machine** — sync the
+branch, run the Studio recipe, file findings. On pass: open PR,
+squash-merge, kick off Phase C (retention mechanics: daily login +
+restocking shop + daily quests + offline progression).

@@ -3,9 +3,11 @@
 --
 -- Thin requires-and-Init() bootstrapper. Real logic lives in Modules/.
 -- Order:
---   1. HUD (CreditsDisplay etc.) — no dependencies; up first.
---   2. Build mode (palette + preview + input) — listens for Remotes
---      that the HUD also reads, but no direct dep.
+--   1. HUD pieces (CreditsDisplay, ...) — no deps; up first
+--   2. Camera + Input + Mode (B5) — apply initial mode before user
+--      input can override
+--   3. Build mode (palette + preview + input) — listens to mode
+--      changes from ModeController
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -14,18 +16,23 @@ local Constants = require(Shared:WaitForChild("Constants"))
 local Enums = require(Shared:WaitForChild("Enums"))
 
 local HudController = require(script.Modules.HUD.HudController)
+local CameraController = require(script.Modules.Core.CameraController)
+local InputRouter = require(script.Modules.Core.InputRouter)
 local BuildController = require(script.Modules.Build.BuildController)
 
 HudController.Init()
+CameraController.Init()
+InputRouter.Init()
 BuildController.Init()
 
 print(
 	string.format(
-		"[Outpost-7] Client bootstrap complete. tickRate=%ds, gridSize=%d, defaultRateLimit=%d, defaultMode=%s, defaultBiome=%s",
+		"[Outpost-7] Client bootstrap complete. tickRate=%ds, gridSize=%d, defaultRateLimit=%d, defaultMode=%s, defaultBiome=%s, debugModeToggle=%s",
 		Constants.TICK.Currency,
 		Constants.GRID.Size,
 		Constants.RATE_LIMITS.Default,
 		Enums.Mode.Build,
-		Enums.Biome.Jungle
+		Enums.Biome.Jungle,
+		tostring(Constants.FEATURES.debugModeToggle)
 	)
 )
