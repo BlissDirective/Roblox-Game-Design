@@ -3,11 +3,39 @@ name: CI
 # Lint + format check + Rojo build on every PR and push to main.
 # Catches "this won't even compile in Studio" before it reaches a human reviewer.
 
+# Skips on doc-only PRs — CI here lints/builds the Luau project, not the
+# markdown. Doc references are validated by docs-check.yml.
+#
+# Note: this workflow file itself is intentionally NOT in the paths filter.
+# Until Phase A1 lands src/, there is nothing for the workflow to lint or
+# build, so a self-trigger on workflow edits would just produce a guaranteed
+# failure. Once src/ exists, edits to ci.yml will be exercised by any
+# subsequent source-touching PR.
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "assets/**"
+      - "default.project.json"
+      - "wally.toml"
+      - "wally.lock"
+      - "selene.toml"
+      - "stylua.toml"
+      - "aftman.toml"
   pull_request:
     branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "assets/**"
+      - "default.project.json"
+      - "wally.toml"
+      - "wally.lock"
+      - "selene.toml"
+      - "stylua.toml"
+      - "aftman.toml"
 
 permissions:
   contents: read
