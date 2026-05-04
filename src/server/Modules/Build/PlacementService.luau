@@ -37,9 +37,10 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
 local GridMath = require(Shared:WaitForChild("Modules"):WaitForChild("Math"):WaitForChild("GridMath"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local BuildableRegistry =
+	require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("BuildableRegistry"))
 
 local PlotManager = require(script.Parent.Parent.World.PlotManager)
-local BuildableRegistry = require(script.Parent.BuildableRegistry)
 local BaseSerializer = require(script.Parent.BaseSerializer)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 

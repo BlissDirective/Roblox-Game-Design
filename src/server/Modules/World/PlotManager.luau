@@ -40,6 +40,7 @@ export type PlotInfo = {
 	size: number,
 	folder: Folder,
 	floor: BasePart,
+	spawn: SpawnLocation,
 	nodes: Folder,
 	buildings: Folder,
 	ownerUserId: number?,
@@ -88,6 +89,22 @@ local function plotCenterFor(plotId: number, plotCount: number): Vector3
 	return Vector3.new(cx, Constants.WORLD.BaseY, cz)
 end
 
+local function buildSpawn(parent: Folder, center: Vector3): SpawnLocation
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "Spawn"
+	spawn.Anchored = true
+	spawn.CanCollide = false
+	spawn.Transparency = 1
+	spawn.Size = Vector3.new(4, 1, 4)
+	-- Slight Y-offset above the floor so the character doesn't clip through.
+	spawn.Position = center + Vector3.new(0, 3, 0)
+	spawn.Neutral = true
+	spawn.AllowTeamChangeOnTouch = false
+	spawn.Enabled = false -- Plot-specific; we set RespawnLocation manually on allocate.
+	spawn.Parent = parent
+	return spawn
+end
+
 local function buildPlot(plotsRoot: Folder, plotId: number): PlotInfo
 	local center = plotCenterFor(plotId, Constants.WORLD.PlotCount)
 
@@ -96,6 +113,7 @@ local function buildPlot(plotsRoot: Folder, plotId: number): PlotInfo
 	folder.Parent = plotsRoot
 
 	local floor = buildFloor(folder, plotId, center, Constants.WORLD.PlotSize)
+	local spawn = buildSpawn(folder, center)
 
 	local nodes = Instance.new("Folder")
 	nodes.Name = "Nodes"
@@ -111,6 +129,7 @@ local function buildPlot(plotsRoot: Folder, plotId: number): PlotInfo
 		size = Constants.WORLD.PlotSize,
 		folder = folder,
 		floor = floor,
+		spawn = spawn,
 		nodes = nodes,
 		buildings = buildings,
 		ownerUserId = nil,
@@ -126,11 +145,27 @@ local function flushPendingAllocation(player: Player)
 	end
 end
 
+local function teleportToPlot(player: Player, plot: PlotInfo)
+	-- Move the live character if one already exists; subsequent
+	-- respawns route through plot.spawn via player.RespawnLocation.
+	local character = player.Character
+	if not character then
+		return
+	end
+	local hrp = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if hrp then
+		hrp.CFrame = CFrame.new(plot.center + Vector3.new(0, 5, 0))
+	end
+end
+
 local function allocate(player: Player): PlotInfo?
 	for _, plot in plots do
 		if plot.ownerUserId == nil then
 			plot.ownerUserId = player.UserId
 			playerToPlot[player] = plot
+			player:SetAttribute("PlotId", plot.id) -- replicates to that client (B4)
+			player.RespawnLocation = plot.spawn
+			teleportToPlot(player, plot)
 			print(string.format("[PlotManager] Allocated Plot%d to %s", plot.id, player.Name))
 			flushPendingAllocation(player)
 			return plot
@@ -159,6 +194,7 @@ local function release(player: Player)
 	end
 	playerToPlot[player] = nil
 	plot.ownerUserId = nil
+	player:SetAttribute("PlotId", nil)
 	-- Wipe any in-progress placements; persistent state lives in DataStore
 	-- and re-applies on the next allocation (Phase B3).
 	for _, child in plot.buildings:GetChildren() do

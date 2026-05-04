@@ -412,9 +412,133 @@ input rather than the Command Bar.
 
 ---
 
-## B4 — Build mode UI ⏳
+## B4 — Build mode UI ✅
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### Architectural change
+
+- **`BuildableRegistry` moved** from `src/server/Modules/Build/` to
+  `src/shared/Modules/Registry/`. Client UI needs catalog data
+  (display name, cost, size, color) for the palette button labels
+  and preview Part sizing. Keeping the catalog server-only would
+  have meant duplicating it client-side, which drifts. The module's
+  `BuildPart` function still creates server-side Parts when called
+  from `PlacementService` — convention-driven (clients don't call it).
+
+### What was built
+
+- **`PlotManager.luau`** — gained per-plot `SpawnLocation` (Enabled =
+  false; the spawn is plot-specific, set via `player.RespawnLocation`
+  rather than team affinity) + `player:SetAttribute("PlotId", N)` on
+  allocate (replicates to that client only) + character teleport on
+  allocate if the character already exists.
+- **`PlacementService.luau`** — require path for `BuildableRegistry`
+  updated to the shared location. No behavioral change.
+- **`src/shared/Modules/Lib/HudFormat.luau`** — `Abbreviated` (1.5K /
+  2.5M) and `WithCommas` formatters. Pure functions over numbers.
+- **`src/client/Modules/HUD/CreditsDisplay.luau`** — top-right
+  ScreenGui readout. Listens to `Remotes.CreditsChanged` and
+  refreshes via `HudFormat.Abbreviated`.
+- **`src/client/Modules/HUD/HudController.luau`** — top-level
+  orchestrator. B4 ships with CreditsDisplay; later phases append
+  HealthDisplay, WaveTimer, Minimap.
+- **`src/client/Modules/Build/BuildPalette.luau`** — bottom-center
+  ScreenGui with one button per `PALETTE_ORDER` entry (extractor,
+  wall). Reads catalog from shared `BuildableRegistry`. Tap toggles
+  selection. Subscribes are notified via `OnSelectionChanged`.
+- **`src/client/Modules/Build/PlacementPreview.luau`** — ghost Part
+  follows cursor (raycast from camera through `GetMouseLocation`),
+  snaps to grid via shared `GridMath.SnapToCell`, tints green/red
+  based on **advisory** validation (in-plot, occupancy via Buildings
+  folder scan, node availability for extractors). Server still
+  authoritatively validates on `PlaceBuilding` receipt — the client
+  flag only suppresses obviously-bad Remotes from going out.
+- **`src/client/Modules/Build/BuildController.luau`** — wires the
+  three pieces. `UserInputService.InputBegan` filters out
+  GUI-consumed inputs; mouse-1 / touch over the world fires
+  `Remotes.PlaceBuilding:FireServer(buildableId, cellX, cellZ)` if
+  the advisory snap is valid.
+- **`src/client/init.client.luau`** — `HudController.Init()` +
+  `BuildController.Init()` after the existing diagnostic print.
+
+### Audit (B4-scope, sandbox-side)
+
+- `--!strict` on all 22 `.luau` files (was 18; added 5 client + 1
+  shared HudFormat)
+- `stylua --check` clean
+- `rojo build` produces a `.rbxl` with the new tree
+- `BuildableRegistry` now appears under `ReplicatedStorage.Shared.Modules.Registry`
+
+### Audit (B4-scope, Studio-side — pending your local run)
+
+After F5 (with Server Authority Beta enabled):
+
+1. **HUD appears.** Top-right shows `0 Credits`. Bottom-center shows
+   two palette buttons (Extractor 50¢, Wall 20¢).
+2. **Spawn location.** You spawn on your plot, not at world origin.
+   Output should still include the Phase B prints (PlotManager,
+   ResourceNodeSpawner, etc.).
+3. **Place via UI:**
+   - Server-context Command Bar:
+     `require(game.ServerScriptService.Server.Modules.Economy.CurrencyService).Add(game.Players:GetPlayers()[1], 200)`
+   - HUD updates to `200 Credits`.
+   - Tap **Wall**. Ghost Part follows cursor; tints green over open
+     cells in your plot, red over occupied / out-of-plot.
+   - Tap on a green cell. Wall appears, HUD drops to `180 Credits`.
+   - Tap **Extractor**. Ghost tints green only over unclaimed nodes.
+     Tap a node. Extractor appears, HUD drops further, then ticks
+     up at 1/sec.
+4. **Phase B audit gate (full loop):** stop play, F5 again. Walls
+   and extractors are restored on your plot (Phase B3); Credits
+   restored to last saved value; income tick resumes.
+5. **Two-client playtest** (Test → Local Server → 2 clients):
+   each client gets its own plot, sees its own HUD, places its own
+   buildings. Credits don't bleed between players.
+
+This is the **canonical Phase B audit gate** per
+`10_BUILD_PROTOCOL.md` ("Two-client playtest. Both players can
+perform the loop. State persists across rejoin.").
+
+### Tech debt / deferred
+
+- **Visuals are debug-grade.** Plain frames, no animations, no
+  spring tweens on credit changes. Phase G aesthetic pass replaces.
+- **Mobile UX is functional, not polished.** Palette buttons are
+  large enough for thumb taps but the bottom-center placement
+  collides with the default Roblox mobile control pad on some
+  devices. Phase G repositions.
+- **No build-mode toggle.** Build mode is always on. Phase B5
+  introduces the camera + mode state machine (`Mode.Build` vs
+  `Mode.Combat`); palette visibility will gate on mode then.
+- **No rotation.** Phase B5 / G may add an additive `r: number?`
+  field to `SerializedBuilding`.
+- **No PlacementResult Remote.** Failures are silent on the wire;
+  the client sees the ghost stay at the cell with no feedback.
+  Phase F4 (FTUE polish) likely adds a `PlacementResult` event for
+  toast notifications.
+- **Advisory validation duplicates server logic.** Cell occupancy
+  is checked client-side by scanning the Buildings folder; if
+  validation rules diverge between client and server, players
+  experience "ghost says green, server rejects" — annoying. Phase
+  F4 may unify by routing through a shared `PlacementValidator`
+  module that both sides require.
+- **Character teleport-on-allocate** uses HRP CFrame. If the
+  character isn't fully loaded yet (rare race), the teleport
+  silently no-ops and the player walks from world origin.
+  RespawnLocation handles subsequent respawns correctly.
+
+### What's next
+
+B5 — camera transition (TP↔FP). `CameraController` for smooth
+TweenService blend, `ModeController` state machine
+(Build / Combat / Raid), `InputRouter` for the `Constants.FEATURES.debugModeToggle`
+keybind. The B5 prototype is the **go/no-go gate** per
+`finalized-brainstorm.md` §3.4 risk #2 — if the swap feels bad,
+Soft V1 falls back to TP-only with FP zoom for combat.
+
+---
 
 ## B5 — Camera transition (TP↔FP) ⏳
 

@@ -2,15 +2,22 @@
 -- Outpost-7 — client bootstrap.
 --
 -- Thin requires-and-Init() bootstrapper. Real logic lives in Modules/.
--- A4: requires the shared modules to verify replication. The print is
--- the audit signal — if it lands in Studio's Output, ReplicatedStorage
--- is replicating the Shared tree to the client.
+-- Order:
+--   1. HUD (CreditsDisplay etc.) — no dependencies; up first.
+--   2. Build mode (palette + preview + input) — listens for Remotes
+--      that the HUD also reads, but no direct dep.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
 local Enums = require(Shared:WaitForChild("Enums"))
+
+local HudController = require(script.Modules.HUD.HudController)
+local BuildController = require(script.Modules.Build.BuildController)
+
+HudController.Init()
+BuildController.Init()
 
 print(
 	string.format(
