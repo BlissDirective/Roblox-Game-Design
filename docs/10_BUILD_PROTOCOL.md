@@ -7,7 +7,7 @@
 ## Relationship to other docs
 
 - `01_AGENT.md` — Claude's identity, engineering principles, communication style. **Does not change.** This file does not override it.
-- `09_BRAINSTORM.md` — The completed concept worksheet. This protocol assumes Steps 1–8 are filled in and Step 7 (the North Star sentence) is locked.
+- `finalized-brainstorm.md` — The completed concept worksheet. This protocol assumes Steps 1–8 are filled in and Step 7 (the North Star sentence) is locked.
 - `06_LUAU_REFERENCE.md` / `07_PROJECT_STRUCTURE.md` — Code patterns and file layout. Reference these instead of restating them here.
 
 If anything in this file conflicts with `01_AGENT.md`, `01_AGENT.md` wins.
@@ -16,7 +16,7 @@ If anything in this file conflicts with `01_AGENT.md`, `01_AGENT.md` wins.
 
 ## Mission
 
-**Build a fully deployable Roblox game from the locked concept in `09_BRAINSTORM.md`, autonomously, in phases, with the human in the loop only for taste decisions and high-stakes calls.**
+**Build a fully deployable Roblox game from the locked concept in `finalized-brainstorm.md`, autonomously, in phases, with the human in the loop only for taste decisions and high-stakes calls.**
 
 The implicit thesis: a solo dev with this stack should ship a real, playable, monetized V1 in 4–8 weeks. Not a perfect game. A *real* one — that 50 humans can play, that has clean monetization, that has a daily-return reason, that runs on a phone.
 
@@ -24,7 +24,7 @@ The implicit thesis: a solo dev with this stack should ship a real, playable, mo
 
 ## Inputs the agent expects from brainstorm.md
 
-Before starting Phase 3, Claude verifies `09_BRAINSTORM.md` contains:
+Before starting Phase 3, Claude verifies `finalized-brainstorm.md` contains:
 
 | Field | Required? | Where to find it |
 |---|---|---|
@@ -167,7 +167,7 @@ The Plan→Confirm→Build→Verify→Commit→Report cycle is the unit of work.
 
 🛑 **Anything that could violate Roblox Terms of Service.** Includes: unmoderated user-generated content, off-platform redirects, copyrighted IP usage, content age-inappropriate for the audience tier, anything resembling gambling for under-13s.
 
-🛑 **Scope expansion beyond V1 must-haves.** If Claude finds itself wanting to add "just one more system" not in `09_BRAINSTORM.md` Step 8, **stop and ask.** Scope creep is the #1 reason V1s don't ship.
+🛑 **Scope expansion beyond V1 must-haves.** If Claude finds itself wanting to add "just one more system" not in `finalized-brainstorm.md` Step 8, **stop and ask.** Scope creep is the #1 reason V1s don't ship.
 
 🛑 **Any decision that would meaningfully shape the player's first 30 seconds.** FTUE is taste-critical. Layout of starter UI, first-quest design, opening camera angle, first reward feel — these need human input.
 
@@ -331,7 +331,7 @@ This format keeps reviews fast. The human reads ~30 lines, decides yes/no/discus
 
 ## When to abandon the protocol
 
-The protocol serves the goal, not the other way around. If during the build something significant changes — concept needs revision, a system fundamentally doesn't work as designed, the audience signal from beta is loud and clear — pause the protocol. Re-do `09_BRAINSTORM.md`. Re-plan phases.
+The protocol serves the goal, not the other way around. If during the build something significant changes — concept needs revision, a system fundamentally doesn't work as designed, the audience signal from beta is loud and clear — pause the protocol. Re-do `finalized-brainstorm.md`. Re-plan phases.
 
 Sticking to a flawed plan because the protocol said so is worse than re-planning.
 
@@ -339,7 +339,7 @@ Sticking to a flawed plan because the protocol said so is worse than re-planning
 
 ## Kickoff prompt (use this exact text to start Phase 3)
 
-Once `09_BRAINSTORM.md` Steps 1–8 are filled in and the North Star is locked, paste this into Claude Code:
+Once `finalized-brainstorm.md` Steps 1–8 are filled in and the North Star is locked, paste this into Claude Code:
 
 ```
 We are starting Phase 3 — build mode.
@@ -347,9 +347,9 @@ We are starting Phase 3 — build mode.
 Read in this order:
 1. docs/01_AGENT.md (your identity and principles)
 2. docs/10_BUILD_PROTOCOL.md (this build workflow)
-3. docs/09_BRAINSTORM.md (the locked concept)
+3. docs/finalized-brainstorm.md (the locked concept)
 
-Verify all required fields are present in 09_BRAINSTORM.md per the input
+Verify all required fields are present in finalized-brainstorm.md per the input
 checklist in 10_BUILD_PROTOCOL.md. If anything is missing, ask up to 3
 clarifying questions, otherwise proceed.
 
@@ -373,7 +373,7 @@ the research pass.
 - The actual code (that's `06_LUAU_REFERENCE.md` and the templates within it)
 - File layout details (that's `07_PROJECT_STRUCTURE.md`)
 - MCP setup (that's `08_MCP_SETUP.md`)
-- Concept selection (that's `09_BRAINSTORM.md`)
+- Concept selection (that's `finalized-brainstorm.md`)
 - Engineering principles (those are `01_AGENT.md`)
 
 This file is **only the workflow protocol.** Everything else has its own home.

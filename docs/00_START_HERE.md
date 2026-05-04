@@ -25,7 +25,8 @@ The goal: build a **highly-played, highly-monetized Roblox game** as a solo deve
 | 06 | **LUAU_REFERENCE.md** | Writing or reviewing any code. Anti-exploit patterns. DataStore. RemoteEvents. |
 | 07 | **PROJECT_STRUCTURE.md** | Setting up the repo. File naming. Rojo. Where things live. |
 | 08 | **MCP_SETUP.md** | First-time setup. Connecting Claude Code to Roblox Studio. Troubleshooting. |
-| 09 | **BRAINSTORM.md** | Phase 2 — picking what to actually build. |
+| 09 | **finalized-brainstorm.md** | Phase 2 — picking what to actually build. Locked concept, V1 scope, phase plan. |
+| 10 | **BUILD_PROTOCOL.md** | Workflow loop: Plan → Confirm → Build → Verify → Commit → Report. |
 
 ---
 
@@ -47,7 +48,7 @@ This means every doc is written assuming **zero prior Roblox knowledge**. When s
 You and Claude get on the same page about the platform, the economics, the engineering, and what wins.
 
 ### Phase 2 — Concept (THIS IS NEXT)
-Use `09_BRAINSTORM.md` as a worksheet. Generate 5–10 concepts. Score them. Pick one.
+Use `finalized-brainstorm.md` as a worksheet. Generate 5–10 concepts. Score them. Pick one.
 
 ### Phase 3 — Build
 - Set up Roblox Studio + Claude Code + MCP (see `08_MCP_SETUP.md`)

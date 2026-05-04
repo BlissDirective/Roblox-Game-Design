@@ -251,7 +251,7 @@ Examples to play with:
 - "An RPG with social hangout space, themed around a fashion academy" → female-skewed, voice-chat ready
 - "A strategy game with collection mechanics, themed around mythological pets"
 
-`09_BRAINSTORM.md` is where you'll actually generate concepts using this thinking.
+`finalized-brainstorm.md` is where you'll actually generate concepts using this thinking.
 
 ---
 

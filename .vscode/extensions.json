@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "JohnnyMorganz.luau-lsp",
+    "JohnnyMorganz.stylua",
+    "Kampfkarren.selene-vscode",
+    "evaera.vscode-rojo",
+    "EditorConfig.EditorConfig",
+    "eamodio.gitlens",
+    "aaron-bond.better-comments",
+    "redhat.vscode-yaml",
+    "tamasfe.even-better-toml",
+    "DavidAnson.vscode-markdownlint"
+  ]
+}

@@ -1,0 +1,16 @@
+# CODEOWNERS — every file is owned by the maintainer at V1.
+# When contributors join, split ownership by domain (e.g. /src/server/Modules/Combat → @combat-lead).
+#
+# Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @BlissDirective
+
+# Especially sensitive surfaces — keep ownership tight even after team grows
+/src/server/Modules/Security/        @BlissDirective
+/src/server/Modules/Monetization/    @BlissDirective
+/src/server/Modules/Player/          @BlissDirective
+/.github/workflows/                  @BlissDirective
+/CLAUDE.md                           @BlissDirective
+/docs/01_AGENT.md                    @BlissDirective
+/docs/10_BUILD_PROTOCOL.md           @BlissDirective
+/docs/REPO_STRUCTURE.md              @BlissDirective

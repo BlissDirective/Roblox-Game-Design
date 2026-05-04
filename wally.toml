@@ -1,0 +1,18 @@
+[package]
+name = "blissdirective/outpost-7"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+description = "Outpost-7 — sci-fi colonization tycoon × wave defense × PvP raids"
+license = "MIT"
+
+# Shared dependencies (replicated to client). Add as needed during Phase A.
+[dependencies]
+# Promise = "evaera/promise@4.0.0"
+# Signal = "sleitnick/signal@1.5.0"
+
+[server-dependencies]
+# ProfileService = "ttstrike/profileservice@1.4.4"
+
+[dev-dependencies]
+# TestEZ = "roblox/testez@0.4.1"

@@ -1,0 +1,43 @@
+# Build artifacts
+build/
+place/*.rbxl
+place/*.rbxlx
+place/*.rbxm
+place/*.rbxmx
+!place/.gitkeep
+
+# Wally packages (managed by `wally install`)
+Packages/
+ServerPackages/
+DevPackages/
+wally-package.json
+
+# Lune / sourcemap
+sourcemap.json
+
+# Aftman tool cache
+.aftman/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+*.iml
+
+# Local env / secrets
+.env
+.env.local
+*.local
+
+# Logs
+*.log
+logs/
+
+# Coverage / test output
+coverage/
+test-results/
+
+# Generated asset manifest is committed (do NOT ignore src/shared/AssetIds.luau)

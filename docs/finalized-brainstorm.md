@@ -310,13 +310,19 @@ This section translates each phase into concrete tool/code recommendations groun
 | Layer | Tool | Why |
 |---|---|---|
 | Language | **Luau** with strict type annotations, `.luau` extension | Per `10_BUILD_PROTOCOL.md` — non-negotiable. Strict mode catches 60% of bugs at edit time. |
-| Sync | **Rojo** (`rojo.space`) | Industry standard. Local file editing → Studio sync. |
-| Editor | **VS Code** + Roblox LSP + Selene linter + StyLua formatter | Tier-1 Luau dev experience. |
+| Toolchain pinning | **Aftman** (`aftman.toml`) | Pins Rojo / Selene / StyLua / Wally / Lune versions across local + CI. One source of truth — no "works on my machine" drift. |
+| Package manager | **Wally** (`wally.toml`) | Standard Luau dependency manager. Installs to `Packages/` (shared), `ServerPackages/` (server-only), `DevPackages/` (test/CI only). The `wally.lock` file is committed. |
+| Sync | **Rojo** (`rojo.space`) | Industry standard. Local file editing → Studio sync. `default.project.json` is the authoritative project descriptor. |
+| Editor | **VS Code** + Roblox LSP + Selene linter + StyLua formatter | Tier-1 Luau dev experience. Settings checked in at `.vscode/settings.json`. |
 | Source control | **Git** + GitHub (private repo) | Phase commits per build protocol. |
 | MCP | **Roblox Studio MCP** (per `08_MCP_SETUP.md`) | Lets Claude Code drive Studio operations during build sessions. |
-| Asset pipeline | **Roblox Studio Asset Manager** + Roblox Marketplace | Per `02_11_asset_pipeline.md`. Don't build models from scratch. |
+| Asset pipeline | **Roblox Studio Asset Manager** + Roblox Marketplace + **Open Cloud Assets API** uploader | Per `02_11_asset_pipeline.md`. Marketplace assets are imported manually; first-party assets (icons, custom decals, sounds) upload via Open Cloud and are pinned in a checked-in `src/shared/AssetIds.luau` manifest. Full mechanics in `docs/playbooks/PUBLISHING.md`. |
 | Build orchestration | **Claude Code** running per `10_BUILD_PROTOCOL.md` | The agent + protocol does the building; you do taste decisions. |
+| Build artifact | **`.rbxl`** (binary) via `rojo build default.project.json --output build/Game.rbxl` | Matches the Roblox demo-repo convention. Smaller and faster to upload than `.rbxlx`. Open Cloud `places:update` accepts it directly. |
+| Release pipeline | **Open Cloud `places:update`** + GitHub Actions (`.github/workflows/release.yml`) | Push-button publish to a chosen place. Requires `ROBLOX_API_KEY` (secret) and `UNIVERSE_ID` / `PLACE_ID` (vars). See `docs/playbooks/PUBLISHING.md`. |
 | Music/SFX | **Roblox Audio Library** (free) + **Pixabay/Audiio** (royalty-free synthwave) | $20–50 of premium tracks lifts atmosphere significantly. |
+
+**Caveat — content Open Cloud cannot publish remotely:** CSG operations (`UnionAsync` / `SubtractAsync`), `EditableMesh`, and `EditableImage` instances must be authored and committed from a Studio session at least once. CI can ship code changes around them, but the geometry/textures themselves require a one-time manual Studio publish per asset. Track each such asset in `docs/playbooks/PUBLISHING.md` so launch day doesn't surface surprises.
 
 ### 4.2 Phase A — Foundation (Week 1)
 
@@ -471,10 +477,15 @@ This section translates each phase into concrete tool/code recommendations groun
 
 | Sub-phase | Concrete deliverables |
 |---|---|
-| H1 | Game icon (3 versions A/B test ready), 3 thumbnails (transformation, defense, raid moment) |
+| H1 | Game icon (3 versions A/B test ready), 3 thumbnails (transformation, defense, raid moment) — uploaded via Open Cloud, IDs pinned in `src/shared/AssetIds.luau` |
 | H2 | Game description, tags, age rating (13+ for combat) |
 | H3 | Studio 8-client simulation passes — no desync, no DataStore conflicts |
-| H4 | Friends-only soft test — see §5 below |
+| H4 | **Build artifact verified** — `rojo build default.project.json --output build/Game.rbxl` produces a valid `.rbxl` that opens cleanly in Studio. CI artifact retention enabled. |
+| H5 | **Open Cloud release pipeline live** — `.github/workflows/release.yml` publishes `build/Game.rbxl` to the live place via `places:update`. Required GitHub **secret**: `ROBLOX_API_KEY` (Open Cloud key, scoped to *Place: Update* on the target universe). Required GitHub **vars**: `UNIVERSE_ID`, `PLACE_ID`. Manual dry-run against a staging place first. |
+| H6 | **CSG / EditableMesh / EditableImage one-time publish** — every asset of these types is authored in Studio and committed before the first CI release, because Open Cloud cannot materialize them remotely. Inventory tracked in `docs/playbooks/PUBLISHING.md`. |
+| H7 | Friends-only soft test — see §5 below |
+
+**Full deployment mechanics live in `docs/playbooks/PUBLISHING.md`** — read it before any release.
 
 ### 4.10 Phase I — Launch buffer (Weeks 16–18)
 
@@ -672,9 +683,9 @@ We are starting Phase 3 — build mode.
 Read in this order:
 1. docs/01_AGENT.md (your identity and principles)
 2. docs/10_BUILD_PROTOCOL.md (this build workflow)
-3. docs/09_BRAINSTORM.md (the locked concept — Outpost-7)
+3. docs/finalized-brainstorm.md (the locked concept — Outpost-7)
 
-Verify all required fields are present in 09_BRAINSTORM.md per the input
+Verify all required fields are present in finalized-brainstorm.md per the input
 checklist in 10_BUILD_PROTOCOL.md (§9 of the doc confirms all are present).
 Proceed without asking permission.
 

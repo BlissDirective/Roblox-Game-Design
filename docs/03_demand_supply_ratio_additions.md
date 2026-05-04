@@ -40,7 +40,7 @@ This is rough math, not science — but it's a useful gate. If you can't articul
 
 ---
 
-## Edit 2 — `09_BRAINSTORM.md`
+## Edit 2 — `finalized-brainstorm.md`
 
 **Where:** In Step 3's Claude prompt, add a 13th item to the per-concept output list.
 

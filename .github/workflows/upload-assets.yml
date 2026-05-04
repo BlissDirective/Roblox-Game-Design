@@ -1,0 +1,69 @@
+name: Upload assets to Roblox (Open Cloud)
+
+# Manually triggered. Walks assets/ and uploads any new/changed files via the
+# Open Cloud Assets API, then regenerates src/shared/AssetIds.luau with the
+# returned asset IDs and opens a PR.
+#
+# Roblox asset IDs are immutable once uploaded — DO NOT re-upload on every push.
+# Run this workflow only when you've added or changed binary assets.
+#
+# Required GitHub repository config:
+#   secrets:
+#     ROBLOX_API_KEY     — Open Cloud API key, scope: asset:read + asset:write
+#                          (and the creator must be ID-verified for audio uploads)
+#
+# Reference: https://create.roblox.com/docs/cloud/guides/usage-assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Don't upload, just show what would change"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upload-assets
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    name: Walk assets/ and upload via Open Cloud
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run upload script
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          chmod +x tools/scripts/upload-assets.sh
+          ./tools/scripts/upload-assets.sh
+
+      - name: Open PR with regenerated AssetIds.luau
+        if: github.event.inputs.dry_run != 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: assets/auto-upload-${{ github.run_number }}
+          title: "[assets] Auto-upload + regenerate AssetIds.luau"
+          body: |
+            Automated asset upload from `tools/scripts/upload-assets.sh`.
+
+            Review the diff for `src/shared/AssetIds.luau` before merging.
+          commit-message: "[assets] Auto-upload via Open Cloud — regenerate AssetIds.luau"
+          add-paths: |
+            src/shared/AssetIds.luau
+            tools/asset-import/upload-manifest.json

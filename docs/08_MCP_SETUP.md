@@ -319,4 +319,4 @@ For routine "add this one print statement" work, just do it.
 
 ---
 
-**Next: `09_BRAINSTORM.md` — pick the actual concept to build.**
+**Next: `finalized-brainstorm.md` — pick the actual concept to build.**

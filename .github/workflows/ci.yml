@@ -1,0 +1,63 @@
+name: CI
+
+# Lint + format check + Rojo build on every PR and push to main.
+# Catches "this won't even compile in Studio" before it reaches a human reviewer.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Lint, format, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Aftman toolchain
+        uses: ok-nick/setup-aftman@v0.4.2
+        with:
+          version: "v0.3.0"
+
+      - name: Cache Wally packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            Packages
+            ServerPackages
+            DevPackages
+          key: ${{ runner.os }}-wally-${{ hashFiles('wally.lock', 'wally.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-wally-
+
+      - name: Install Wally packages
+        run: wally install
+
+      - name: Lint (Selene)
+        run: selene src/ tests/
+
+      - name: Format check (StyLua)
+        run: stylua --check src/ tests/
+
+      - name: Build place file (Rojo)
+        run: |
+          mkdir -p build
+          rojo build --output build/Game.rbxl
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Game.rbxl
+          path: build/Game.rbxl
+          retention-days: 7

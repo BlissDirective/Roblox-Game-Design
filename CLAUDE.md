@@ -23,6 +23,7 @@
 4. `docs/07_PROJECT_STRUCTURE.md` — file layout
 5. `docs/06_LUAU_REFERENCE.md` — code patterns
 6. `docs/REPO_STRUCTURE.md` — full repo tree (Phase A1 checklist)
+7. `docs/playbooks/PUBLISHING.md` — Open Cloud deployment pipeline (read before any release)
 
 Pull other docs (`02`–`05`, `08`) on demand when the topic comes up.
 
@@ -90,4 +91,4 @@ Pull other docs (`02`–`05`, `08`) on demand when the topic comes up.
 
 The V1 must-have list lives in `docs/finalized-brainstorm.md` §2.8. The V1.5+ deferred list is §2.9. Anything not on §2.8 is out of scope unless explicitly approved.
 
-If `01_AGENT.md` and any other doc disagree, **`01_AGENT.md` wins.**
+If `docs/01_AGENT.md` and any other doc disagree, **`docs/01_AGENT.md` wins.**
