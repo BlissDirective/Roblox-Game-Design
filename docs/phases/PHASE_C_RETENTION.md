@@ -388,6 +388,120 @@ Phase C; the four-mechanic retention stack is then complete.
 
 ---
 
-## C4 — Offline progression ⏳
+## C4 — Offline progression ✅ — closes Phase C
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### What was built
+
+- **`Player/DataManager.luau`** — gained per-player `sessionMeta`
+  table tracking `previousLastJoinAt`. Captured during LoadPlayer
+  *before* the bookkeeping write so OfflineProgression can read it
+  on rejoin. Cleared on PlayerRemoving alongside the loadedSignal.
+  New public API: `GetSessionMeta(player)`.
+- **`Build/BuildRestorer.luau`** — exposes `OnRestoreComplete:
+  RBXScriptSignal`. Fires after Restore completes (success-or-fail,
+  including the `#saved == 0` path so OfflineProgression's
+  "no-income → no-popup" branch runs cleanly without waiting).
+- **`Economy/CurrencyService.luau`** — added
+  `GetTotalIncomePerSecond(player)`. Sums all currently-registered
+  extractors' income; reads 0 if the player has none.
+- **`Retention/OfflineProgression.luau`** — `GrantOnJoin(player)`:
+  `elapsed = os.time() - previousLastJoinAt` capped at
+  `Constants.RETENTION.OfflineProgressionCapSeconds` (12h),
+  multiplied by `GetTotalIncomePerSecond`, granted via
+  `CurrencyService.Add`, fired to client via `Remotes.WelcomeBack`.
+  Skips silently for first-ever joins (no previous timestamp) and
+  for players with no extractors.
+- **`Remotes.luau`** — `WelcomeBack` (Server → Client Event).
+- **`init.server.luau`** — `OfflineProgression.Init()` wired last,
+  after `DailyQuestManager.Init()`. Comment notes the ordering
+  requirement (must be after BuildRestorer.Init so the
+  `OnRestoreComplete` subscription is in place before the first
+  player's restore fires).
+- **`Retention/WelcomeBackPopup.luau`** — centered modal showing
+  away time (with "capped at 12h" suffix when `wasCapped`),
+  income rate, and the granted Credits total. Single Collect
+  button dismisses.
+- **`init.client.luau`** — wired `WelcomeBackPopup.Init()` last.
+
+### Audit (C4-scope, sandbox-side)
+
+- 38 `.luau` files — `--!strict` on all
+- `stylua --check` clean
+- `rojo build` produces a `.rbxl` with the new tree
+
+### Audit (C4-scope, Studio-side — pending your local run)
+
+After F5:
+
+1. **First join (new account)** — no popup. Output is silent on
+   OfflineProgression (no `previousLastJoinAt`).
+2. **Place an extractor** — start earning income. Note the
+   per-second rate (1/sec for one extractor at V1 values).
+3. **Stop play (Shift+F5).** `lastJoinAt` saves through
+   ProfileStore EndSession.
+4. **Time-shift** in Server Command Bar (so the rejoin sees a
+   gap) — easier than waiting:
+   ```luau
+   local DM = require(game.ServerScriptService.Server.Modules.Player.DataManager)
+   local p = game.Players:GetPlayers()[1]
+   DM.GetData(p).lastDailyClaim = nil  -- avoid C1 popup interfering
+   -- Force the saved lastJoinAt back 30 minutes:
+   DM.GetData(p).lastJoinAt = os.time() - 1800
+   ```
+   Stop, F5 again. Output should include
+   `[OfflineProgression] <Name> away 1800s (capped 1800s), income N/s → +M credits`.
+   The Welcome Back popup shows: "Away: 30m", "Income rate: N/sec",
+   "+M Credits". Click Collect → popup closes, HUD shows the
+   new total.
+5. **Cap test.** Set `lastJoinAt = os.time() - 86400` (24h);
+   rejoin. Expect "Away: 24h (capped at 12h)". Granted = 12h ×
+   income rate.
+6. **No-income path.** Player with zero extractors and a previous
+   join: no popup, no grant, no log line.
+
+### Tech debt / deferred
+
+- **Wave damage during offline.** V1 assumes bases survive offline
+  (no PvE waves while away). Phase E may add wave persistence so
+  long absences cost the player some defenders, balancing the
+  offline grant.
+- **No multiplier interaction.** Phase D's 2x Credits pass should
+  multiply offline income too. Implementation lands when
+  `GamePassService.SetMultiplier` is wired — at that point
+  OfflineProgression will read the multiplier just like
+  CurrencyService's tick does.
+- **No animation.** Welcome Back popup snaps in. Phase G adds
+  spring tween + coin spill on Collect.
+- **Popup ordering.** If a player is also eligible for the daily
+  login popup (C1), both fire on join. They can stack (Welcome
+  Back behind Daily Login). For V1 this is fine — close one and
+  the other is still readable. F4 may sequence them.
+
+### Phase C status
+
+**All four daily-return mechanics shipped.** Server enforces every
+gate; clients render. Phase C audit gate per
+`10_BUILD_PROTOCOL.md`: time-shift test (`lastDailyClaim`,
+`lastQuestReset`, `lastJoinAt` Command Bar manipulation) verifies
+streak / quest reset / offline grant logic without waiting for
+real UTC midnight. Per-mechanic recipes are in their respective
+sub-phase entries above.
+
+**Phase C commits:**
+- `94faf80` C1 — daily login + 7-day streak
+- `8e63afc` C2 — restocking blueprint shop
+- `29ac845` C3 — daily quests + cross-service event bus
+- `<this commit>` C4 — offline progression
+
+### What's next
+
+Phase D — monetization. Game Passes (2× Credits, Auto-Collect,
+VIP Operator), Developer Products (Emergency Shield, Credit Packs,
+Core Pack), Battle Pass infrastructure, idempotent
+`MarketplaceService.ProcessReceipt`. ADR-001's "ProcessReceipt
+idempotency" rule from the brainstorm §4.5 is the highest-stakes
+guarantee in this phase — duplicate receipt firings (Roblox can
+fire twice) must not double-grant.

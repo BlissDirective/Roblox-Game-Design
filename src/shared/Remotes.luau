@@ -91,6 +91,12 @@ local Remotes = {
 	-- Client → Server (RemoteFunction). Args: (questId: string).
 	-- Returns DailyQuestManager.ClaimResult.
 	ClaimQuest = getOrCreate("ClaimQuest", "RemoteFunction") :: RemoteFunction,
+
+	-- Phase C4 — Retention / offline progression:
+	-- Server → Client. Args: (payload: OfflineProgression.WelcomeBack).
+	-- Fired once per join when the player has accrued offline income.
+	-- Skipped silently for new players or players with no extractors.
+	WelcomeBack = getOrCreate("WelcomeBack", "RemoteEvent") :: RemoteEvent,
 }
 
 return Remotes

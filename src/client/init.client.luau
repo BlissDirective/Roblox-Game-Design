@@ -22,6 +22,7 @@ local BuildController = require(script.Modules.Build.BuildController)
 local DailyLoginPopup = require(script.Modules.Retention.DailyLoginPopup)
 local ShopController = require(script.Modules.Shop.ShopController)
 local DailyQuestsPanel = require(script.Modules.Retention.DailyQuestsPanel)
+local WelcomeBackPopup = require(script.Modules.Retention.WelcomeBackPopup)
 
 HudController.Init()
 CameraController.Init()
@@ -30,6 +31,7 @@ BuildController.Init()
 DailyLoginPopup.Init()
 ShopController.Init()
 DailyQuestsPanel.Init()
+WelcomeBackPopup.Init()
 
 print(
 	string.format(

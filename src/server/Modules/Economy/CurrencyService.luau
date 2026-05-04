@@ -152,6 +152,21 @@ function CurrencyService.GetCores(player: Player): number
 	return if data then data.cores else 0
 end
 
+-- Sum of all currently-registered extractors' per-second income for
+-- the player. C4's OfflineProgression reads this post-restore to
+-- compute `elapsed × income` for the offline grant.
+function CurrencyService.GetTotalIncomePerSecond(player: Player): number
+	local set = extractorsByPlayer[player]
+	if not set then
+		return 0
+	end
+	local sum = 0
+	for _, buildable in set do
+		sum += buildable.income
+	end
+	return sum
+end
+
 function CurrencyService.SetMultiplier(player: Player, value: number)
 	-- Bounded sanity. Multipliers above 10 are almost certainly bugs;
 	-- log and clamp instead of trusting the caller blindly.

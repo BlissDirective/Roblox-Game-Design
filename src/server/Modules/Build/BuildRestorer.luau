@@ -33,9 +33,19 @@ type PlotInfo = PlotManager.PlotInfo
 
 local BuildRestorer = {}
 
+-- Fires after Restore completes (success-or-fail) for a player.
+-- C4's OfflineProgression subscribes so it can read the now-registered
+-- extractor income to compute the offline grant. Subsequent phases can
+-- subscribe for similar "post-restore" hooks.
+local onRestoreComplete = Instance.new("BindableEvent")
+BuildRestorer.OnRestoreComplete = onRestoreComplete.Event
+
 function BuildRestorer.Restore(player: Player, plot: PlotInfo): (number, number)
 	local saved = BaseSerializer.Get(player)
 	if #saved == 0 then
+		-- Still fire the signal so OfflineProgression's "0 income →
+		-- no popup" path runs cleanly instead of waiting forever.
+		onRestoreComplete:Fire(player, plot, 0, 0)
 		return 0, 0
 	end
 
@@ -70,6 +80,7 @@ function BuildRestorer.Restore(player: Player, plot: PlotInfo): (number, number)
 			successCount + failCount
 		)
 	)
+	onRestoreComplete:Fire(player, plot, successCount, failCount)
 	return successCount, failCount
 end
 

@@ -21,6 +21,7 @@ rows as Remotes are introduced.
 | `BuyShopItem` | Client → Server (Function) | `(blueprintId: string)` | `RATE_LIMITS.Default` (further gated by per-rotation per-item one-shot enforcement) | C2 | Server validates: blueprint id exists, item is in current rotation's stock, not already bought this rotation, affordable via `CurrencyService.TrySpend`. Returns `ShopService.BuyResult`. |
 | `DailyQuestState` | Server → Client (Event) | `(state: DailyQuestManager.State)` — fired only to the affected client | n/a (server-driven) | C3 | Push of today's 3 active quests + per-quest progress + claim flags + `secondsUntilReset`. Fires on join, on every quest progress advance, after every successful ClaimQuest, and on UTC day rollovers. |
 | `ClaimQuest` | Client → Server (Function) | `(questId: string)` | `RATE_LIMITS.Default` (further gated by per-quest one-shot — already-claimed quests reject) | C3 | Server validates: quest id is in today's set, objective.target met, not already claimed. Grants Credits + Cores via `CurrencyService.Add` + `CurrencyService.AddCores`. Returns `DailyQuestManager.ClaimResult`. |
+| `WelcomeBack` | Server → Client (Event) | `(payload: OfflineProgression.WelcomeBack)` — fired only to the affected client | n/a (server-driven) | C4 | One-shot per join when offline progression accrued any Credits. Skipped silently for new players or players with no extractors. Fired after BuildRestorer.OnRestoreComplete so the income calc can read newly-registered extractors. |
 
 ---
 

@@ -23,6 +23,7 @@ local BuildRestorer = require(script.Modules.Build.BuildRestorer)
 local DailyLoginManager = require(script.Modules.Retention.DailyLoginManager)
 local ShopService = require(script.Modules.Economy.ShopService)
 local DailyQuestManager = require(script.Modules.Retention.DailyQuestManager)
+local OfflineProgression = require(script.Modules.Retention.OfflineProgression)
 
 ServerAuthorityBootstrap.Apply()
 DataManager.Init()
@@ -34,6 +35,10 @@ BuildRestorer.Init()
 DailyLoginManager.Init()
 ShopService.Init()
 DailyQuestManager.Init()
+-- OfflineProgression must Init AFTER BuildRestorer so the
+-- OnRestoreComplete subscription is registered before the first
+-- player's restore fires.
+OfflineProgression.Init()
 
 print(
 	string.format(

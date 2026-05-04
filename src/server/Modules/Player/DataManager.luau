@@ -46,6 +46,14 @@ local loadedSignals: { [Player]: BindableEvent } = {}
 -- Set when we initiate the session end (PlayerRemoving / BindToClose) so
 -- OnSessionEnd can distinguish our own teardown from a cross-server steal.
 local intentionalEnd: { [Player]: boolean } = {}
+-- Per-session metadata captured during LoadPlayer. Kept separate from
+-- the persisted Profile.Data so it doesn't get serialized. C4
+-- (offline progression) reads previousLastJoinAt to compute elapsed
+-- time × extractor income.
+export type SessionMeta = {
+	previousLastJoinAt: number?,
+}
+local sessionMeta: { [Player]: SessionMeta } = {}
 
 local function profileKey(player: Player): string
 	return tostring(player.UserId)
@@ -113,7 +121,10 @@ function DataManager.LoadPlayer(player: Player)
 
 	-- Bookkeeping fields prove round-trip persistence to the A audit:
 	-- firstJoinAt is sticky; lastJoinAt + sessionsPlayed advance every load.
+	-- Capture the previous lastJoinAt BEFORE stamping the new value
+	-- so OfflineProgression (C4) can compute elapsed time on rejoin.
 	local now = os.time()
+	sessionMeta[player] = { previousLastJoinAt = profile.Data.lastJoinAt }
 	profile.Data.firstJoinAt = profile.Data.firstJoinAt or now
 	profile.Data.lastJoinAt = now
 	profile.Data.sessionsPlayed += 1
@@ -161,6 +172,10 @@ function DataManager.WaitForData(player: Player): PlayerData?
 	return if profile then profile.Data else nil
 end
 
+function DataManager.GetSessionMeta(player: Player): SessionMeta?
+	return sessionMeta[player]
+end
+
 function DataManager.Init()
 	Players.PlayerAdded:Connect(DataManager.LoadPlayer)
 
@@ -173,6 +188,7 @@ function DataManager.Init()
 	Players.PlayerRemoving:Connect(function(player)
 		DataManager.SavePlayer(player)
 		clearLoadSignal(player)
+		sessionMeta[player] = nil
 	end)
 
 	game:BindToClose(function()
