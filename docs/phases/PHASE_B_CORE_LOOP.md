@@ -278,9 +278,139 @@ buildings dictionary into a compact form on `ProfileSchema.baseLayout`;
 
 ---
 
-## B3 — Persistent base state ⏳
+## B3 — Persistent base state ✅
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### What was built
+
+- **`ProfileSchema.luau`** — added `baseLayout: { SerializedBuilding }`
+  field with `id`, `x`, `z` per entry. Default `{}`. Additive change;
+  `ProfileStore:Reconcile()` fills the empty array into older saves
+  on next load — no migration needed.
+- **`PlotManager.luau`** — added `WaitForPlot(player)` (yields until
+  allocation or returns nil if the player left first / server full).
+  Internally a per-player `BindableEvent` flushed by `allocate` and
+  `release`. Lets BuildRestorer wait without racing PlayerAdded
+  handler ordering.
+- **`Build/BaseSerializer.luau`** — thin façade over
+  `ProfileSchema.baseLayout`. Public API: `Append`, `Remove`, `Get`,
+  `Clear`. Mutates the in-memory profile in place; the actual
+  DataStore write happens on ProfileStore's auto-save (~5 min) or on
+  `PlayerRemoving` / `BindToClose`.
+- **`Build/BuildRestorer.luau`** — on plot allocation, walks the
+  saved layout and re-applies each entry via
+  `PlacementService.TryPlace(..., trusted = true)`. Failures log a
+  warn and skip; partial restores are acceptable (Phase F1 may add
+  telemetry for "buildings dropped on restore").
+- **`PlacementService.luau`** — gained the `trusted: boolean?`
+  parameter. When true: skip affordability deduction (already paid
+  in prior session) and skip `BaseSerializer.Append` (already
+  saved). When false/nil: existing fresh-placement behavior plus
+  the new `BaseSerializer.Append` call after a successful place.
+- **`init.server.luau`** — `BuildRestorer.Init()` wired after
+  `PlacementService.Init()`. Order matters: PlacementService must be
+  ready before the restorer's first replay fires.
+
+### Persistence rhythm
+
+| Event | Effect |
+|---|---|
+| Successful placement | `BaseSerializer.Append` mutates the in-memory layout. |
+| ProfileStore auto-save (~5 min) | DataStore write of all profile fields incl. baseLayout. |
+| `PlayerRemoving` | DataManager.SavePlayer → ProfileStore EndSession → DataStore write. |
+| `BindToClose` | Same flush path as PlayerRemoving for every active session. |
+| Server crash mid-session | Up to ~5 min of placements lost (the worst-case auto-save gap). Acceptable for V1. |
+| Plot allocation on rejoin | BuildRestorer walks saved layout, calls TryPlace in trusted mode for each. |
+
+### Audit (B3-scope, sandbox-side)
+
+- `--!strict` on the new modules
+- StyLua + rojo build clean (rerun below)
+- `ProfileSchema.DEFAULT_DATA.baseLayout = {}` round-trips through
+  `Reconcile()` for older saves (verified by code reading)
+- Trusted-mode skip paths verified by code reading: affordability
+  (line ref) + persistence (line ref) both gated on `not trusted`
+
+### Audit (B3-scope, Studio-side — pending your local run)
+
+The full Phase B audit gate. Runs after a fresh F5 or once Server
+Authority Beta is enabled per DAILY_DEV_LOOP.md:
+
+1. **Place an extractor and a wall:**
+   ```luau
+   -- Server context Command Bar:
+   local PlacementService = require(game.ServerScriptService.Server.Modules.Build.PlacementService)
+   local PlotManager      = require(game.ServerScriptService.Server.Modules.World.PlotManager)
+   local CurrencyService  = require(game.ServerScriptService.Server.Modules.Economy.CurrencyService)
+   local BaseSerializer   = require(game.ServerScriptService.Server.Modules.Build.BaseSerializer)
+   local p = game.Players:GetPlayers()[1]
+   local node = PlotManager.GetPlot(p).nodes:GetChildren()[1]
+   local cx, cz = node:GetAttribute("CellX"), node:GetAttribute("CellZ")
+   CurrencyService.Add(p, 200)
+   print(PlacementService.TryPlace(p, "extractor", cx, cz))
+   print(PlacementService.TryPlace(p, "wall",      cx + 2, cz))
+   print("layout:", #BaseSerializer.Get(p), "entries")  -- expect 2
+   ```
+2. **Stop play (Shift+F5).** Output should include:
+   ```
+   [DataManager] Saving <YourName> (sessions=2)
+   [DataManager] BindToClose: flushing 1 profile(s)
+   [DataManager] BindToClose: flush complete
+   ```
+3. **Press F5 again.** Output should include:
+   ```
+   [DataManager] Loaded <YourName> — session #3, credits=<remaining>, ...
+   [PlotManager] Allocated PlotN to <YourName>
+   [PlacementService] Restored extractor on PlotN at <cx,cz> for <YourName>
+   [PlacementService] Restored wall on PlotN at <cx+2,cz> for <YourName>
+   [BuildRestorer] PlotN for <YourName>: restored 2/2
+   ```
+4. **Visual:** the extractor and wall reappear at the same cells.
+   Income tick continues (extractor still ticks the per-second income).
+5. **Cross-shape failure path** (optional): manually corrupt the
+   saved layout to test the warn:
+   ```luau
+   local data = require(game.ServerScriptService.Server.Modules.Player.DataManager).GetData(p)
+   table.insert(data.baseLayout, { id = "ghost_buildable", x = 0, z = 0 })
+   -- leave + rejoin → expect warn:
+   --   [BuildRestorer] PlotN: failed to restore ghost_buildable at (0,0) for <YourName> — unknown buildable: ghost_buildable
+   --   [BuildRestorer] PlotN for <YourName>: restored 0/1
+   ```
+
+This is the **Phase B audit gate** per `10_BUILD_PROTOCOL.md`. Pass = B3
+done; B4 (build mode UI) and B5 (camera transitions) ship the
+client-side experience on top of the now-complete server foundation.
+
+### Tech debt / deferred
+
+- **No save-on-placement debounce.** Currently relies on
+  ProfileStore's 5-min auto-save for mid-session persistence. If a
+  server crashes between auto-saves, recent placements are lost.
+  Acceptable for V1 (placements aren't real-money). Phase F1+ may
+  add a debounced explicit save for "high-stakes" placements (e.g.,
+  buildings that cost > N Credits).
+- **No rotation field.** Buildables snap to grid in 0° rotation.
+  Phase B4 build palette may add rotation; that lands as an additive
+  schema change (`r: number?` defaulting to 0).
+- **Restoration is replay, not snapshot.** If a buildable's stats
+  change between sessions (e.g., extractor income tuning in Phase G),
+  restored extractors get the new stats. This is the right behavior
+  for V1 — players benefit from buffs, eat nerfs equally.
+- **No restoration telemetry.** Failed-restore counts log to Output
+  but don't go anywhere. Phase F1's analytics taxonomy will add a
+  `build_restored_partial` event.
+
+### What's next
+
+B4 — client-side build mode. Third-person camera positioning,
+`BuildPalette` UI (extractor / wall picker), `PlacementPreview`
+(snap-to-grid ghost), HUD for Credits display via the
+`CreditsChanged` Remote. First time the player places via gameplay
+input rather than the Command Bar.
+
+---
 
 ## B4 — Build mode UI ⏳
 

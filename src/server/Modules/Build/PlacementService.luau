@@ -40,6 +40,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local PlotManager = require(script.Parent.Parent.World.PlotManager)
 local BuildableRegistry = require(script.Parent.BuildableRegistry)
+local BaseSerializer = require(script.Parent.BaseSerializer)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 
 type Buildable = BuildableRegistry.Buildable
@@ -88,7 +89,18 @@ local function fail(reason: string): PlaceResult
 	return { ok = false, error = reason }
 end
 
-function PlacementService.TryPlace(player: Player, buildableId: string, cellX: number, cellZ: number): PlaceResult
+-- `trusted` mode is for restoration paths (BuildRestorer): skip the
+-- affordability deduction (already paid in a prior session) and skip
+-- persisting back to baseLayout (already saved). All other validations
+-- still run — a restore that violates plot bounds or occupancy is a
+-- bug we want to surface, not paper over.
+function PlacementService.TryPlace(
+	player: Player,
+	buildableId: string,
+	cellX: number,
+	cellZ: number,
+	trusted: boolean?
+): PlaceResult
 	-- 1. Plot allocation
 	local plot = PlotManager.GetPlot(player)
 	if not plot then
@@ -128,7 +140,8 @@ function PlacementService.TryPlace(player: Player, buildableId: string, cellX: n
 	end
 
 	-- 6. Affordability — atomic check-and-deduct via CurrencyService.
-	if buildable.cost > 0 then
+	-- Skipped in `trusted` mode (restoration: already paid in prior session).
+	if not trusted and buildable.cost > 0 then
 		if not CurrencyService.TrySpend(player, buildable.cost) then
 			return fail("insufficient credits")
 		end
@@ -153,7 +166,33 @@ function PlacementService.TryPlace(player: Player, buildableId: string, cellX: n
 		CurrencyService.RegisterExtractor(player, buildable, part)
 	end
 
-	print(string.format("[PlacementService] %s placed %s on Plot%d at %s", player.Name, buildable.id, plot.id, cellKey))
+	-- 8. Persist to baseLayout — fresh placements only; restorations
+	-- skip because the entry is already in the saved layout.
+	if not trusted then
+		BaseSerializer.Append(player, buildable.id, cellX, cellZ)
+	end
+
+	if trusted then
+		print(
+			string.format(
+				"[PlacementService] Restored %s on Plot%d at %s for %s",
+				buildable.id,
+				plot.id,
+				cellKey,
+				player.Name
+			)
+		)
+	else
+		print(
+			string.format(
+				"[PlacementService] %s placed %s on Plot%d at %s",
+				player.Name,
+				buildable.id,
+				plot.id,
+				cellKey
+			)
+		)
+	end
 	return { ok = true, part = part }
 end
 

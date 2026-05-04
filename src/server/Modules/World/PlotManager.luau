@@ -49,6 +49,10 @@ local PlotManager = {}
 
 local plots: { PlotInfo } = {}
 local playerToPlot: { [Player]: PlotInfo } = {}
+-- Per-player BindableEvent that fires once when the plot is allocated.
+-- Lets BuildRestorer (and other post-allocation systems) wait without
+-- racing PlayerAdded handler ordering.
+local pendingAllocations: { [Player]: BindableEvent } = {}
 
 local PLOT_TINTS: { Color3 } = {
 	Color3.fromRGB(40, 90, 60), -- Plot 1: muted green
@@ -113,12 +117,22 @@ local function buildPlot(plotsRoot: Folder, plotId: number): PlotInfo
 	}
 end
 
+local function flushPendingAllocation(player: Player)
+	local event = pendingAllocations[player]
+	if event then
+		pendingAllocations[player] = nil
+		event:Fire()
+		event:Destroy()
+	end
+end
+
 local function allocate(player: Player): PlotInfo?
 	for _, plot in plots do
 		if plot.ownerUserId == nil then
 			plot.ownerUserId = player.UserId
 			playerToPlot[player] = plot
 			print(string.format("[PlotManager] Allocated Plot%d to %s", plot.id, player.Name))
+			flushPendingAllocation(player)
 			return plot
 		end
 	end
@@ -130,10 +144,15 @@ local function allocate(player: Player): PlotInfo?
 			Constants.WORLD.PlotCount
 		)
 	)
+	flushPendingAllocation(player) -- unblock any waiters; they'll see GetPlot == nil
 	return nil
 end
 
 local function release(player: Player)
+	-- If the player left before allocation completed, drop any pending
+	-- waiter so callers don't yield forever.
+	flushPendingAllocation(player)
+
 	local plot = playerToPlot[player]
 	if not plot then
 		return
@@ -149,6 +168,25 @@ local function release(player: Player)
 end
 
 function PlotManager.GetPlot(player: Player): PlotInfo?
+	return playerToPlot[player]
+end
+
+-- Yields until the player has an allocated plot, then returns it.
+-- Returns nil if allocation has already happened and failed (server full),
+-- so callers can distinguish "still waiting" from "won't get one".
+function PlotManager.WaitForPlot(player: Player): PlotInfo?
+	if playerToPlot[player] then
+		return playerToPlot[player]
+	end
+	if not player:IsDescendantOf(Players) then
+		return nil
+	end
+	local event = pendingAllocations[player]
+	if not event then
+		event = Instance.new("BindableEvent")
+		pendingAllocations[player] = event
+	end
+	event.Event:Wait()
 	return playerToPlot[player]
 end
 

@@ -19,6 +19,7 @@ local PlotManager = require(script.Modules.World.PlotManager)
 local ResourceNodeSpawner = require(script.Modules.World.ResourceNodeSpawner)
 local CurrencyService = require(script.Modules.Economy.CurrencyService)
 local PlacementService = require(script.Modules.Build.PlacementService)
+local BuildRestorer = require(script.Modules.Build.BuildRestorer)
 
 ServerAuthorityBootstrap.Apply()
 DataManager.Init()
@@ -26,6 +27,7 @@ PlotManager.Init()
 ResourceNodeSpawner.Init()
 CurrencyService.Init()
 PlacementService.Init()
+BuildRestorer.Init()
 
 print(
 	string.format(

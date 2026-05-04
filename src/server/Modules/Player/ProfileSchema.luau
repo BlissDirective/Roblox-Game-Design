@@ -3,11 +3,14 @@
 	Outpost-7 — versioned PlayerData schema.
 
 	Phase A2: ships v1.0 with the minimum fields needed to verify
-	round-trip persistence. Later phases add fields freely; ProfileStore's
-	`:Reconcile()` merges new template defaults into older saves on load,
-	so additive changes need no migration.
+	round-trip persistence. Later phases add fields freely (additive
+	changes are safe — ProfileStore's `:Reconcile()` merges defaults
+	from this template into older saves).
+	Phase B3: adds `baseLayout` (the player's persistent placed-buildings
+	list). Additive — no migration needed; older saves get an empty
+	array on next load via Reconcile().
 
-	Renaming, removing, or retyping a field requires:
+	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
 	  2. Add a migrator under MIGRATIONS keyed by the source version
 	  3. Log the change in docs/architecture/DATA_SCHEMA.md
@@ -19,6 +22,12 @@ local ProfileSchema = {}
 
 ProfileSchema.CURRENT_SCHEMA_VERSION = 1
 
+export type SerializedBuilding = {
+	id: string, -- buildable id from BuildableRegistry
+	x: number, -- snap-grid cell X
+	z: number, -- snap-grid cell Z
+}
+
 export type PlayerData = {
 	_version: number,
 	credits: number,
@@ -26,6 +35,7 @@ export type PlayerData = {
 	firstJoinAt: number?,
 	lastJoinAt: number?,
 	sessionsPlayed: number,
+	baseLayout: { SerializedBuilding },
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -35,6 +45,7 @@ ProfileSchema.DEFAULT_DATA = {
 	firstJoinAt = nil,
 	lastJoinAt = nil,
 	sessionsPlayed = 0,
+	baseLayout = {},
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

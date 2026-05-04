@@ -21,12 +21,37 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     firstJoinAt = nil :: number?, -- os.time() of first profile creation
     lastJoinAt  = nil :: number?, -- os.time() of most recent load
     sessionsPlayed = 0,          -- ++ on every successful LoadPlayer
+    baseLayout  = {},            -- persistent placed-buildings list (B3)
 }
 ```
 
 The bookkeeping fields (`firstJoinAt`, `lastJoinAt`, `sessionsPlayed`) exist
 specifically so the A2 audit can verify a value mutated mid-session
 round-trips through DataStore on rejoin.
+
+### `baseLayout` shape (B3)
+
+```luau
+type SerializedBuilding = {
+    id: string,  -- buildable id from BuildableRegistry
+    x: number,   -- snap-grid cell X
+    z: number,   -- snap-grid cell Z
+}
+
+baseLayout: { SerializedBuilding }
+```
+
+Every entry is a single placed building. The list is mutated in place by
+`Server.Build.BaseSerializer` (`Append` on placement, `Remove` on
+removal, `Clear` on plot wipe). `Server.Build.BuildRestorer` replays the
+list on plot allocation by calling `PlacementService.TryPlace` in
+**trusted mode** (skips affordability + persistence).
+
+Future shape evolution:
+- Adding a field (e.g., `r` for rotation in Phase B4) is **additive** —
+  drop the new field with a default in `BuildableRegistry` for entries
+  saved before the field existed.
+- Renaming `id` / `x` / `z` requires a migration.
 
 ## Migration log
 
