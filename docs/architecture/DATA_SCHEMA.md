@@ -22,6 +22,9 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     lastJoinAt  = nil :: number?, -- os.time() of most recent load
     sessionsPlayed = 0,          -- ++ on every successful LoadPlayer
     baseLayout  = {},            -- persistent placed-buildings list (B3)
+    -- Phase C1 — Retention / daily login:
+    lastDailyClaim = nil :: string?, -- "YYYY-MM-DD" UTC of last claim
+    dailyStreak    = 0,              -- consecutive days claimed (1..N)
 }
 ```
 

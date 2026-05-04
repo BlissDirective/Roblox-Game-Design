@@ -9,6 +9,9 @@
 	Phase B3: adds `baseLayout` (the player's persistent placed-buildings
 	list). Additive — no migration needed; older saves get an empty
 	array on next load via Reconcile().
+	Phase C1: adds `lastDailyClaim` + `dailyStreak` for the daily-login
+	mechanic. Additive — older saves get nil + 0 from defaults via
+	Reconcile().
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -36,6 +39,9 @@ export type PlayerData = {
 	lastJoinAt: number?,
 	sessionsPlayed: number,
 	baseLayout: { SerializedBuilding },
+	-- Phase C1 — Retention / daily login
+	lastDailyClaim: string?, -- "YYYY-MM-DD" UTC; nil = never claimed
+	dailyStreak: number, -- 0 = no active streak; 1..N consecutive days
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -46,6 +52,8 @@ ProfileSchema.DEFAULT_DATA = {
 	lastJoinAt = nil,
 	sessionsPlayed = 0,
 	baseLayout = {},
+	lastDailyClaim = nil,
+	dailyStreak = 0,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

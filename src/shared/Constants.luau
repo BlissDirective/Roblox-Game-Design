@@ -56,6 +56,34 @@ local Constants = {
 		Size = 4, -- studs
 	},
 
+	-- Retention mechanics (Phase C). All values picked per
+	-- finalized-brainstorm.md §2.4 and §4.4. Server-only enforcement.
+	RETENTION = {
+		-- Daily login reward by streak day. The default fallback is
+		-- DailyRewards[7] for any non-milestone day past day 7. Day-14
+		-- and day-30 are milestone bumps to reward sustained streaks.
+		-- Tunable in Phase G after playtest data lands.
+		DailyRewards = {
+			[1] = 500,
+			[2] = 750,
+			[3] = 1000,
+			[4] = 1500,
+			[5] = 2000,
+			[6] = 3000,
+			[7] = 5000,
+			[14] = 15000,
+			[30] = 50000,
+		},
+		-- "yesterday" by UTC date counts as in-streak; anything older
+		-- resets to day 1. The brainstorm calls this the "24h grace
+		-- window" — interpreted as a one-day-late tolerance.
+		StreakGraceDays = 1,
+		-- Phase C2 — restocking shop (UTC seconds per rotation).
+		ShopRotationSeconds = 6 * 60 * 60,
+		-- Phase C4 — offline progression cap (seconds).
+		OfflineProgressionCapSeconds = 12 * 60 * 60,
+	},
+
 	-- World layout. V1 ships with a single shared server containing
 	-- N fixed plots. Each plot is a square of `PlotSize` studs centered
 	-- on its origin. Plots are arranged in a 2×2 grid with a `PlotGap`

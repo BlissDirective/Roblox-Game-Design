@@ -15,6 +15,8 @@ rows as Remotes are introduced.
 |---|---|---|---|---|---|
 | `PlaceBuilding` | Client → Server (Event) | `(buildableId: string, cellX: integer, cellZ: integer)` — buildableId must exist in BuildableRegistry; cells must fall in player's plot bounds | `RATE_LIMITS.Placement` (60/sec — placement bursts during build mode) | B1 | Server validates plot allocation, buildable id, cell bounds, occupancy, node requirement (extractor only). Affordability via `CurrencyService.TrySpend` since B2. Reach raycast deferred to F1. No paired result event yet — failures are silent. B4 may add a `PlacementResult` event for UI feedback. |
 | `CreditsChanged` | Server → Client (Event) | `(newCredits: number)` — fired only to the affected client | n/a (server-driven) | B2 | Notification only — clients use it to refresh HUD display. Server is the source of truth (`DataManager.GetData(player).credits`). Fires from `CurrencyService` on income tick, `TrySpend`, `Add`, and on initial profile load. |
+| `DailyLoginState` | Server → Client (Event) | `(state: DailyLoginManager.State)` — fired only to the affected client | n/a (server-driven) | C1 | Push of current claim eligibility + streak + reward. Client renders the popup off this. Fires on join (after profile load) and after every successful claim. |
+| `ClaimDailyReward` | Client → Server (Function) | `()` | `RATE_LIMITS.Default` (server-side `os.time` makes per-Remote rate limiting redundant — at most one successful claim per UTC day) | C1 | Server validates with `os.time()` only — clients never send a date, so system-clock manipulation can't unlock extra claims. Returns `DailyLoginManager.ClaimResult` (`ok = true, reward, day` or `ok = false, error`). |
 
 ---
 

@@ -19,11 +19,13 @@ local HudController = require(script.Modules.HUD.HudController)
 local CameraController = require(script.Modules.Core.CameraController)
 local InputRouter = require(script.Modules.Core.InputRouter)
 local BuildController = require(script.Modules.Build.BuildController)
+local DailyLoginPopup = require(script.Modules.Retention.DailyLoginPopup)
 
 HudController.Init()
 CameraController.Init()
 InputRouter.Init()
 BuildController.Init()
+DailyLoginPopup.Init()
 
 print(
 	string.format(

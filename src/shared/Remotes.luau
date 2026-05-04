@@ -63,6 +63,16 @@ local Remotes = {
 	-- is not the source of truth. CurrencyService fires per affected
 	-- player on every credit change (income tick, spend, grant).
 	CreditsChanged = getOrCreate("CreditsChanged", "RemoteEvent") :: RemoteEvent,
+
+	-- Phase C1 — Retention / daily login:
+	-- Server → Client. Args: (state: DailyLoginManager.State).
+	-- Server pushes the current claim state on join + after each
+	-- successful claim. Client renders the popup off this.
+	DailyLoginState = getOrCreate("DailyLoginState", "RemoteEvent") :: RemoteEvent,
+	-- Client → Server (RemoteFunction). Args: ().
+	-- Server validates (server-side os.time, exploit-proof), grants,
+	-- returns DailyLoginManager.ClaimResult.
+	ClaimDailyReward = getOrCreate("ClaimDailyReward", "RemoteFunction") :: RemoteFunction,
 }
 
 return Remotes
