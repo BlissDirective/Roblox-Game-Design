@@ -80,6 +80,10 @@ local Constants = {
 		StreakGraceDays = 1,
 		-- Phase C2 — restocking shop (UTC seconds per rotation).
 		ShopRotationSeconds = 6 * 60 * 60,
+		-- How many slots the rotation surfaces per cycle. Items are
+		-- picked deterministically from BlueprintRegistry by rotation
+		-- index so all players on all servers see the same stock.
+		ShopSlotsPerRotation = 3,
 		-- Phase C4 — offline progression cap (seconds).
 		OfflineProgressionCapSeconds = 12 * 60 * 60,
 	},

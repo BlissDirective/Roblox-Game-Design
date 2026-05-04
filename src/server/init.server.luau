@@ -21,6 +21,7 @@ local CurrencyService = require(script.Modules.Economy.CurrencyService)
 local PlacementService = require(script.Modules.Build.PlacementService)
 local BuildRestorer = require(script.Modules.Build.BuildRestorer)
 local DailyLoginManager = require(script.Modules.Retention.DailyLoginManager)
+local ShopService = require(script.Modules.Economy.ShopService)
 
 ServerAuthorityBootstrap.Apply()
 DataManager.Init()
@@ -30,6 +31,7 @@ CurrencyService.Init()
 PlacementService.Init()
 BuildRestorer.Init()
 DailyLoginManager.Init()
+ShopService.Init()
 
 print(
 	string.format(

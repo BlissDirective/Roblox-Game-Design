@@ -73,6 +73,15 @@ local Remotes = {
 	-- Server validates (server-side os.time, exploit-proof), grants,
 	-- returns DailyLoginManager.ClaimResult.
 	ClaimDailyReward = getOrCreate("ClaimDailyReward", "RemoteFunction") :: RemoteFunction,
+
+	-- Phase C2 — Retention / restocking shop:
+	-- Server → Client. Args: (state: ShopService.State).
+	-- Pushed on join + after every successful BuyShopItem + on
+	-- rotation boundary crossings.
+	ShopState = getOrCreate("ShopState", "RemoteEvent") :: RemoteEvent,
+	-- Client → Server (RemoteFunction). Args: (blueprintId: string).
+	-- Returns ShopService.BuyResult.
+	BuyShopItem = getOrCreate("BuyShopItem", "RemoteFunction") :: RemoteFunction,
 }
 
 return Remotes

@@ -20,12 +20,14 @@ local CameraController = require(script.Modules.Core.CameraController)
 local InputRouter = require(script.Modules.Core.InputRouter)
 local BuildController = require(script.Modules.Build.BuildController)
 local DailyLoginPopup = require(script.Modules.Retention.DailyLoginPopup)
+local ShopController = require(script.Modules.Shop.ShopController)
 
 HudController.Init()
 CameraController.Init()
 InputRouter.Init()
 BuildController.Init()
 DailyLoginPopup.Init()
+ShopController.Init()
 
 print(
 	string.format(

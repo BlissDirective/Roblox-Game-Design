@@ -12,6 +12,9 @@
 	Phase C1: adds `lastDailyClaim` + `dailyStreak` for the daily-login
 	mechanic. Additive — older saves get nil + 0 from defaults via
 	Reconcile().
+	Phase C2: adds `shopRotationSeen` + `shopBuysThisRotation` for the
+	restocking blueprint shop. Additive — older saves get nil + {} on
+	next load. Stale rotations reset lazily inside ShopService.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -42,6 +45,9 @@ export type PlayerData = {
 	-- Phase C1 — Retention / daily login
 	lastDailyClaim: string?, -- "YYYY-MM-DD" UTC; nil = never claimed
 	dailyStreak: number, -- 0 = no active streak; 1..N consecutive days
+	-- Phase C2 — Retention / restocking shop
+	shopRotationSeen: number?, -- last rotation index the player saw
+	shopBuysThisRotation: { [string]: boolean }, -- item ids bought
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -54,6 +60,8 @@ ProfileSchema.DEFAULT_DATA = {
 	baseLayout = {},
 	lastDailyClaim = nil,
 	dailyStreak = 0,
+	shopRotationSeen = nil,
+	shopBuysThisRotation = {},
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

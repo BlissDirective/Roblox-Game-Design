@@ -25,6 +25,9 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     -- Phase C1 — Retention / daily login:
     lastDailyClaim = nil :: string?, -- "YYYY-MM-DD" UTC of last claim
     dailyStreak    = 0,              -- consecutive days claimed (1..N)
+    -- Phase C2 — Retention / restocking shop:
+    shopRotationSeen     = nil :: number?, -- last rotation index seen
+    shopBuysThisRotation = {},             -- { [blueprintId]: true } bought-this-rotation flags
 }
 ```
 
