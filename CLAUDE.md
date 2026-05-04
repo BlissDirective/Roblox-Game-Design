@@ -70,7 +70,7 @@ Pull other docs (`02`–`05`, `08`) on demand when the topic comes up.
 ## Workflow rules
 
 - **Plan before code.** For any non-trivial sub-phase, propose architecture (modules, Remotes, DataStore keys) and wait for confirmation before writing.
-- **Audit before commit.** Functional / persistence / multi-client / hostile / performance audits per `10_BUILD_PROTOCOL.md`. If an audit fails: do not commit, do not proceed, diagnose and re-audit.
+- **Audit before commit.** Functional / persistence / multi-client / hostile / performance audits per `docs/10_BUILD_PROTOCOL.md`. If an audit fails: do not commit, do not proceed, diagnose and re-audit.
 - **Three failed fix attempts → escalate.** Don't keep grinding. Surface what was tried, what was observed, and propose alternatives.
 - **Phase-level research, not sub-phase.** 2–4 web searches at the start of each phase to verify APIs aren't deprecated. Don't burn turns researching mid-phase.
 - **Ask up to 3 clarifying questions at a time.** Never 15. If required brainstorm fields are present, proceed without asking permission.

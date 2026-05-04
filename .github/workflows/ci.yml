@@ -3,11 +3,35 @@ name: CI
 # Lint + format check + Rojo build on every PR and push to main.
 # Catches "this won't even compile in Studio" before it reaches a human reviewer.
 
+# Skips on doc-only PRs — CI here lints/builds the Luau project, not the
+# markdown. Doc references are validated by docs-check.yml.
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "assets/**"
+      - "default.project.json"
+      - "wally.toml"
+      - "wally.lock"
+      - "selene.toml"
+      - "stylua.toml"
+      - "aftman.toml"
+      - ".github/workflows/ci.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "assets/**"
+      - "default.project.json"
+      - "wally.toml"
+      - "wally.lock"
+      - "selene.toml"
+      - "stylua.toml"
+      - "aftman.toml"
+      - ".github/workflows/ci.yml"
 
 permissions:
   contents: read

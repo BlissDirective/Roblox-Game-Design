@@ -99,59 +99,42 @@ return AssetIds
 
 Every consumer reads `AssetIds.Sounds.ExtractorPlace` — never a literal `rbxassetid://`.
 
-### 4.3 Upload workflow (manual, not CI)
+### 4.3 Upload workflow (manually triggered, runs in CI)
 
-Asset uploads are a **manual step**, not a CI step. The reason: Open Cloud asset uploads don't have great idempotency, so accidentally double-uploading on every CI run wastes IDs and pollutes the asset list.
+Asset uploads are a **manually triggered** workflow — `.github/workflows/upload-assets.yml` (`workflow_dispatch` only). Roblox AssetIds are immutable once issued, so re-uploading on every push wastes IDs and pollutes the creator's asset list. Trigger this workflow only when you've added or changed binary assets in `assets/`.
 
-```bash
-# scripts/upload-asset.sh (TBD — write during Phase H)
-# 1. POST asset binary to https://apis.roblox.com/assets/v1/assets
-#    Headers: x-api-key: $ROBLOX_API_KEY
-#    Body: multipart with creationContext + file
-# 2. Poll the operation until done
-# 3. Print the new AssetId
-# 4. Manually paste into src/shared/AssetIds.luau and commit
-```
+**What it does:**
+1. Runs `tools/scripts/upload-assets.sh`, which walks `assets/` and POSTs new/changed files to `https://apis.roblox.com/assets/v1/assets` with `x-api-key: $ROBLOX_API_KEY`.
+2. Polls each operation until done.
+3. Regenerates `src/shared/AssetIds.luau` from `tools/asset-import/upload-manifest.json`.
+4. Opens a PR (`assets/auto-upload-<run>`) with the regenerated manifest. Review the diff before merging — that's the human checkpoint that prevents a bad upload from contaminating `main`.
 
-The Open Cloud key used for uploads needs **`asset:create` + `asset:read`** scope on the target creator (user or group). This is a **separate** key from the place-publishing key in §1, scoped narrower.
+**Dry-run option:** `workflow_dispatch` exposes a `dry_run` boolean. Use it the first time on any new asset set to confirm the upload script's output before mutating Roblox state.
+
+The Open Cloud key used by `upload-assets.yml` needs **`asset:read` + `asset:write`** scope on the target creator (user or group). For audio uploads, the creator account must also be **ID-verified** in the Creator Dashboard. This is a **separate** key from the place-publishing key in §1, scoped narrower.
 
 ---
 
 ## 5. CI workflow — `.github/workflows/release.yml`
 
-_TBD — written during Phase H. Sketch:_
+The release workflow is live. Two trigger modes:
 
-```yaml
-on:
-  push:
-    tags: ['v*']
+- **Tag push** — push a `v*.*.*` tag (e.g. `git tag -s v0.1.0 && git push origin v0.1.0`). Runs the full pipeline and publishes a new `Published` (live) place version.
+- **Manual** — `workflow_dispatch` from the Actions UI. Lets you choose `Saved` (draft, not live) or `Published` (live) via the `version_type` input. Use `Saved` for staging dry-runs.
 
-jobs:
-  release:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ok-nick/setup-aftman@v0.4.2
-      - run: wally install
-      - run: selene src/
-      - run: stylua --check src/
-      - run: rojo build default.project.json --output build/Game.rbxl
-      - uses: actions/upload-artifact@v4
-        with: { name: place-rbxl, path: build/Game.rbxl, retention-days: 30 }
-      - name: Publish to Roblox
-        env:
-          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
-          UNIVERSE_ID:    ${{ vars.UNIVERSE_ID }}
-          PLACE_ID:       ${{ vars.PLACE_ID }}
-        run: |
-          curl -sSf -X POST \
-            -H "x-api-key: $ROBLOX_API_KEY" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary @build/Game.rbxl \
-            "https://apis.roblox.com/universes/v1/$UNIVERSE_ID/places/$PLACE_ID/versions?versionType=Published"
-```
+**Pipeline steps** (see the file for exact details):
+1. `setup-aftman` → installs the pinned toolchain (Rojo, Selene, StyLua, Wally, Lune)
+2. `wally install`
+3. `selene src/` and `stylua --check src/`
+4. `rojo build --output build/Game.rbxl`
+5. POST the binary to `https://apis.roblox.com/universes/v1/$UNIVERSE_ID/places/$PLACE_ID/versions?versionType=$VERSION_TYPE` with `x-api-key: $ROBLOX_API_KEY`. Fails the job if any of those env vars is missing.
+6. On tag pushes only: opens a GitHub Release with `build/Game.rbxl` attached and auto-generated release notes.
 
-Pin third-party actions to a SHA before going to production — version tags are mutable.
+The job runs in the `production` environment, so any required reviewers / wait timers configured on that environment apply. Concurrency is `release` with `cancel-in-progress: false` — releases queue, never cancel each other mid-upload.
+
+**Hardening backlog:**
+- Pin third-party actions (`ok-nick/setup-aftman`, `softprops/action-gh-release`) to a SHA before V1 launch — version tags are mutable.
+- Wire `STAGING_PLACE_ID` into a separate manual job so dry-runs target staging without editing the workflow each time.
 
 ---
 
@@ -183,10 +166,10 @@ Open Cloud keeps the last several published versions of a place — verify reten
 
 ## 8. Known gaps / TBDs
 
-- §4.3 — `scripts/upload-asset.sh` not written yet
-- §5 — `release.yml` not written yet
-- §3 — CSG/EditableMesh/EditableImage inventory empty until Phase G/H
-- Per-environment universe split (dev / staging / prod) — TBD; for V1 a single universe with two places (`STAGING_PLACE_ID` + `PLACE_ID`) is sufficient
+- §3 — CSG / EditableMesh / EditableImage inventory empty until Phase G/H
+- §5 — third-party actions in `release.yml` not yet pinned to SHAs (still on version tags)
+- §5 — staging dry-run still requires manually swapping `PLACE_ID`; wire `STAGING_PLACE_ID` into a separate job during Phase H
+- Per-environment universe split (dev / staging / prod) — for V1, a single universe with two places (`STAGING_PLACE_ID` + `PLACE_ID`) is sufficient
 
 ---
 
