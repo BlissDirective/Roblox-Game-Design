@@ -88,6 +88,76 @@ local Constants = {
 		OfflineProgressionCapSeconds = 12 * 60 * 60,
 	},
 
+	-- Monetization (Phase D). All ID values are placeholders for V1
+	-- dev — REPLACE_BEFORE_LAUNCH per the protocol's "real money flow"
+	-- escalation rule (10_BUILD_PROTOCOL.md). A 0 ID makes
+	-- MarketplaceService:PromptGamePassPurchase / PromptProductPurchase
+	-- raise an "invalid ID" error in Studio — that's the desired
+	-- developer signal.
+	MONETIZATION = {
+		-- Game Passes (one-time permanent unlocks per
+		-- 05_MONETIZATION.md / brainstorm §2.7).
+		GamePasses = {
+			DoubleCredits = {
+				key = "DoubleCredits",
+				id = 0, -- REPLACE_BEFORE_LAUNCH
+				displayName = "2× Credits",
+				description = "Doubles all Credit gains permanently.",
+				priceRobux = 199,
+			},
+			AutoCollect = {
+				key = "AutoCollect",
+				id = 0, -- REPLACE_BEFORE_LAUNCH
+				displayName = "Auto-Collect",
+				description = "Faster passive income (V1 effect TBD per Phase D3 decision).",
+				priceRobux = 299,
+			},
+			VipOperator = {
+				key = "VipOperator",
+				id = 0, -- REPLACE_BEFORE_LAUNCH
+				displayName = "VIP Operator",
+				description = "Exclusive armor skin, +1 daily quest slot, VIP-only blueprints.",
+				priceRobux = 499,
+			},
+		},
+
+		-- Developer Products (consumable; per-purchase grants).
+		-- Phase D2 wires ProcessReceipt + PurchaseLedger.
+		DevProducts = {
+			EmergencyShield = {
+				key = "EmergencyShield",
+				id = 0, -- REPLACE_BEFORE_LAUNCH
+				displayName = "Emergency Shield",
+				description = "5-minute raid immunity.",
+				priceRobux = 49,
+			},
+			CreditPackSmall = {
+				key = "CreditPackSmall",
+				id = 0,
+				displayName = "Credit Pack (Small)",
+				description = "+10,000 Credits.",
+				priceRobux = 99,
+				grantCredits = 10000,
+			},
+			CreditPackLarge = {
+				key = "CreditPackLarge",
+				id = 0,
+				displayName = "Credit Pack (Large)",
+				description = "+75,000 Credits.",
+				priceRobux = 499,
+				grantCredits = 75000,
+			},
+			CorePack = {
+				key = "CorePack",
+				id = 0,
+				displayName = "Core Pack",
+				description = "+50 Cores.",
+				priceRobux = 199,
+				grantCores = 50,
+			},
+		},
+	},
+
 	-- World layout. V1 ships with a single shared server containing
 	-- N fixed plots. Each plot is a square of `PlotSize` studs centered
 	-- on its origin. Plots are arranged in a 2×2 grid with a `PlotGap`

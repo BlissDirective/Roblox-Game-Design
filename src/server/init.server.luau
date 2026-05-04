@@ -24,6 +24,7 @@ local DailyLoginManager = require(script.Modules.Retention.DailyLoginManager)
 local ShopService = require(script.Modules.Economy.ShopService)
 local DailyQuestManager = require(script.Modules.Retention.DailyQuestManager)
 local OfflineProgression = require(script.Modules.Retention.OfflineProgression)
+local MonetizationService = require(script.Modules.Monetization.MonetizationService)
 
 ServerAuthorityBootstrap.Apply()
 DataManager.Init()
@@ -39,6 +40,7 @@ DailyQuestManager.Init()
 -- OnRestoreComplete subscription is registered before the first
 -- player's restore fires.
 OfflineProgression.Init()
+MonetizationService.Init()
 
 print(
 	string.format(

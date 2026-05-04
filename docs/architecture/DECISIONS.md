@@ -197,3 +197,53 @@
   - If Roblox disables the Beta, revert this ADR + the project-file
     changes; the manual pattern in `06_LUAU_REFERENCE.md` is still
     correct.
+
+---
+
+## ADR-006: Local ownership cache; trust `PromptGamePassPurchaseFinished` over re-querying `UserOwnsGamePassAsync`
+
+- **Date:** 2026-05-04 (Phase D1)
+- **Status:** Accepted.
+- **Context:** Roblox `MarketplaceService:UserOwnsGamePassAsync` caches
+  ownership results internally and **does not refresh after a
+  mid-session purchase**. A long-standing issue (still open as of
+  Dec 2025 per DevForum) where after `PromptGamePassPurchase` returns
+  `wasPurchased = true`, calling `UserOwnsGamePassAsync` for the same
+  pass continues to return `false` until the player rejoins. We need
+  pass effects (2× Credits, Auto-Collect, VIP) to apply mid-session
+  immediately on purchase — players who paid 200+ Robux expect
+  instant effect.
+- **Decision:**
+  1. `GamePassService` maintains its own per-session ownership map:
+     `ownership[playerUserId][passId] = bool`.
+  2. On player join: call `UserOwnsGamePassAsync` once per pass, cache
+     the result. (This is the only time we trust the API.)
+  3. Listen to `MarketplaceService.PromptGamePassPurchaseFinished`.
+     When `wasPurchased == true`, **set the cache to true directly**
+     without re-querying — the purchase prompt's positive return is
+     authoritative for the current session.
+  4. All pass-effect application (`PassEffects.ApplyAll`) reads from
+     our local cache, not from `UserOwnsGamePassAsync`.
+- **Why:**
+  - Forum-confirmed bug. Workaround is community-standard.
+  - Trust boundary intact: a cheating client can't fake
+    `wasPurchased = true` because the event fires from
+    `MarketplaceService` server-side, not from a client Remote.
+  - Stale-cache risk on the OTHER direction (player owns the pass
+    from a prior session but we incorrectly cache "not owned") is
+    mitigated by always re-querying on fresh join. A player who
+    rejoins a server gets fresh ownership data.
+- **Alternatives considered:**
+  - **Trust `UserOwnsGamePassAsync` only** — would force the player
+    to rejoin to see effects of a mid-session purchase. Bad UX,
+    rejected.
+  - **Persist ownership in `profile.Data`** — would add a sync layer
+    between Roblox's source of truth and ours. Rejected; ownership
+    lives in Roblox.
+- **Consequences:**
+  - One canonical chokepoint for "does player X own pass Y" —
+    `GamePassService.Owns(player, passId)`. Phase D3+ reads only
+    from this.
+  - If Roblox eventually fixes the cache bug (unlikely soon), this
+    ADR can be revisited and the local cache removed; `Owns` becomes
+    a thin wrapper over `UserOwnsGamePassAsync`.
