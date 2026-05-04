@@ -17,12 +17,14 @@ local ServerAuthorityBootstrap = require(script.Modules.Lifecycle.ServerAuthorit
 local DataManager = require(script.Modules.Player.DataManager)
 local PlotManager = require(script.Modules.World.PlotManager)
 local ResourceNodeSpawner = require(script.Modules.World.ResourceNodeSpawner)
+local CurrencyService = require(script.Modules.Economy.CurrencyService)
 local PlacementService = require(script.Modules.Build.PlacementService)
 
 ServerAuthorityBootstrap.Apply()
 DataManager.Init()
 PlotManager.Init()
 ResourceNodeSpawner.Init()
+CurrencyService.Init()
 PlacementService.Init()
 
 print(

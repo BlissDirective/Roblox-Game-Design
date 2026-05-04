@@ -56,6 +56,13 @@ local Remotes = {
 	-- Server validates and places (or silently rejects). Phase B4 may
 	-- add a paired PlacementResult event for UI feedback.
 	PlaceBuilding = getOrCreate("PlaceBuilding", "RemoteEvent") :: RemoteEvent,
+
+	-- Phase B2 — Economy:
+	-- Server → Client. Args: (newCredits: number).
+	-- Notification only — the client renders this for HUD display; it
+	-- is not the source of truth. CurrencyService fires per affected
+	-- player on every credit change (income tick, spend, grant).
+	CreditsChanged = getOrCreate("CreditsChanged", "RemoteEvent") :: RemoteEvent,
 }
 
 return Remotes

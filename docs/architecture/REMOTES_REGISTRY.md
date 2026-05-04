@@ -13,7 +13,8 @@ rows as Remotes are introduced.
 
 | Remote | Direction | Args (validated server-side) | Rate limit (per player) | Phase introduced | Notes |
 |---|---|---|---|---|---|
-| `PlaceBuilding` | Client → Server (Event) | `(buildableId: string, cellX: integer, cellZ: integer)` — buildableId must exist in BuildableRegistry; cells must fall in player's plot bounds | `RATE_LIMITS.Placement` (60/sec — placement bursts during build mode) | B1 | Server validates plot allocation, buildable id, cell bounds, occupancy, node requirement (extractor only). Affordability check is deferred to B2; reach raycast is deferred to F1. No paired result event yet — failures are silent. B4 may add a `PlacementResult` event for UI feedback. |
+| `PlaceBuilding` | Client → Server (Event) | `(buildableId: string, cellX: integer, cellZ: integer)` — buildableId must exist in BuildableRegistry; cells must fall in player's plot bounds | `RATE_LIMITS.Placement` (60/sec — placement bursts during build mode) | B1 | Server validates plot allocation, buildable id, cell bounds, occupancy, node requirement (extractor only). Affordability via `CurrencyService.TrySpend` since B2. Reach raycast deferred to F1. No paired result event yet — failures are silent. B4 may add a `PlacementResult` event for UI feedback. |
+| `CreditsChanged` | Server → Client (Event) | `(newCredits: number)` — fired only to the affected client | n/a (server-driven) | B2 | Notification only — clients use it to refresh HUD display. Server is the source of truth (`DataManager.GetData(player).credits`). Fires from `CurrencyService` on income tick, `TrySpend`, `Add`, and on initial profile load. |
 
 ---
 

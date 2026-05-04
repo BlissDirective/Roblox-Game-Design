@@ -40,6 +40,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local PlotManager = require(script.Parent.Parent.World.PlotManager)
 local BuildableRegistry = require(script.Parent.BuildableRegistry)
+local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 
 type Buildable = BuildableRegistry.Buildable
 type PlotInfo = PlotManager.PlotInfo
@@ -126,7 +127,13 @@ function PlacementService.TryPlace(player: Player, buildableId: string, cellX: n
 		claimedNode = node
 	end
 
-	-- 6. Affordability — B2 wires CurrencyService.TrySpend here.
+	-- 6. Affordability — atomic check-and-deduct via CurrencyService.
+	if buildable.cost > 0 then
+		if not CurrencyService.TrySpend(player, buildable.cost) then
+			return fail("insufficient credits")
+		end
+	end
+
 	-- 7. Reach check — F1 hardens with server raycast.
 
 	-- All validations passed. Spawn the part.
@@ -138,6 +145,12 @@ function PlacementService.TryPlace(player: Player, buildableId: string, cellX: n
 	plotOcc[cellKey] = buildable.id
 	if claimedNode then
 		claimedNode:SetAttribute("Claimed", true)
+	end
+
+	-- Income-bearing buildables register with CurrencyService so the
+	-- 1Hz tick aggregates them into the owner's per-second income.
+	if buildable.income > 0 then
+		CurrencyService.RegisterExtractor(player, buildable, part)
 	end
 
 	print(string.format("[PlacementService] %s placed %s on Plot%d at %s", player.Name, buildable.id, plot.id, cellKey))

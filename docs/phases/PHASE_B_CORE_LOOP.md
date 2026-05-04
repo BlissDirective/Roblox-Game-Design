@@ -177,9 +177,106 @@ First server→client Remote (`CreditsChanged`).
 
 ---
 
-## B2 — Currency tick + extractor income ⏳
+## B2 — Currency tick + extractor income ✅
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### What was built
+
+- **`src/server/Modules/Economy/CurrencyService.luau`** — server-
+  authoritative Credits ledger. Public API: `GetCredits`, `TrySpend`,
+  `Add`, `SetMultiplier`, `RegisterExtractor`, `UnregisterExtractor`,
+  `Init`. Tick loop runs at `Constants.TICK.Currency` (1Hz),
+  aggregates registered-extractor income per player, multiplies by
+  the per-player multiplier (default 1.0; Phase D writes 2× via
+  GamePassService), and writes back to `ProfileSchema.credits`.
+  Multiplier setter clamps implausible values (≤ 0 or > 10) with a
+  warn rather than trusting the caller blindly.
+- **`PlacementService.luau`** — affordability gate is wired:
+  `if buildable.cost > 0 then CurrencyService.TrySpend(...)` runs as
+  validation step 6, replacing the B1 placeholder. On TrySpend
+  failure the placement returns `{ ok = false, error = "insufficient credits" }`.
+  Income-bearing placements (extractors) call
+  `CurrencyService.RegisterExtractor` after the part lands, so the
+  next tick aggregates them.
+- **`Remotes.luau`** — registered `CreditsChanged` (Server → Client).
+  Clients render this for HUD display only; the server's
+  `ProfileSchema.credits` is authoritative.
+- **`init.server.luau`** — `CurrencyService.Init()` wired between
+  `ResourceNodeSpawner.Init()` and `PlacementService.Init()` so the
+  currency tick is live before the first placement Remote fires.
+- **`REMOTES_REGISTRY.md`** — `CreditsChanged` row added; the
+  `PlaceBuilding` row updated to reflect the wired affordability check.
+
+### Audit (B2-scope, sandbox-side)
+
+- `--!strict` on the new module
+- StyLua + rojo build clean
+- Affordability path covered by code reading: `TrySpend` deducts on
+  success, returns false on insufficient funds, leaves credits
+  untouched on type/data errors. PlacementService bails before
+  spawning the part on `TrySpend = false`.
+
+### Audit (B2-scope, Studio-side — pending your local run)
+
+After F5:
+1. `[CurrencyService]` doesn't appear in Output until the first tick.
+   That's expected — the tick runs every 1s but only logs when an
+   extractor exists.
+2. **Earn Credits via the loop:**
+   ```luau
+   -- Server context Command Bar:
+   local PlacementService = require(game.ServerScriptService.Server.Modules.Build.PlacementService)
+   local PlotManager = require(game.ServerScriptService.Server.Modules.World.PlotManager)
+   local CurrencyService = require(game.ServerScriptService.Server.Modules.Economy.CurrencyService)
+   local p = game.Players:GetPlayers()[1]
+   local plot = PlotManager.GetPlot(p)
+   local node = plot.nodes:GetChildren()[1]
+   -- Grant starter credits so the first extractor is affordable:
+   CurrencyService.Add(p, 100)
+   -- Place an extractor (50 cost, 1/sec income):
+   print(PlacementService.TryPlace(p, "extractor", node:GetAttribute("CellX"), node:GetAttribute("CellZ")))
+   -- Watch credits accrue:
+   for i = 1, 5 do task.wait(1); print("credits:", CurrencyService.GetCredits(p)) end
+   ```
+   Expected: starting from 50 credits (100 grant − 50 extractor),
+   credits increment by 1 each second.
+3. **Affordability rejection:**
+   ```luau
+   -- With <20 credits, attempting a wall (cost 20) should fail:
+   print(PlacementService.TryPlace(p, "wall", 9, 9)) -- expect { ok = false, error = "insufficient credits" }
+   ```
+4. **Client receives CreditsChanged** — in a Player1 client context,
+   ```luau
+   game.ReplicatedStorage:WaitForChild("OutpostRemotes"):WaitForChild("CreditsChanged").OnClientEvent:Connect(print)
+   ```
+   should print every credit change.
+
+### Tech debt / deferred
+
+- **No CreditsLedger audit log yet.** Phase F1 anti-exploit will want
+  one for "credits gained from suspicious sources" detection.
+- **No batching of CreditsChanged.** At 1Hz tick rate this is fine
+  (1 fire per affected player per second). If we ever lower the tick
+  rate to sub-second, batch.
+- **Multiplier is per-player flat.** No per-source multipliers
+  (e.g., wave-defense XP bonus during a wave). Phase E may need
+  per-source.
+- **No persistence of the multiplier.** It's session-only (rebuilt on
+  rejoin via Phase D's GamePassService.ApplyPasses on PlayerAdded).
+- **Initial credits are 0.** New players can't afford anything until a
+  starter grant lands (Phase B4 / FTUE) or daily login lands (C1).
+  Audit recipe above uses `CurrencyService.Add` to seed.
+
+### What's next
+
+B3 — persistent base state. `BaseSerializer` packs the placed-
+buildings dictionary into a compact form on `ProfileSchema.baseLayout`;
+`BuildRestorer` re-applies on rejoin. `ProfileSchema` gets the new
+`baseLayout` field (additive — `Reconcile()` handles older saves).
+
+---
 
 ## B3 — Persistent base state ⏳
 
