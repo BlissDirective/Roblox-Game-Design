@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rojo: Serve",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "rojo serve default.project.json"
+    },
+    {
+      "name": "Rojo: Build place",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "rojo build default.project.json --output build/Game.rbxl"
+    }
+  ]
+}

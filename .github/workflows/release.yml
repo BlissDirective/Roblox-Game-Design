@@ -1,0 +1,104 @@
+name: Release — publish place via Open Cloud
+
+# Tag-triggered (v0.x.y) or manual.
+# Builds Game.rbxl with Rojo, then publishes a new live version of the start
+# place via the Roblox Open Cloud Place Publishing API.
+#
+# Required GitHub repository config:
+#   secrets:
+#     ROBLOX_API_KEY     — Open Cloud API key, scope: universe-places:write
+#                          (also recommend universe.places:write for older grants)
+#   variables:
+#     UNIVERSE_ID        — the Experience (universe) ID
+#     PLACE_ID           — the start place ID inside that Experience
+#
+# Reference: https://create.roblox.com/docs/cloud/guides/usage-place-publishing
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Saved (draft) or Published (live)"
+        type: choice
+        required: true
+        default: "Published"
+        options:
+          - Saved
+          - Published
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build + publish to Roblox
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Aftman toolchain
+        uses: ok-nick/setup-aftman@v0.4.2
+        with:
+          version: "v0.3.0"
+
+      - name: Install Wally packages
+        run: wally install
+
+      - name: Lint (Selene)
+        run: selene src/
+
+      - name: Format check (StyLua)
+        run: stylua --check src/
+
+      - name: Build place (Rojo)
+        run: |
+          mkdir -p build
+          rojo build --output build/Game.rbxl
+          ls -la build/
+
+      - name: Publish to Roblox (Open Cloud)
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UNIVERSE_ID: ${{ vars.UNIVERSE_ID }}
+          PLACE_ID: ${{ vars.PLACE_ID }}
+          VERSION_TYPE: ${{ github.event.inputs.version_type || 'Published' }}
+        run: |
+          if [ -z "$ROBLOX_API_KEY" ] || [ -z "$UNIVERSE_ID" ] || [ -z "$PLACE_ID" ]; then
+            echo "::error::Missing ROBLOX_API_KEY secret or UNIVERSE_ID/PLACE_ID vars"
+            exit 1
+          fi
+
+          ENDPOINT="https://apis.roblox.com/universes/v1/${UNIVERSE_ID}/places/${PLACE_ID}/versions?versionType=${VERSION_TYPE}"
+          echo "Publishing build/Game.rbxl to $ENDPOINT"
+
+          RESPONSE=$(curl --fail-with-body --silent --show-error \
+            -X POST "$ENDPOINT" \
+            -H "x-api-key: $ROBLOX_API_KEY" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary "@build/Game.rbxl")
+
+          echo "Response: $RESPONSE"
+          VERSION=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('versionNumber','?'))")
+          echo "Published version: $VERSION"
+          echo "PUBLISHED_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/Game.rbxl
+          generate_release_notes: true
+          body: |
+            Published to Roblox as place version `${{ env.PUBLISHED_VERSION }}`.
+
+            See `CHANGELOG.md` for the full change list.

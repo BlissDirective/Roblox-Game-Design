@@ -1,0 +1,8 @@
+std = "roblox"
+
+[config]
+empty_if = { comments_count = true }
+unscoped_variables = "deny"
+shadowing = "warn"
+multiple_statements = "warn"
+deprecated = "warn"

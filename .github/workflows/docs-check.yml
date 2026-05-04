@@ -1,0 +1,50 @@
+name: Docs sanity check
+
+# Verifies that:
+#   - CLAUDE.md cross-references resolve to real files
+#   - docs/ internal links don't 404
+#   - No accidentally-extensionless markdown files in the repo root
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - "CLAUDE.md"
+      - "docs/**"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Verify doc references
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check CLAUDE.md references resolve
+        run: |
+          set -e
+          fail=0
+          for ref in $(grep -oE '`[^`]+\.md`' CLAUDE.md | tr -d '`'); do
+            if [ ! -f "$ref" ]; then
+              echo "::error file=CLAUDE.md::Broken reference: $ref"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Check root has no extensionless markdown drafts
+        run: |
+          set -e
+          # Any non-dotfile at the root with no extension that contains markdown headings is suspicious
+          for f in $(find . -maxdepth 1 -type f ! -name "LICENSE" ! -name "CODEOWNERS" ! -name ".*" ! -name "*.*"); do
+            if head -n 5 "$f" 2>/dev/null | grep -q "^#"; then
+              echo "::error::Extensionless markdown file at root: $f (rename to .md)"
+              exit 1
+            fi
+          done

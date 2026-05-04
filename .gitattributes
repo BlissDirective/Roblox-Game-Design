@@ -1,0 +1,44 @@
+# Auto-detect line endings, normalize to LF in repo
+* text=auto eol=lf
+
+# Luau source
+*.luau text eol=lf
+*.lua  text eol=lf
+
+# Configs
+*.json text eol=lf
+*.toml text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.md   text eol=lf
+
+# Shell scripts must be LF
+*.sh text eol=lf
+
+# Binary Roblox formats — never diff, store via Git LFS when > 1MB
+*.rbxl  binary
+*.rbxlx binary
+*.rbxm  binary
+*.rbxmx binary
+*.fbx   binary
+*.gltf  binary
+*.glb   binary
+
+# Audio / image / video binary
+*.mp3 binary
+*.ogg binary
+*.wav binary
+*.flac binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.bmp binary
+*.tga binary
+*.mp4 binary
+*.webm binary
+
+# Git LFS rules (uncomment after `git lfs install` if needed)
+# *.fbx   filter=lfs diff=lfs merge=lfs -text
+# *.png   filter=lfs diff=lfs merge=lfs -text
+# *.rbxm  filter=lfs diff=lfs merge=lfs -text
+# *.rbxmx filter=lfs diff=lfs merge=lfs -text

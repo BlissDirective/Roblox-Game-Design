@@ -1,0 +1,10 @@
+# Aftman — pinned toolchain for the Outpost-7 build pipeline.
+# Run `aftman install` after cloning. CI installs via the same file.
+# Version pins are intentional. Update via PR + CHANGELOG entry.
+
+[tools]
+rojo   = "rojo-rbx/rojo@7.4.4"
+selene = "Kampfkarren/selene@0.27.1"
+stylua = "JohnnyMorganz/StyLua@2.0.2"
+wally  = "UpliftGames/wally@0.3.2"
+lune   = "lune-org/lune@0.8.9"

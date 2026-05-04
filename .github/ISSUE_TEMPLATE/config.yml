@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/BlissDirective/Roblox-Game-Design/security/advisories/new
+    about: Report exploits or security issues privately. Do NOT open a public issue.
+  - name: Knowledge base
+    url: https://github.com/BlissDirective/Roblox-Game-Design/blob/main/docs/00_START_HERE.md
+    about: Start here for the project knowledge base.
