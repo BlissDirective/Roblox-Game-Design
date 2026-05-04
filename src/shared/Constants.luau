@@ -104,13 +104,18 @@ local Constants = {
 				displayName = "2× Credits",
 				description = "Doubles all Credit gains permanently.",
 				priceRobux = 199,
+				multiplier = 2.0,
 			},
 			AutoCollect = {
 				key = "AutoCollect",
 				id = 0, -- REPLACE_BEFORE_LAUNCH
 				displayName = "Auto-Collect",
-				description = "Faster passive income (V1 effect TBD per Phase D3 decision).",
+				-- V1 effect (Phase D3 decision): +50% income while
+				-- online. Stacks with DoubleCredits via multiplicative
+				-- composition: base × 2.0 × 1.5 = ×3.0 max.
+				description = "+50% income while online (stacks with 2× Credits → ×3.0 max).",
 				priceRobux = 299,
+				multiplier = 1.5,
 			},
 			VipOperator = {
 				key = "VipOperator",

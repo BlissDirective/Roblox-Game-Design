@@ -17,12 +17,13 @@
 --]]
 
 local GamePassService = require(script.Parent.GamePassService)
+local DevProductService = require(script.Parent.DevProductService)
 
 local MonetizationService = {}
 
 function MonetizationService.Init()
 	GamePassService.Init()
-	-- D2: DevProductService.Init() (PurchaseLedger is its dep).
+	DevProductService.Init()
 	-- D3: PassEffects.Init() — subscribes to GamePassService.OnOwnershipChanged.
 	-- D4: BattlePassService.Init().
 end

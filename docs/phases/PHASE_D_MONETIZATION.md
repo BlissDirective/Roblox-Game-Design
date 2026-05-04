@@ -151,9 +151,126 @@ round-trips through DataStore. Idempotency is the audit gate.
 
 ---
 
-## D2 — Dev Product infrastructure + PurchaseLedger ⏳
+## D2 — Dev Product infrastructure + PurchaseLedger ✅
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### What was built
+
+- **`ProfileSchema.luau`** — `purchaseHistory: { [string]: boolean }`
+  field. Keys are Roblox-issued `PurchaseId` strings; values always
+  `true`. Additive; older saves get `{}` from defaults via Reconcile.
+- **`Monetization/PurchaseLedger.luau`** — thin façade over
+  `profile.Data.purchaseHistory`. Public API: `HasPurchase`,
+  `RecordPurchase`. Defensive nil-fill on read in case Reconcile
+  hasn't run.
+- **`Monetization/DevProductService.luau`** — sets
+  `MarketplaceService.ProcessReceipt` (the **only** registered
+  callback per Roblox's "set once" rule). Receipt flow:
+  1. Resolve player from `receipt.PlayerId`. Not in this server →
+     `NotProcessedYet` (Roblox retries on next join).
+  2. `WaitForData` so the profile + ledger are ready.
+  3. **Idempotency check**: `PurchaseLedger.HasPurchase` →
+     `PurchaseGranted` if already seen.
+  4. Resolve product key from `receipt.ProductId` via
+     `Constants.MONETIZATION.DevProducts`. Unknown ID →
+     `NotProcessedYet` (deployment drift; Roblox retries).
+  5. Apply effect (`grantCredits` + `grantCores`). If no effect
+     wired (e.g., Emergency Shield, deferred to Phase E) →
+     `NotProcessedYet` so Roblox keeps retrying until we ship.
+  6. `PurchaseLedger.RecordPurchase(purchaseId)` only after
+     successful apply.
+  7. Return `PurchaseGranted`.
+- **`MonetizationService.luau`** — wired `DevProductService.Init()`
+  after `GamePassService.Init()`.
+
+### Crash safety / atomicity
+
+The grant (`CurrencyService.Add`) and the ledger record live in
+the same `profile.Data` table. ProfileStore's auto-save flushes
+them together on a single DataStore write. If the server crashes
+between grant and flush, **both** revert; the next ProcessReceipt
+retry re-grants from a clean slate, producing the correct net
+effect (player gets the purchase exactly once).
+
+### Audit (D2-scope, sandbox-side)
+
+- 42 `.luau` files — `--!strict` on all
+- `stylua --check` clean
+- `rojo build` produces a `.rbxl` with the new tree
+- ProfileSchema's `DEFAULT_DATA.purchaseHistory = {}` round-trips
+  through Reconcile (verified by code reading)
+
+### Audit (D2-scope, Studio-side — pending your local run)
+
+Live ProcessReceipt requires real product IDs (Phase H), but the
+idempotency path can be exercised manually:
+
+```luau
+-- Server Command Bar:
+local DPS = require(game.ServerScriptService.Server.Modules.Monetization.DevProductService)
+local p = game.Players:GetPlayers()[1]
+
+-- Synthesize a receipt with a fake PurchaseId. ProductId 0 → falls
+-- through to "unknown product" path; that's expected for placeholder
+-- IDs. To exercise the granted path, temporarily set a real ProductId
+-- in Constants and a fake one matching here:
+local fakeReceipt = {
+    PlayerId      = p.UserId,
+    ProductId     = 0,                      -- match a Constants entry
+    PurchaseId    = "test-receipt-001",
+    PlaceIdWherePurchased = game.PlaceId,
+    CurrencySpent = 99,
+    CurrencyType  = Enum.CurrencyType.Robux,
+}
+
+print(DPS.ProcessReceipt(fakeReceipt))   -- expect: NotProcessedYet (unknown product 0)
+print(DPS.ProcessReceipt(fakeReceipt))   -- same; not idempotent yet because not granted
+
+-- Idempotency exercise (after temporarily wiring a real product
+-- match):
+print(DPS.ProcessReceipt(fakeReceipt))   -- → PurchaseGranted, applies effect
+print(DPS.ProcessReceipt(fakeReceipt))   -- → PurchaseGranted (idempotent skip; no double-grant)
+-- Verify in Output: "[DevProductService] Idempotent skip: <Name> already had purchase test-receipt-001"
+```
+
+The full audit gate is **two ProcessReceipt invocations with the
+same PurchaseId result in exactly one grant** — observable via
+HUD credits delta.
+
+### Tech debt / deferred
+
+- **Real Product IDs at Phase H.** Single-line edit per product in
+  `Constants.MONETIZATION.DevProducts`. Protocol-escalates.
+- **Emergency Shield effect** is deferred to Phase E (raid system
+  needs to exist for "raid immunity timer" to mean anything). Until
+  then, ProcessReceipt for that product returns `NotProcessedYet`
+  and Roblox keeps retrying — **acceptable** because we'd rather
+  hold a real-money receipt open than burn it on a non-existent
+  effect. **Important**: don't ship Emergency Shield to prod
+  before Phase E lands or every purchase will retry indefinitely.
+  Tracked.
+- **No history pruning.** Lifetime purchases accumulate. Heavy
+  spender at 1,000 lifetime purchases ≈ 50KB; well under the 4MB
+  DataStore limit. Phase F+ may prune entries past Roblox's ~13-
+  month refund window.
+- **No client-side purchase confirmation UI.** The default Roblox
+  prompt closes after purchase. D5 may add an in-game "Thanks"
+  toast that listens for an effect-applied event.
+
+### What's next
+
+D3 — pass effects wired. With Auto-Collect locked at +50%
+(Option B from the Phase D kickoff Q), `PassEffects.luau` will
+subscribe to `GamePassService.OnOwnershipChanged` and call
+`CurrencyService.SetMultiplier` with the multiplicative composition:
+`product(passes the player owns) * passOwnership[key].multiplier`.
+DoubleCredits (×2.0) + AutoCollect (×1.5) → ×3.0 stack. VIP
+Operator's effects (cosmetic skin, +1 quest slot, blueprints)
+land alongside.
+
+---
 
 ## D3 — Pass effects wired ⏳
 

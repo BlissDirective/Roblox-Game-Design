@@ -18,6 +18,10 @@
 	Phase C3: adds `dailyQuests` + `lastQuestReset` for the daily-quest
 	system. Additive. Stale quest sets reset lazily inside
 	DailyQuestManager when the UTC day changes.
+	Phase D2: adds `purchaseHistory: { [purchaseId]: true }` for
+	`MarketplaceService.ProcessReceipt` idempotency. Additive — older
+	saves get an empty table on next load via Reconcile. Keys are
+	Roblox-issued purchase IDs (strings); values are always `true`.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -59,6 +63,8 @@ export type PlayerData = {
 	-- Phase C3 — Retention / daily quests
 	dailyQuests: { [string]: QuestProgress }, -- 3 keys per active day
 	lastQuestReset: string?, -- "YYYY-MM-DD" UTC of last roll
+	-- Phase D2 — Monetization / receipt idempotency
+	purchaseHistory: { [string]: boolean }, -- Roblox PurchaseId → true
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -75,6 +81,7 @@ ProfileSchema.DEFAULT_DATA = {
 	shopBuysThisRotation = {},
 	dailyQuests = {},
 	lastQuestReset = nil,
+	purchaseHistory = {},
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

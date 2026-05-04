@@ -31,8 +31,25 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     -- Phase C3 — Retention / daily quests:
     dailyQuests          = {},             -- { [questId]: { progress = 0, claimed = false } }
     lastQuestReset       = nil :: string?, -- "YYYY-MM-DD" UTC of last quest roll
+    -- Phase D2 — Monetization / receipt idempotency:
+    purchaseHistory      = {},             -- { [purchaseId: string]: true } — keys are Roblox PurchaseIds
 }
 ```
+
+### `purchaseHistory` shape (D2)
+
+Keyed by Roblox-issued `PurchaseId` (string, unique per receipt).
+`MarketplaceService.ProcessReceipt` consults this via
+`Server.Monetization.PurchaseLedger.HasPurchase` before applying
+any product effect; if seen, the callback returns `PurchaseGranted`
+without re-granting. This makes Roblox's at-least-once retry
+semantics safe.
+
+The history grows monotonically over a player's lifetime. At ~50
+chars per UUID-style `PurchaseId`, a heavy spender with 1,000
+lifetime purchases adds ~50KB to their save — well under DataStore's
+4MB-per-key limit. Pruning entries older than ~13 months (Roblox's
+refund window) is a Phase F+ optimization if needed.
 
 The bookkeeping fields (`firstJoinAt`, `lastJoinAt`, `sessionsPlayed`) exist
 specifically so the A2 audit can verify a value mutated mid-session
