@@ -9,16 +9,9 @@
 	  3. Adding a Remote = one entry here + one row in
 	     docs/architecture/REMOTES_REGISTRY.md.
 
-	A3 ships the helper + an empty registry. Phases B+ register their
-	Remotes by appending to the `Remotes` table at the bottom.
-
-	Registration shape (uncomment per phase that adds the Remote):
-
-	    local Remotes = {
-	        CoinChanged   = getOrCreate("CoinChanged",   "RemoteEvent")    :: RemoteEvent,
-	        PlaceBuilding = getOrCreate("PlaceBuilding", "RemoteEvent")    :: RemoteEvent,
-	        ClaimDaily    = getOrCreate("ClaimDaily",    "RemoteFunction") :: RemoteFunction,
-	    }
+	Rate limits and validation rules live with the consumers
+	(Server/Security/AntiExploit + RemoteValidator). This file is just
+	the wire-shape declaration.
 --]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -40,7 +33,6 @@ local function ensureContainer(): Folder
 	return folder
 end
 
--- selene: allow(unused_variable)
 local function getOrCreate(name: string, className: "RemoteEvent" | "RemoteFunction"): Instance
 	local container = ensureContainer()
 	local existing = container:FindFirstChild(name)
@@ -59,7 +51,11 @@ local function getOrCreate(name: string, className: "RemoteEvent" | "RemoteFunct
 end
 
 local Remotes = {
-	-- Phases B+ register Remotes here.
+	-- Phase B1 — Build:
+	-- Client → Server. Args: (buildableId: string, cellX: number, cellZ: number).
+	-- Server validates and places (or silently rejects). Phase B4 may
+	-- add a paired PlacementResult event for UI feedback.
+	PlaceBuilding = getOrCreate("PlaceBuilding", "RemoteEvent") :: RemoteEvent,
 }
 
 return Remotes

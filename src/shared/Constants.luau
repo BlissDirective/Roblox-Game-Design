@@ -4,6 +4,8 @@
 
 	Phase A1: FEATURES table.
 	Phase A3: structural sections (DATASTORE, RATE_LIMITS, TICK, GRID).
+	Phase B1: WORLD (plots, dimensions), NODES (spawner params), BUILD
+	          (placement reach), STREAMING (radii).
 	Subsequent phases populate values as the systems they back come online.
 
 	Rule: no hardcoded magic numbers in modules. If a value needs tuning,
@@ -23,14 +25,14 @@ local Constants = {
 		playerBuiltArenas = false, -- V2
 		coopColonies = false, -- V2
 		cosmeticGacha = false, -- V2
+
+		-- Debug aids — leave true through Phase F4, flip false for ship.
+		debugModeToggle = true, -- B5: keybind to swap TP↔FP without combat present
 	},
 
 	-- DataStore configuration. Read by DataManager.
 	DATASTORE = {
 		StoreName = "PlayerData_v1",
-		-- Hard ceiling on BindToClose flush wait. Roblox enforces a 30s
-		-- BindToClose budget; we leave 5s headroom for the engine to
-		-- complete its own teardown after we return.
 		BindToCloseTimeoutSeconds = 25,
 	},
 
@@ -52,6 +54,54 @@ local Constants = {
 	-- Build-mode geometry. Mobile-thumb-friendly grid per Phase B4 plan.
 	GRID = {
 		Size = 4, -- studs
+	},
+
+	-- World layout. V1 ships with a single shared server containing
+	-- N fixed plots. Each plot is a square of `PlotSize` studs centered
+	-- on its origin. Plots are arranged in a 2×2 grid with a `PlotGap`
+	-- gutter between them.
+	WORLD = {
+		PlotCount = 4, -- 2×2 grid; matches squad max (4) per finalized-brainstorm.md §2.6
+		PlotSize = 64, -- studs; mobile-camera-friendly footprint
+		PlotGap = 32, -- studs between adjacent plots
+		BaseY = 0, -- world Y of all plot floors
+		PlotFloorThickness = 1,
+	},
+
+	-- Resource node spawner params (Phase B1). Per-plot Poisson disk
+	-- distribution: `MinDistance` controls density, `MaxAttemptsPerCell`
+	-- caps how hard the sampler tries before giving up. The seed is
+	-- derived per-server from `game.JobId` so re-rolls during dev get
+	-- a different layout — but every player on a given server sees the
+	-- same nodes.
+	NODES = {
+		PerPlotTarget = 10, -- aim for ~10 nodes per plot
+		MinDistance = 8, -- studs between any two nodes
+		MaxAttemptsPerCell = 30, -- Bridson's recommended k value
+		EdgeMargin = 4, -- nodes don't spawn within N studs of plot edges
+		HeightOffset = 0.5, -- node visual sits this far above plot floor
+		Radius = 1, -- node visual radius (studs)
+	},
+
+	-- Placement validation. PlacementService enforces these.
+	BUILD = {
+		MaxReachStuds = 32, -- a player must be within this distance of a
+		-- claimed cell to place / interact (anti-cheat
+		-- rough cut; F1 hardens with server-side raycast)
+		ExtractorRequiresNode = true, -- extractors must be placed on a node cell
+	},
+
+	-- Workspace.StreamingEnabled tuning. Conservative radii for a
+	-- 128×128 stud world (4 plots + gaps). Re-evaluate when biomes
+	-- expand in Phase G.
+	STREAMING = {
+		MinRadius = 256,
+		MaxRadius = 512,
+		-- Plot-reset destroys: batch this many per task.wait() tick to
+		-- dodge the "bulk-destroy ping spike" footgun documented on the
+		-- Roblox DevForum for tycoon games using StreamingEnabled.
+		BulkDestroyBatchSize = 8,
+		BulkDestroyBatchDelay = 0.05, -- seconds
 	},
 }
 

@@ -13,7 +13,7 @@ rows as Remotes are introduced.
 
 | Remote | Direction | Args (validated server-side) | Rate limit (per player) | Phase introduced | Notes |
 |---|---|---|---|---|---|
-| _(none yet)_ | | | | | |
+| `PlaceBuilding` | Client → Server (Event) | `(buildableId: string, cellX: integer, cellZ: integer)` — buildableId must exist in BuildableRegistry; cells must fall in player's plot bounds | `RATE_LIMITS.Placement` (60/sec — placement bursts during build mode) | B1 | Server validates plot allocation, buildable id, cell bounds, occupancy, node requirement (extractor only). Affordability check is deferred to B2; reach raycast is deferred to F1. No paired result event yet — failures are silent. B4 may add a `PlacementResult` event for UI feedback. |
 
 ---
 

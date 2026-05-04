@@ -73,3 +73,127 @@
   - Schema additions stay free (ProfileStore `:Reconcile()` merges
     template defaults). Renames/removals still require versioned
     migrations and human approval per build protocol.
+
+---
+
+## ADR-004: Defer Server Authority Beta to V1.5/V2
+
+- **Date:** 2026-05-04 (Phase B kickoff)
+- **Status:** ⛔ **Superseded by ADR-005** (2026-05-04, same day, before
+  any code that depended on this decision was written). Reasoning
+  preserved below for the trail.
+- **Context:** Roblox shipped a Server-Authority + Latency-Compensation
+  Studio Beta in 2026 (`AuthorityMode = Server`,
+  `NextGenerationReplication`, `UseFixedSimulation`,
+  `Deferred SignalBehavior`, `PlayerScriptsUseInput`). Adopting it
+  would replace our manual server-authoritative pattern with engine-level
+  enforcement plus built-in lag compensation.
+- **Decision:** **Do not adopt for V1.** Continue with the manual
+  server-authoritative pattern from `06_LUAU_REFERENCE.md`
+  (client requests via Remote → `AntiExploit.RateCheck` →
+  `RemoteValidator` → server mutation). Revisit at V1.5/V2 once the
+  Beta graduates **and** V1 launch data shows raid hit-reg or
+  movement-cheat is a player-facing problem.
+- **Why:**
+  - Benefit is concentrated in Phase E (raid hit-reg) and F (anti-exploit)
+    — but the opt-in requires foundational changes at A/B that we'd
+    carry for 14–18 weeks of Beta-API churn risk.
+  - Studio Team's "APIs finalized and not set to change significantly"
+    leaves non-zero churn risk, and a Beta can be platform-disabled
+    with little notice.
+  - Documentation is thin; community examples sparse. Stalls in Phase E
+    (already the highest-risk phase per `finalized-brainstorm.md` §3.4
+    risk #1) compound.
+  - Top 2026 tycoons (Steal a Brainrot, Grow a Garden, etc.) ship on
+    the manual pattern without competitive issues. Outpost-7 is
+    tycoon-with-raids, not shooter-with-tycoon — the 5-min raid is the
+    only window where Server Authority would help.
+- **Alternatives considered:**
+  - **Adopt for V1** — rejected (above).
+  - **Adopt only for the raid-reserved-server place** — would let us
+    isolate Beta exposure to Phase E. Rejected because: two
+    architectures to maintain, Beta-risk in our highest-risk phase,
+    and the migration in V1.5 (if needed) is no harder than
+    starting from manual now.
+- **Consequences:**
+  - We hand-roll any latency compensation needed in Phase E. For V1,
+    we accept some hit-reg slop (5-min matches, low stakes per match,
+    not a competitive shooter).
+  - Anti-exploit (Phase F1) stays on `AntiExploit.RateCheck` +
+    `RemoteValidator`.
+  - V1.5/V2 migration to Server Authority is a façade-protected swap
+    in the same spirit as ADR-003 (DataManager). Trust boundary already
+    routes through one validator chokepoint (`Security.RemoteValidator`,
+    Phase F2), so the migration surface is finite.
+
+---
+
+## ADR-005: Adopt Server Authority Beta for V1
+
+- **Date:** 2026-05-04 (Phase B kickoff). Supersedes ADR-004 same day,
+  before code that locked us out had landed.
+- **Status:** Accepted.
+- **Context:** The user pushed back on ADR-004 with: *"You said the
+  opt-in needs to happen at the foundation layer (Phases A/B) so the
+  architecture matches end-to-end. Let's add it to V1. We can adjust
+  later if needed."* That reframe converts the "carry Beta-API risk
+  for 14–18 weeks" cost into the cost of *not* paying a V1.5/V2
+  retrofit, which is larger.
+- **Decision:** Enable Server Authority Beta in V1. Set the
+  Beta-required `Workspace` properties via `default.project.json`:
+  `NextGenerationReplication = true`, `UseFixedSimulation = true`,
+  `StreamingEnabled = true`, `PlayerScriptsUseInput = true`,
+  `SignalBehavior = Deferred`, `AuthorityMode = Server`.
+  Each contributor enables **Beta Features → Server Authority Core
+  API** in their Studio install (recipe in
+  `docs/playbooks/DAILY_DEV_LOOP.md`).
+- **Why the reframe holds up:**
+  - **Reversibility is real.** Rolling back is a `git revert` of the
+    project-file changes — no code in B1 depends on the auth model.
+    The cost asymmetry is *adopting now and rolling back* < *not
+    adopting and retrofitting later*.
+  - **Carry cost is concentrated, not spread.** Most of Phase A–D
+    (persistence, build mode, currency, monetization) doesn't interact
+    with the humanoid auth model. The places that do are B5 (camera
+    transitions need to respect `PlayerScriptsUseInput`), E1 (raid
+    hit-reg benefits), E2 (PvE wave hit-reg benefits), and F1
+    (anti-exploit leans on engine-level auth).
+  - **The Beta is opt-in, not experimental.** Studio Team's "APIs
+    finalized and not set to change significantly before final release"
+    is a real-but-bounded risk. Worst case: a breaking API change forces
+    a 1–2-day fix during Phase E.
+- **Risks accepted:**
+  1. **Beta API churn before launch.** Mitigation: pin API surface use
+     behind helpers in `Security/TrustBoundary.luau` so a breaking
+     change is one file to update.
+  2. **Platform-side disable.** Roblox could disable the Beta with little
+     notice. Mitigation: keep the manual server-authoritative pattern
+     intact in `06_LUAU_REFERENCE.md` as a documented fallback. If the
+     Beta gets pulled, we revert the project-file changes and the manual
+     pattern still works.
+  3. **Documentation thinness.** Mitigation: log every Beta-API
+     workaround we discover in `docs/architecture/DECISIONS.md` (or a
+     dedicated `SERVER_AUTHORITY_NOTES.md` if it grows past 5 entries).
+  4. **Studio version skew.** Each contributor must enable the Beta
+     locally. Documented in `DAILY_DEV_LOOP.md`. CI runners build via
+     Rojo only — no Studio dependency — so CI is unaffected.
+- **Alternatives reconsidered:**
+  - **Stay on ADR-004 (defer)** — the 14–18-week carry cost the user
+    surfaced makes this strictly worse than adopting now with
+    reversibility intact.
+  - **Adopt only for raid place** — would isolate Beta exposure but
+    creates two architectures. The user's "match end-to-end" framing
+    rejects this implicitly.
+- **Consequences:**
+  - `default.project.json` carries the Beta Workspace property block.
+  - First commit using these properties (B1) lands the project-file
+    change. CI's `rojo build` will validate the property names match
+    Roblox's current schema; if they fail, the property names have
+    drifted and we update.
+  - All contributors must enable **Beta Features → Server Authority
+    Core API** in Studio. Recipe in `docs/playbooks/DAILY_DEV_LOOP.md`.
+  - Phase E1 (raid hit-reg) and F1 (anti-exploit) plans simplify —
+    we lean on engine-level lag compensation instead of hand-rolling.
+  - If Roblox disables the Beta, revert this ADR + the project-file
+    changes; the manual pattern in `06_LUAU_REFERENCE.md` is still
+    correct.

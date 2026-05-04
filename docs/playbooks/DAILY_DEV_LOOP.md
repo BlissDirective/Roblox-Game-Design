@@ -12,7 +12,17 @@
    aftman install      # installs pinned rojo / selene / stylua / wally / lune
    wally install       # populates Packages/, ServerPackages/, DevPackages/
    ```
-2. Open a fresh Roblox Studio place. Click the Rojo plugin → **Connect**.
+2. **Enable Server Authority Beta in Studio** (required — see ADR-005):
+   - Open Roblox Studio
+   - **File → Beta Features**
+   - Tick **Server Authority Core API**
+   - Restart Studio
+   - Without this, the Workspace properties set by Rojo
+     (`AuthorityMode = Server`, `NextGenerationReplication`,
+     `UseFixedSimulation`, `PlayerScriptsUseInput`,
+     `SignalBehavior = Deferred`) won't apply correctly and player
+     movement may behave inconsistently.
+3. Open a fresh Roblox Studio place. Click the Rojo plugin → **Connect**.
 
 ## The loop
 
