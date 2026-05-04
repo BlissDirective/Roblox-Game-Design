@@ -336,12 +336,39 @@ None. A4 is integration work on top of A1–A3.
 
 ### Phase A status
 
-**Sandbox-side: complete.** All four sub-phases shipped, committed, and
-pushed. CI on the PR will run Selene + StyLua + `rojo build`.
+**Sandbox-side: complete + audited.** All four sub-phases shipped,
+committed, and pushed. Local toolchain run on 2026-05-04 covered the
+parts that don't need Studio:
+
+| Check | Result |
+|---|---|
+| `--!strict` on every `.luau` (8 files) | ✅ pass |
+| `default.project.json` valid JSON | ✅ pass |
+| `stylua --check src/ tests/` (v2.0.2) | ✅ pass (exit 0, no diff) |
+| `wally install` resolves `lm-loleris/profilestore@1.0.3` | ✅ pass |
+| `rojo build default.project.json` (v7.4.4) | ✅ pass — 35K `.rbxl` |
+| Built tree matches `REPO_STRUCTURE.md` §1 | ✅ pass (verified via `.rbxlx`) |
+| `Server` is a `Script`; `Client` is a `LocalScript` | ✅ pass |
+| `ServerScriptService.ServerPackages.ProfileStore` matches DataManager require | ✅ pass |
+| `selene src/ tests/` (v0.27.1) | ⚠️ couldn't run locally — sandbox TLS rejected the Roblox API-Dump fetch. CI has working certs, will run there. |
+| Studio runtime audit (DataStore round-trip + BindToClose) | ⏳ pending — requires GUI Studio on your machine |
+
+**Audit-run finding (FIXED in same commit as this report):** the local
+`rojo build` failed initially with
+*"Rojo project referred to a file using `$path` that could not be
+turned into a Roblox Instance: Packages"*. Root cause: Wally only
+creates a packages dir for realms with declared dependencies; with
+`[dependencies]` and `[dev-dependencies]` empty, neither `Packages/`
+nor `DevPackages/` is created — but `default.project.json` maps all
+three Packages paths into the tree, so `rojo build` errors. **Same
+failure would have hit CI on the PR.** Fix: added an "Ensure package
+realm dirs exist" step (`mkdir -p Packages ServerPackages DevPackages`)
+to both `.github/workflows/ci.yml` and `.github/workflows/release.yml`,
+right after `wally install`.
 
 **Studio audit: pending the user's run** of the four-step recipe above.
-On audit pass, Phase A is closed. On audit fail, log findings here under
-"Audit failures" and we triage per `10_BUILD_PROTOCOL.md`'s
+On audit pass, Phase A is closed. On audit fail, log findings here
+under "Audit failures" and we triage per `10_BUILD_PROTOCOL.md`'s
 three-attempts-then-escalate rule.
 
 ### What's next

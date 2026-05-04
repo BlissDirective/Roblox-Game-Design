@@ -72,6 +72,14 @@ jobs:
       - name: Install Wally packages
         run: wally install
 
+      - name: Ensure package realm dirs exist
+        # Wally only creates a packages dir for realms with declared deps.
+        # default.project.json maps all three Packages paths into the tree,
+        # so empty realms (no shared deps yet, no dev deps yet) need empty
+        # placeholder folders or `rojo build` errors with "$path could not be
+        # turned into a Roblox Instance".
+        run: mkdir -p Packages ServerPackages DevPackages
+
       - name: Lint (Selene)
         run: selene src/ tests/
 

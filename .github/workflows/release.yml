@@ -54,6 +54,11 @@ jobs:
       - name: Install Wally packages
         run: wally install
 
+      - name: Ensure package realm dirs exist
+        # See ci.yml for the same step's rationale: Wally only creates dirs
+        # for realms with declared deps; default.project.json maps all three.
+        run: mkdir -p Packages ServerPackages DevPackages
+
       - name: Lint (Selene)
         run: selene src/
 
