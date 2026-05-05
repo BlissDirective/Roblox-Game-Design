@@ -70,7 +70,11 @@ function OfflineProgression.GrantOnJoin(player: Player)
 		return
 	end
 
-	local granted = math.floor(capped * incomePerSecond)
+	-- D5: apply the player's pass multiplier to the offline grant
+	-- (closes D3 tech debt). Players with 2× Credits + Auto-Collect
+	-- get ×3.0 offline income, same as live tick.
+	local multiplier = CurrencyService.GetMultiplier(player)
+	local granted = math.floor(capped * incomePerSecond * multiplier)
 	if granted <= 0 then
 		return
 	end

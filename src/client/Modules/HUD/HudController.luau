@@ -8,11 +8,13 @@
 --]]
 
 local CreditsDisplay = require(script.Parent.CreditsDisplay)
+local CoresDisplay = require(script.Parent.CoresDisplay)
 
 local HudController = {}
 
 function HudController.Init()
 	CreditsDisplay.Init()
+	CoresDisplay.Init()
 end
 
 return HudController

@@ -16,6 +16,13 @@
 	through init.server.luau.
 --]]
 
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
+local Remotes = require(Shared:WaitForChild("Remotes"))
+
 local GamePassService = require(script.Parent.GamePassService)
 local DevProductService = require(script.Parent.DevProductService)
 local PassEffects = require(script.Parent.PassEffects)
@@ -24,6 +31,20 @@ local BattlePassXP = require(script.Parent.BattlePass.BattlePassXP)
 local BattlePassClaimService = require(script.Parent.BattlePass.ClaimService)
 
 local MonetizationService = {}
+
+-- D5: builds a snapshot of which GamePasses the player owns and pushes
+-- it down the OwnershipState Remote. Client uses this to render
+-- "Owned" badges in the pass shop without re-querying
+-- UserOwnsGamePassAsync (which is stale per ADR-006). Server is the
+-- source of truth.
+local function pushOwnershipState(player: Player)
+	local ownership: { [string]: boolean } = {}
+	for key in Constants.MONETIZATION.GamePasses do
+		ownership[key] = GamePassService.Owns(player, key)
+	end
+	local remote = Remotes.OwnershipState :: RemoteEvent
+	remote:FireClient(player, ownership)
+end
 
 function MonetizationService.Init()
 	GamePassService.Init()
@@ -38,6 +59,32 @@ function MonetizationService.Init()
 	-- Init in any order relative to DailyQuestManager.
 	BattlePassXP.Init()
 	BattlePassClaimService.Init()
+
+	-- OwnershipState replication. Push on every ownership flip
+	-- (initial prime fires once per pass; rapid mid-session purchase
+	-- fires once per pass). Each push is a small map (≤ ~6 keys at V1
+	-- catalog size); chattiness is negligible.
+	GamePassService.OnOwnershipChanged:Connect(function(player)
+		pushOwnershipState(player)
+	end)
+
+	-- Push an initial state on join in case the player connects before
+	-- any OnOwnershipChanged fires (e.g. all passes default to "not
+	-- owned" with placeholder IDs — no flip occurs and the client
+	-- otherwise sees no state).
+	Players.PlayerAdded:Connect(function(player)
+		task.spawn(function()
+			-- Wait briefly for primeAllForPlayer to complete its first
+			-- pass; without this the snapshot may be empty.
+			task.wait(1)
+			if player:IsDescendantOf(Players) then
+				pushOwnershipState(player)
+			end
+		end)
+	end)
+	for _, player in Players:GetPlayers() do
+		task.spawn(pushOwnershipState, player)
+	end
 end
 
 return MonetizationService

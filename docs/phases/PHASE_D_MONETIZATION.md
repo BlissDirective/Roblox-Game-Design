@@ -529,6 +529,146 @@ Closes Phase D.
 
 ---
 
-## D5 — Monetization UI ⏳
+## D5 — Monetization UI ✅ — closes Phase D
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### What was built
+
+#### Server (closing the D3 tech debt + new replication paths)
+
+- **`CurrencyService.GetMultiplier(player)`** — public accessor for
+  the per-player multiplier (returns 1 on miss). Closes the D3 tech
+  debt where `OfflineProgression` couldn't read the value.
+- **`OfflineProgression.GrantOnJoin`** — now multiplies `elapsed *
+  incomePerSecond * GetMultiplier(player)` so 2× Credits +
+  Auto-Collect owners get the same ×3.0 boost on offline grants
+  that they get on the live tick.
+- **`CurrencyService.AddCores`** — fires the new `CoresChanged`
+  Remote on every grant (so the HUD reads live).
+- **`CurrencyService.Init`** PlayerAdded — now pushes initial
+  `CoresChanged` alongside `CreditsChanged` so the HUD has a
+  starting value before any grant fires.
+- **`MonetizationService.Init`** — added inline `pushOwnershipState`
+  function that builds a `{ [passKey]: boolean }` snapshot via
+  `GamePassService.Owns` per pass, fires `Remotes.OwnershipState`
+  to the affected client. Subscribes to `GamePassService.OnOwnershipChanged`
+  for delta pushes; PlayerAdded primes ~1s after join (lets the
+  initial `UserOwnsGamePassAsync` prime cycle complete first).
+
+#### Remotes
+
+- **`CoresChanged`** (Server → Client Event) — companion to
+  `CreditsChanged`.
+- **`OwnershipState`** (Server → Client Event) — full GamePass
+  ownership map per push.
+
+#### Client
+
+- **`HUD/CoresDisplay.luau`** — top-right readout next to
+  `CreditsDisplay`. Listens to `CoresChanged`. Same visual style
+  with amber stroke (vs. teal Credits) for quick value-type
+  distinction.
+- **`HUD/HudController`** — wires `CoresDisplay.Init()`.
+- **`Shop/GamePassPanel.luau`** — combined pass + product store.
+  ScrollingFrame with two sections ("GAME PASSES", "PRODUCTS").
+  Iterates `Constants.MONETIZATION.{GamePasses, DevProducts}`.
+  GamePass cards show "Owned" (greyed) or "Buy 199 R$" — Buy invokes
+  `MarketplaceService:PromptGamePassPurchase`. DevProduct cards
+  always show Buy → `PromptProductPurchase`. Listens to
+  `OwnershipState` and rebuilds when open.
+- **`Shop/BattlePassPanel.luau`** — XP header (progress bar +
+  "Tier N / 30 — X / 1000 XP" label) + 30-row scrolling tier list.
+  Each row shows tier badge (filled green at-or-below current tier),
+  Free + Premium track buttons. Buttons display the reward when
+  not yet reached, "Claim {reward}" when claimable, "Claimed"
+  when done. Premium gate: button disabled until `state.premiumOwned`.
+- **`Shop/MonetizationController.luau`** — adds two HUD toggle
+  buttons: "Store" (x=208, teal stroke) → opens `GamePassPanel`;
+  "Battle Pass" (x=320, amber stroke) → opens `BattlePassPanel`.
+- **`init.client.luau`** — wires `MonetizationController.Init()`
+  last in the chain.
+
+### Audit (D5-scope, sandbox-side)
+
+- 51 `.luau` files — `--!strict` on all
+- `stylua --check` clean
+- `rojo build` produces a `.rbxl` with the new tree
+
+### Audit (D5-scope, Studio-side — pending your local run)
+
+After F5:
+
+1. **Cores HUD readout visible** top-right next to Credits, both
+   showing 0 initially.
+2. **Grant cores via Command Bar:**
+   ```luau
+   local CS = require(game.ServerScriptService.Server.Modules.Economy.CurrencyService)
+   CS.AddCores(game.Players:GetPlayers()[1], 50)
+   ```
+   HUD updates to "50 Cores".
+3. **Open Store** → 4 GamePass cards + 4 DevProduct cards visible,
+   prices shown in R$.
+4. **Click Buy** on a GamePass → console warn:
+   `[GamePassPanel] DoubleCredits has placeholder ID — REPLACE_BEFORE_LAUNCH`
+   (Phase H replaces with real IDs).
+5. **Open Battle Pass** → XP bar at 0%, 30 tier rows visible.
+   Grant XP via Command Bar:
+   ```luau
+   local BPS = require(game.ServerScriptService.Server.Modules.Monetization.BattlePass.BattlePassService)
+   BPS.GrantXP(game.Players:GetPlayers()[1], 5500)
+   ```
+   Bar advances; tier 5 + earlier rows turn green; tier 5's Free
+   button reads "Claim 500 ¢"; click it → tier reward applied,
+   button flips to "Claimed", HUD credits +500.
+6. **Premium gate** — Premium buttons remain disabled until
+   ownership flips. Cannot test the live flip without real Pass
+   IDs (Phase H).
+7. **Offline grant + multiplier (D3 tech debt fix)** — manually
+   `data.lastJoinAt = os.time() - 600` + set `multipliers[p] = 3.0`
+   in CurrencyService → rejoin → "+M Credits" payload should be
+   3× what it would have been without the multiplier.
+
+### Tech debt / deferred
+
+- **5 toggle buttons in the top row** (Shop, Quests, Store, Battle
+  Pass) plus the Build palette bottom-center are V1 mobile-tight.
+  Phase G repositions per device (likely a hamburger menu on
+  mobile, expanded row on desktop).
+- **No purchase-confirmation toast.** The default Roblox prompt
+  closes after success; the client doesn't currently display
+  "+50K Credits granted!" feedback. CreditsChanged fires and the
+  HUD ticks but there's no narrative beat. F4 / G adds.
+- **No icons** in the pass / product / battle-pass cards — all
+  text. Phase G with the asset pipeline.
+- **BattlePassPanel re-renders on every state push.** With 30 tier
+  rows that's a meaningful instance churn on each XP grant. V1 is
+  fine (1 push per quest claim ≤ 3-4 times/day per player); F1+
+  may diff-patch.
+
+### Phase D status
+
+**All five sub-phases shipped.** Server enforces every gate,
+clients render. Phase D audit gate per `10_BUILD_PROTOCOL.md`:
+test purchase flow in Studio, verify pass effects apply
+immediately + on rejoin, verify duplicate `ProcessReceipt` calls
+only credit once. Per-mechanic recipes are in their respective
+sub-phase entries above.
+
+**Phase D commits:**
+- `982fa11` D1 — Game Pass infrastructure + ADR-006
+- `17c144a` D2 — Dev Product infrastructure + idempotent PurchaseLedger
+- `a1345b8` D3 — pass effects wired
+- `205bbd5` D4 — Battle Pass scaffolding
+- `<this commit>` D5 — monetization UI
+
+### What's next
+
+Phase E — Social Layer. Per `finalized-brainstorm.md` §4.6 this is
+the **highest-risk phase** (raids + clans + voice chat + leaderboards
++ friends, weeks 7–9). Pre-committed Soft V1 fallback exists per
+§3.3 if E slips past Week 12. Research pass at Phase E kickoff:
+MessagingService cross-server matchmaking, MemoryStoreService
+sentinel patterns, TeleportService:ReserveServer flow, Spatial
+Voice 2026 status, OrderedDataStore for leaderboards.

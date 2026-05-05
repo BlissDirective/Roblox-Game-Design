@@ -64,6 +64,13 @@ local Remotes = {
 	-- player on every credit change (income tick, spend, grant).
 	CreditsChanged = getOrCreate("CreditsChanged", "RemoteEvent") :: RemoteEvent,
 
+	-- Phase D5 — Economy / Cores HUD:
+	-- Server → Client. Args: (newCores: number).
+	-- Same shape and contract as CreditsChanged. Fires from
+	-- CurrencyService.AddCores (quest claim rewards in C3, BP tier
+	-- claims in D4, Core Pack purchases in D2 once real IDs land).
+	CoresChanged = getOrCreate("CoresChanged", "RemoteEvent") :: RemoteEvent,
+
 	-- Phase C1 — Retention / daily login:
 	-- Server → Client. Args: (state: DailyLoginManager.State).
 	-- Server pushes the current claim state on join + after each
@@ -107,6 +114,15 @@ local Remotes = {
 	-- Client → Server (RemoteFunction). Args: (tier: number, track: "free" | "premium").
 	-- Returns BattlePassService.ClaimResult.
 	ClaimBattlePassTier = getOrCreate("ClaimBattlePassTier", "RemoteFunction") :: RemoteFunction,
+
+	-- Phase D5 — Monetization / GamePass ownership replication:
+	-- Server → Client. Args: (ownership: { [passKey: string]: boolean }).
+	-- Pushed on join (after first prime) and on every flip via
+	-- GamePassService.OnOwnershipChanged. Client uses this to render
+	-- "Owned" badges on the GamePass shop panel without needing to
+	-- call UserOwnsGamePassAsync (which has the staleness bug per
+	-- ADR-006). Server is the source of truth.
+	OwnershipState = getOrCreate("OwnershipState", "RemoteEvent") :: RemoteEvent,
 }
 
 return Remotes

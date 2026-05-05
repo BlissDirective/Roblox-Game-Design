@@ -51,6 +51,11 @@ local function fireChanged(player: Player, newCredits: number)
 	remote:FireClient(player, newCredits)
 end
 
+local function fireCoresChanged(player: Player, newCores: number)
+	local remote = Remotes.CoresChanged :: RemoteEvent
+	remote:FireClient(player, newCores)
+end
+
 local function getMultiplier(player: Player): number
 	return multipliers[player] or 1
 end
@@ -144,6 +149,7 @@ function CurrencyService.AddCores(player: Player, amount: number): boolean
 		return false
 	end
 	data.cores += amount
+	fireCoresChanged(player, data.cores)
 	return true
 end
 
@@ -177,6 +183,13 @@ function CurrencyService.SetMultiplier(player: Player, value: number)
 	multipliers[player] = value
 end
 
+-- Public accessor for the per-player multiplier. Returns 1 when the
+-- player has no entry (fresh join, not yet primed by PassEffects).
+-- D5 / OfflineProgression reads this to scale the offline grant.
+function CurrencyService.GetMultiplier(player: Player): number
+	return multipliers[player] or 1
+end
+
 function CurrencyService.RegisterExtractor(player: Player, buildable: Buildable, part: BasePart)
 	if buildable.income <= 0 then
 		return
@@ -200,11 +213,14 @@ end
 function CurrencyService.Init()
 	Players.PlayerAdded:Connect(function(player)
 		multipliers[player] = 1
-		-- Push the initial credits value to the client once data is loaded.
+		-- Push the initial credits + cores values to the client once
+		-- data is loaded. D5: Cores HUD listens to CoresChanged and
+		-- needs the initial value too.
 		task.spawn(function()
 			local data = DataManager.WaitForData(player)
 			if data then
 				fireChanged(player, data.credits)
+				fireCoresChanged(player, data.cores)
 			end
 		end)
 	end)
