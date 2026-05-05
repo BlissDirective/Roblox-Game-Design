@@ -252,6 +252,64 @@ local Constants = {
 		BulkDestroyBatchSize = 8,
 		BulkDestroyBatchDelay = 0.05, -- seconds
 	},
+
+	-- Raid pipeline (Phase E1). The raid system uses MemoryStoreService
+	-- for the cross-server queue + snapshot + targets pool, MessagingService
+	-- for matched broadcasts and outcome relay, and TeleportService's
+	-- ReserveServerAsync for the raid instance.
+	--
+	-- Two-place architecture per ADR-007: V1 ships a single .rbxl that
+	-- detects raid mode at boot via `game.PrivateServerId ~= ""`. The
+	-- raid place is a reserved instance of the same place id; V1.1+ may
+	-- split into a separate PlaceId once specialization justifies the
+	-- operational cost.
+	--
+	-- All real-money / placement-id-sensitive values are placeholders
+	-- (REPLACE_BEFORE_LAUNCH per the protocol's escalation rule). The
+	-- ReservedServerLauncher refuses to teleport with id = 0 and warns.
+	RAID = {
+		-- Reserved-server target. V1 launch sets to the main PlaceId
+		-- (single-PlaceId reserved-instance pattern). V1.1+ split routes
+		-- to a separate PlaceId in the same Universe.
+		RaidPlaceId = 0, -- REPLACE_BEFORE_LAUNCH
+		-- Round duration. Brainstorm §2.1: "queue into a 5-min round".
+		RoundSeconds = 5 * 60,
+		-- After the round ends, give the player a brief grace window in
+		-- the raid place before forcing the home teleport.
+		PostRoundGraceSeconds = 8,
+		-- Matchmaker cadence. The elected leader runs this loop.
+		MatchmakerTickSeconds = 2,
+		-- An attacker who's been queued past this without being matched
+		-- is auto-popped and offered a PvE wave (Phase E2 fallback).
+		QueueDeadlineSeconds = 30,
+		-- MemoryStoreService expirations.
+		QueueEntryTtl = 90, -- queue rows; cleared on match or deadline
+		SnapshotTtl = 180, -- snapshot lives just long enough to load
+		TargetsTtlSeconds = 90, -- raidable-target heartbeats expire after 2 missed heartbeats
+		-- How often each main server heartbeats its online players into
+		-- the global "raidable" pool.
+		TargetsHeartbeatSeconds = 30,
+		-- Sentinel-based matchmaker leader election. First server to
+		-- claim the sentinel via MemoryStore SetAsync(absent) wins for
+		-- ttl seconds; the leader extends its lease each tick.
+		MatchmakerSentinelKey = "raid.matchmaker.leader",
+		MatchmakerSentinelTtl = 15,
+		-- MemoryStoreService bucket names (single-source-of-truth).
+		QueueMapName = "OutpostRaidQueue",
+		TargetsMapName = "OutpostRaidableTargets",
+		SnapshotMapName = "OutpostRaidSnapshots",
+		SentinelMapName = "OutpostRaidSentinels",
+		-- MessagingService topics.
+		TopicMatched = "outpost.raid.matched",
+		TopicOutcome = "outpost.raid.outcome",
+		-- V1 placeholder reward bands (Phase G/E2 tunes via
+		-- config/balance/raid_rewards.json).
+		AttackerWinCredits = 1000,
+		AttackerLossCredits = 100,
+		-- Defender's consolation reward when raided (the "asynchronous
+		-- defense reward" per brainstorm §2.1). Tuned in Phase G.
+		DefenderRaidedCredits = 250,
+	},
 }
 
 return Constants

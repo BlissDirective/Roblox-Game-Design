@@ -33,8 +33,20 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     lastQuestReset       = nil :: string?, -- "YYYY-MM-DD" UTC of last quest roll
     -- Phase D2 — Monetization / receipt idempotency:
     purchaseHistory      = {},             -- { [purchaseId: string]: true } — keys are Roblox PurchaseIds
+    -- Phase E1 — Raid stats:
+    raidWins        = 0, -- offensive raids won
+    raidLosses      = 0, -- offensive raids lost (incl. mid-round bails)
+    raidsDefended   = 0, -- successful defenses (attacker bailed or — once E2 ships — was killed by snapshot defenders)
+    raidsRaided     = 0, -- total times this player has been the defender of a raid
 }
 ```
+
+### Raid stat fields (E1)
+
+Counters mutated only by `RaidRewardService` on the home server that
+holds the player's profile. The raid server never writes these
+directly (ADR-008). E5's weekly leaderboard reads `raidWins` for the
+"weekly raid wins" board; the global Credits board uses `credits`.
 
 ### `dailyQuests[id].vipOnly` (D3)
 

@@ -247,3 +247,110 @@
   - If Roblox eventually fixes the cache bug (unlikely soon), this
     ADR can be revisited and the local cache removed; `Owns` becomes
     a thin wrapper over `UserOwnsGamePassAsync`.
+
+---
+
+## ADR-007: Single-PlaceId reserved-instance raid architecture for V1
+
+- **Date:** 2026-05-05 (Phase E1)
+- **Status:** Accepted.
+- **Context:** Brainstorm §4.6 calls for a "separate place" for raids
+  to keep the defender's live server untouched. Two readings:
+  1. **True split** — a second PlaceId in the same Universe, with its
+     own `.rbxl` artifact and CI release pipeline.
+  2. **Reserved-instance same-place** — `ReserveServerAsync(currentPlaceId)`
+     returns a private instance of the same place; bootstrap branches on
+     `game.PrivateServerId ~= ""` to enter raid mode.
+  Both honor the "isolation invariant" — the defender's home server is
+  always a different `ServerInstance` than the raid server.
+- **Decision:** **V1 ships single-PlaceId reserved-instance pattern.**
+  `default.project.json` builds one `.rbxl`. `src/server/init.server.luau`
+  branches on `PrivateServerId`: empty → main bootstrap, non-empty → raid
+  bootstrap (DataManager + ServerAuthorityBootstrap + RaidSession only).
+- **Why over true split:**
+  1. **Single CI pipeline.** `release.yml` already publishes one `.rbxl`
+     to one PlaceId; doubling that requires parallel pipelines + a
+     second `ROBLOX_API_KEY` scope.
+  2. **CSG / EditableMesh / EditableImage assets only authored once.**
+     Per `finalized-brainstorm.md` §4.1, these can't publish via Open
+     Cloud and must be authored in Studio. With two PlaceIds, every
+     such asset would need authoring twice.
+  3. **Operational complexity vs. payoff.** True split's only benefit
+     over reserved-instance is the *option* to specialize the raid
+     `.rbxl` (exclude unused modules, smaller download). For V1, the
+     download size delta is negligible (~93KB total today).
+- **Alternatives considered:**
+  - **True two-PlaceId split** — operational cost without compensating
+    benefit at V1 scale. Deferred to V1.5+ if specialization justifies it.
+  - **Always run main + raid stack in same bootstrap** — ambiguous trust
+    boundary; raid place would also have CurrencyService.tickLoop running
+    against snapshots, which makes no sense.
+- **Consequences:**
+  - `Constants.RAID.RaidPlaceId` placeholder = 0 in V1 dev. Phase H sets
+    it to the *same* PlaceId as the main place (single-PlaceId reserved-
+    instance pattern).
+  - V1.1+ split: change `RaidPlaceId` to a separate id in the same
+    Universe; `default.project.json` stays as the main; add a thin
+    `raid.project.json` that only maps the modules the raid bootstrap
+    needs. Code branching on `PrivateServerId` is unchanged.
+  - The brainstorm's "separate place" wording reads as the logical
+    isolation, not the build-artifact split. This ADR honors the
+    invariant cheaply.
+
+---
+
+## ADR-008: Raid server never writes the defender's profile
+
+- **Date:** 2026-05-05 (Phase E1)
+- **Status:** Accepted.
+- **Context:** A raid round resolves with credit transfers between
+  attacker and defender. The simplest implementation has the raid
+  server (which holds the attacker) directly write the defender's
+  profile via `DataStoreService:UpdateAsync` for the credit delta.
+  But the defender's home server *also* holds an active session lock
+  on that profile via ProfileStore — concurrent writes from two
+  servers either trigger session-lock conflicts or (worse) silently
+  overwrite each other.
+- **Decision:** **The raid server is never an authoritative writer of
+  the defender's profile.** All defender-side state changes — credit
+  delta, raid stat counters, future "Your colony was raided"
+  acknowledgments — flow through MessagingService topic
+  `outpost.raid.outcome`. Each main server subscribes; the one that
+  holds the defender's `Player` object applies the writes via
+  `CurrencyService.Add` and direct `data.raidsDefended` mutation.
+- **Why this is the long-term-correct architecture:**
+  1. **Single-writer-per-profile invariant maintained.** ProfileStore's
+     session-lock model assumes one writer; this preserves it.
+  2. **Trust boundary trivially auditable.** Searching the codebase
+     for "writes to defender's profile" yields exactly one hit:
+     `RaidRewardService.applyDefenderSide`, running on the home server.
+     A raid-server-owned write would be invisible across multiple modules.
+  3. **Linear scalability.** N raid servers + M home servers — each
+     pair operates independently. No DataStore contention.
+- **Risks accepted:**
+  - **Defender goes offline mid-raid.** No home server holds the
+    defender; the outcome MessagingService payload is consumed by no
+    listener. The defender-side reward is lost. **Acceptable for V1**
+    (per RAID_PROTOCOL.md "Failure modes & recovery"). V1.5+ adds a
+    `PendingRaidRewards` DataStore — a separate keyspace from
+    `PlayerData_v1`, written only by the raid server, read + cleared
+    by the defender's home server on next join. This avoids the
+    concurrent-write problem because the home server is always the
+    sole reader of pending rewards.
+- **Alternatives considered:**
+  - **Raid server writes defender directly** — violates ProfileStore
+    invariant. Rejected.
+  - **Always teleport the defender into the raid place** — turns
+    asynchronous PvP into synchronous; defeats the brainstorm §2.6
+    "asynchronous PvP via match-based raids" decision. Rejected.
+  - **Defender's home polls for outcomes via MemoryStore** — adds a
+    polling loop on every home server; less efficient than
+    MessagingService's push. Rejected.
+- **Consequences:**
+  - The outcome payload is small (one table per raid, ≤ 7 fields).
+    MessagingService quota at universe scale is comfortable.
+  - Idempotency is owned by the home: per-server in-memory dedupe set
+    on `(attackerUserId, defenderUserId, endedAt)` with a 10-min TTL.
+    Bounded; pruned every 5 minutes.
+  - Future cross-server features (clan stash transfers in E3, gift
+    sending in V1.5) can reuse this MessagingService relay pattern.

@@ -123,6 +123,25 @@ local Remotes = {
 	-- call UserOwnsGamePassAsync (which has the staleness bug per
 	-- ADR-006). Server is the source of truth.
 	OwnershipState = getOrCreate("OwnershipState", "RemoteEvent") :: RemoteEvent,
+
+	-- Phase E1 — Raid / matchmaking + match flow:
+	-- Client → Server (RemoteFunction). Args: ("queue" | "cancel").
+	-- Returns RaidMatchmaker.QueueResult. Server enqueues / cancels via
+	-- MemoryStoreService SortedMap; never trusts the client for any
+	-- match outcome.
+	RaidQueue = getOrCreate("RaidQueue", "RemoteFunction") :: RemoteFunction,
+	-- Server → Client. Args: (state: RaidMatchmaker.QueueState).
+	-- Pushed on enqueue, cancel, match, deadline-pop, raid-end. Client
+	-- renders queue UI off this; server is authoritative.
+	RaidQueueState = getOrCreate("RaidQueueState", "RemoteEvent") :: RemoteEvent,
+	-- Server → Client. Args: (info: RaidSession.StartInfo).
+	-- Fires once in the raid place when the round actually begins.
+	RaidStarted = getOrCreate("RaidStarted", "RemoteEvent") :: RemoteEvent,
+	-- Server → Client. Args: (outcome: RaidSession.Outcome).
+	-- Fires for the attacker at round end (raid place) AND for the
+	-- defender on their home server when the outcome MessagingService
+	-- payload arrives (so they see a "Your colony was raided" toast).
+	RaidEnded = getOrCreate("RaidEnded", "RemoteEvent") :: RemoteEvent,
 }
 
 return Remotes

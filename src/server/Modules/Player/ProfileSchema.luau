@@ -33,6 +33,10 @@
 	read on demand via `GamePassService.Owns`. Season transitions
 	reset XP/tier/claims lazily on the next GetState/GrantXP/TryClaim
 	when `battlePassSeasonId != Constants.BATTLE_PASS.SeasonId`.
+	Phase E1: adds `raidWins`, `raidLosses`, `raidsDefended`,
+	`raidsRaided` for offensive + defensive raid counters. These are
+	the canonical inputs for E5's weekly leaderboard. Additive; older
+	saves get 0 from defaults via Reconcile.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -90,6 +94,11 @@ export type PlayerData = {
 	battlePassTier: number, -- derived from XP; capped at MaxTier
 	battlePassClaimed: { [string]: BattlePassClaimEntry }, -- key = tostring(tier)
 	battlePassSeasonId: string?, -- season-reset detector
+	-- Phase E1 — Raid stats (E5 reads these for the weekly leaderboard).
+	raidWins: number, -- offensive raids won
+	raidLosses: number, -- offensive raids lost
+	raidsDefended: number, -- successful defenses (defender survived a raid)
+	raidsRaided: number, -- total times this player has been raided
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -111,6 +120,10 @@ ProfileSchema.DEFAULT_DATA = {
 	battlePassTier = 0,
 	battlePassClaimed = {},
 	battlePassSeasonId = nil,
+	raidWins = 0,
+	raidLosses = 0,
+	raidsDefended = 0,
+	raidsRaided = 0,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.
