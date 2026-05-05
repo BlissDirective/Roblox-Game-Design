@@ -271,3 +271,180 @@ brainstorm §2.1 "NPC alien wave fallback when raid queue is empty").
 ### Commit
 
 `feat(phaseE1): cross-server raid matchmaker + reserved-server flow`
+
+---
+
+## E2 — PvE wave system + raid-queue fallback ✅
+
+**Date:** 2026-05-05
+**Branch:** `claude/audit-phases-a-d-2BAuW`
+
+### What was built
+
+#### Server (main place)
+
+- **`Constants.COMBAT`** — wave clock cadence (10 min), per-wave alien
+  count formula (`base + (N-1)*scale`, capped at 30), wave duration
+  (90s), spawn-window stagger (15s), pool size (50), and Stalker
+  alien stats (HP 100, melee 10, cooldown 1s, walkspeed 14). Single-
+  source-of-truth for V1 wave tuning; Phase G replaces with
+  `config/balance/wave_scaling.json`.
+- **`ProfileSchema.luau`** — added `wavesSurvived: number` (default 0).
+  Additive; older saves get 0 via Reconcile. Documented in
+  `DATA_SCHEMA.md`.
+- **`Remotes.luau`** — registered `WaveStarted` (S→C) and `WaveEnded`
+  (S→C). Documented in `REMOTES_REGISTRY.md`.
+- **`Modules/Registry/AlienRegistry.luau`** (shared) — alien type
+  catalog. V1 ships only `stalker`; Phase G adds biome variants. Stats
+  pulled from `Constants.COMBAT` so a single tuning file covers
+  everything.
+- **`Combat/AlienPool.luau`** — pre-allocates 50 Stalker actor models
+  at server start. Each is a single Part (PrimaryPart =
+  HumanoidRootPart) + Humanoid, parked under `ServerStorage.OutpostAlienPool`.
+  `Acquire` reparents to `Workspace.AlienActors`, resets HP +
+  position; `Release` reparents back. Pool overflow logs a warn and
+  spawns a fresh actor (graceful degradation; surfaces tuning
+  regressions).
+- **`Combat/AlienAI.luau`** — V1 simplest-possible AI: Heartbeat-
+  driven `MoveTo` toward the target player at 1Hz (avoids per-frame
+  replication cost), Touched-event melee with `meleeCooldown`
+  guard. No PathfindingService — V1 plot is a flat 64×64 square so
+  line-of-sight steering is correct enough. `Drive(alien)` returns a
+  controller handle the WaveDirector calls `:Stop()` on at wave end.
+- **`Combat/DamageService.luau`** — single chokepoint for "X damages
+  Y". V1 wraps `humanoid:TakeDamage` and emits `damage_taken` to
+  QuestObjectives for future quest hooks. F1 hardens with source-
+  trust validation + per-source rate limiting.
+- **`Combat/WaveDirector.luau`** — wave lifecycle owner. Two trigger
+  paths:
+  1. **Wave clock** (`Constants.COMBAT.WaveClockSeconds = 600`) —
+     fires for every online player with a plot, every 10 min. Stagger
+     half-cycle on first tick to dodge "every server fires at the
+     same boundary".
+  2. **Queue-deadline fallback** — subscribes to
+     `RaidMatchmaker.OnDeadlinePop`; calls `StartFallbackWave(player)`.
+     Closes the brainstorm §2.1 "NPC alien wave fallback when raid
+     queue is empty" loop.
+  Per-player active-wave tracking (`activeWaves[player]`) prevents
+  overlapping waves. Wave ends when all aliens dead, timer expires,
+  OR player character dies. Survival increments `wavesSurvived` and
+  emits `wave_survived` to QuestObjectives.
+- **`Raid/RaidMatchmaker.luau`** — added `OnDeadlinePop` BindableEvent;
+  fires inside `deadlineLoop` after the queue state is updated.
+  Decoupled via signal so WaveDirector doesn't require Raid (no
+  cycle).
+- **`init.server.luau`** — wired `WaveDirector.Init()` after
+  `RaidMatchmaker.Init()`. Order matters: WaveDirector subscribes to
+  the matchmaker's BindableEvent, which must exist first.
+
+#### Client
+
+- **`Combat/CombatController.luau`** — wave HUD: top-center banner
+  shows "Wave N (reason) — Xs — Y aliens" with a 1Hz countdown.
+  `WaveStarted` builds the banner; `WaveEnded` clears it and shows a
+  5s result toast (green stroke survived, red stroke failed).
+  Placeholder visuals — Phase G replaces with the neon-tactical
+  theme + alarm SFX.
+- **`init.client.luau`** — wired `CombatController.Init()`.
+
+### Audit (E2-scope, sandbox-side)
+
+- 60 `.luau` files — `--!strict` on all
+- All new modules use `task.spawn` / `task.wait` / Heartbeat (no
+  legacy `wait()` / `coroutine.wrap`)
+- Object-pool invariant verified: `AlienPool.Acquire/Release` is the
+  only path that mutates `Workspace.AlienActors`; aliens never
+  `Instance.new` outside the pool path (overflow warn aside)
+- Coupling check: WaveDirector does not require RaidMatchmaker
+  before its Init runs (avoids load-order cycle); the require lives
+  inside `WaveDirector.Init` so it resolves after the matchmaker
+  module has finished loading
+- New `wavesSurvived` field is mutated only by `WaveDirector.endWave`
+  on the survival path. No other writers (verified by grep)
+- Damage chokepoint invariant: every `humanoid:TakeDamage` call
+  routes through `DamageService.ApplyToHumanoid` (only AlienAI is a
+  caller for E2; F1 turret service will be the second caller)
+- Trust boundary for `WaveStarted` / `WaveEnded`: notification-only,
+  fired to the affected player. No client → server wave Remote
+  (server is sole authority on wave state)
+
+### Audit (E2-scope, Studio-side — pending your local run)
+
+After F5:
+
+1. **Pool initialized.** Output:
+   `[AlienPool] Pre-allocated 50 Stalker actors.`
+2. **Manual wave fire** in Server Command Bar:
+   ```luau
+   local WaveDirector = require(game.ServerScriptService.Server.Modules.Combat.WaveDirector)
+   local p = game.Players:GetPlayers()[1]
+   WaveDirector.StartWave(p)
+   ```
+   Expect: 6 (= base 5 + (wave 1 - 1) * scale 1) Stalker neon-magenta
+   parts spawn around the player's plot perimeter and walk toward
+   them. `WaveStarted` Remote fires; HUD banner appears with a 90s
+   countdown. Aliens damage the player on touch.
+3. **Wave end paths:**
+   - Survive 90s without dying → `[WaveDirector] <Name> wave 1 ended:
+     survived=true, remaining=N`. HUD shows green "Wave 1 survived".
+     `data.wavesSurvived` increments to 1.
+   - Kill all aliens (no offensive option in V1 — defer to manual
+     command bar `humanoid:TakeDamage(100)` per alien; turrets land
+     in E2.5 / Phase G).
+   - Player character dies → `survived=false`. No counter increment.
+4. **Queue-deadline fallback chain:**
+   - Click "Queue for Raid" with no other online players. Wait 30s
+     for the deadline pop.
+   - Expect: `[WaveDirector] <Name> wave N started: count=N, reason=queue_deadline`.
+   - HUD banner shows reason as "no match — fallback".
+5. **Wave clock:**
+   - Wait `WaveClockSeconds / 2` (300s = 5 min) past server start
+     for the first clock tick. Subsequent waves every 600s (10 min).
+   - Verify clock-driven waves don't double-fire if a queue-deadline
+     wave is already active (the `activeWaves[player]` guard rejects).
+
+### Tech debt / deferred
+
+- **No offensive option for the player.** V1 ships waves that damage
+  but no way to fight back. E2.5 or Phase G adds:
+  - `Combat/TurretService.luau` — auto-targeting raycast turret as
+    a new buildable in BuildableRegistry.
+  - `Combat/DroneSwarmService.luau` — player-commanded drone swarm
+    (Recon/Combat/Engineering presets per brainstorm §4.8).
+  - Player weapon system (FP combat mode per brainstorm §2.8).
+- **No PathfindingService.** Aliens line-of-sight steer via MoveTo.
+  Walls block the ground but not the path heuristic — aliens can
+  bunch against walls. Phase G upgrades when biome terrain lands.
+- **No alien variants.** Stalker only in V1. Phase G adds volcanic
+  + ice-cave variants with biome-tied visuals + stats.
+- **`damage_taken` quest event has no quest entry yet.** The pool of
+  10 quests in `DailyQuestManager.QUEST_POOL` doesn't include a
+  damage-related objective. Phase G's quest-pool expansion adds
+  e.g. "Survive 3 PvE waves" (`wave_survived`) and "Take 500 damage"
+  (`damage_taken`).
+- **Wave clock cadence is V1 placeholder.** 10 min / wave is a
+  guess; Phase G playtest data tunes via
+  `config/balance/wave_scaling.json`.
+- **Snapshot rendering deferred.** RaidSession still runs raid
+  rounds in an empty world. Snapshot rendering + raid-place wave
+  defenders ship in a follow-up sub-phase or Phase G.
+- **Touched events are unrate-limited.** A modded client could spam
+  Touched events to inflate `damage_taken` emissions. F1's per-
+  Remote rate limiting + DamageService source validation closes
+  this.
+- **No alien death VFX / SFX.** Aliens just disappear back to the
+  pool when killed. Phase G adds a death animation + the
+  bioluminescent "burst" effect.
+
+### What's next
+
+E3 — Clan/squad system. New `Social/ClanService.luau` +
+`Social/ClanStashLedger.luau`; cross-server clan chat via
+MessagingService topic `outpost.clan.<clanId>`. New DataStore
+`ClanData_v1` (separate keyspace from PlayerData). New
+ProfileSchema field `clanId: string?`. Stash withdrawal > N
+requires leader approval; logged.
+
+### Commit
+
+`feat(phaseE2): PvE wave system + raid-queue fallback`

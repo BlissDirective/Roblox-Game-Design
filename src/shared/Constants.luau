@@ -317,6 +317,53 @@ local Constants = {
 		-- defense reward" per brainstorm §2.1). Tuned in Phase G.
 		DefenderRaidedCredits = 250,
 	},
+
+	-- PvE waves (Phase E2). Brainstorm §2.1: "By night, the jungle moves.
+	-- Aggressive alien fauna swarm your perimeter." V1 ships one alien
+	-- type (Stalker — matches the bioluminescent jungle theme) and a
+	-- linear difficulty curve scaling with wave number. Phase G adds
+	-- biome-specific variants (volcanic, ice cave) and tunes the curve
+	-- via `config/balance/wave_scaling.json`.
+	--
+	-- Object pooling per CLAUDE.md "anything spawned in bulk" rule. The
+	-- pool is sized to `AlienPoolSize` per server; aliens beyond that
+	-- spawn fresh instances (graceful degradation if a wave overshoots
+	-- the pool, but the warn surfaces tuning regressions).
+	COMBAT = {
+		-- How often a wave fires for every online player who has a plot.
+		-- 600s = 10 min. Approximates the brainstorm's "by night, the
+		-- jungle moves" cadence without needing a real day/night cycle
+		-- yet (Phase G adds the cycle).
+		WaveClockSeconds = 600,
+		-- Wave difficulty curve. Linear: wave N spawns
+		-- `AliensPerWaveBase + (N-1) * AliensPerWaveScale` aliens, capped
+		-- at `AliensPerWaveCap`. V1 placeholder; Phase G tunes after
+		-- playtest data shows where the difficulty wall lands.
+		AliensPerWaveBase = 5,
+		AliensPerWaveScale = 1,
+		AliensPerWaveCap = 30,
+		-- How long a wave runs before auto-ending (regardless of remaining
+		-- aliens). 90s caps the round so a player who can't kill them all
+		-- isn't stuck forever.
+		WaveDurationSeconds = 90,
+		-- Stagger spawns over this fraction of the wave duration. Prevents
+		-- a "bulk Instance.new spike" footgun on wave start.
+		WaveSpawnWindowSeconds = 15,
+		-- Object pool size per server. V1 cap of 30 aliens × 1.5 buffer
+		-- for overlap when waves stack from queue-deadline fallback +
+		-- regular wave clock. Pool overflow logs and falls back to
+		-- ad-hoc spawn (correct, just slower).
+		AlienPoolSize = 50,
+		-- Alien stats — Stalker (V1 sole type).
+		AlienBaseHp = 100,
+		AlienMeleeDamage = 10,
+		AlienMeleeCooldownSeconds = 1.0,
+		AlienWalkSpeed = 14,
+		-- Spawn ring: aliens appear at the plot edge and walk toward the
+		-- player. `SpawnRingPadding` is the additional distance outside
+		-- the plot bounds where they spawn (so they don't clip the wall).
+		SpawnRingPadding = 6,
+	},
 }
 
 return Constants

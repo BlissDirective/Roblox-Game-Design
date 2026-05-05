@@ -25,6 +25,7 @@ local DailyQuestsPanel = require(script.Modules.Retention.DailyQuestsPanel)
 local WelcomeBackPopup = require(script.Modules.Retention.WelcomeBackPopup)
 local MonetizationController = require(script.Modules.Shop.MonetizationController)
 local RaidController = require(script.Modules.Raid.RaidController)
+local CombatController = require(script.Modules.Combat.CombatController)
 
 HudController.Init()
 CameraController.Init()
@@ -36,6 +37,7 @@ DailyQuestsPanel.Init()
 WelcomeBackPopup.Init()
 MonetizationController.Init()
 RaidController.Init()
+CombatController.Init()
 
 print(
 	string.format(

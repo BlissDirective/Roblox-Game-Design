@@ -45,6 +45,7 @@ else
 	local MonetizationService = require(script.Modules.Monetization.MonetizationService)
 	local RaidMatchmaker = require(script.Modules.Raid.RaidMatchmaker)
 	local RaidRewardService = require(script.Modules.Raid.RaidRewardService)
+	local WaveDirector = require(script.Modules.Combat.WaveDirector)
 
 	PlotManager.Init()
 	ResourceNodeSpawner.Init()
@@ -63,6 +64,9 @@ else
 	-- outcome relay routes credits to home profiles.
 	RaidMatchmaker.Init()
 	RaidRewardService.Init()
+	-- WaveDirector must Init AFTER RaidMatchmaker so OnDeadlinePop
+	-- subscription registers against an existing BindableEvent.
+	WaveDirector.Init()
 
 	print(
 		string.format(

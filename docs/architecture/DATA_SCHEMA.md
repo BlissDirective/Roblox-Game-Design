@@ -38,6 +38,8 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     raidLosses      = 0, -- offensive raids lost (incl. mid-round bails)
     raidsDefended   = 0, -- successful defenses (attacker bailed or — once E2 ships — was killed by snapshot defenders)
     raidsRaided     = 0, -- total times this player has been the defender of a raid
+    -- Phase E2 — Wave stats:
+    wavesSurvived   = 0, -- lifetime count of PvE waves survived
 }
 ```
 
@@ -47,6 +49,19 @@ Counters mutated only by `RaidRewardService` on the home server that
 holds the player's profile. The raid server never writes these
 directly (ADR-008). E5's weekly leaderboard reads `raidWins` for the
 "weekly raid wins" board; the global Credits board uses `credits`.
+
+### Wave stat field (E2)
+
+```luau
+wavesSurvived: number  -- lifetime count of PvE waves survived
+```
+
+Mutated only by `WaveDirector.endWave` when the player survives a
+wave (alien-kill-all OR timer-expiry-with-player-alive). Player-died
+counts as a loss; no increment. Drives a future `wave_survived`
+quest objective (Phase G expands the quest pool) and is a candidate
+column for E5's secondary leaderboard if Phase G playtest data shows
+PvE engagement.
 
 ### `dailyQuests[id].vipOnly` (D3)
 

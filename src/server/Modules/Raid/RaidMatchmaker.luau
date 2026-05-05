@@ -106,6 +106,13 @@ local sentinelMap: any = MemoryStoreService:GetHashMap(Constants.RAID.SentinelMa
 -- to the local client before the global state catches up.
 local localQueueState: { [Player]: QueueState } = {}
 
+-- Fires when a player's queue entry expires without a match. Phase E2's
+-- WaveDirector subscribes here for the "PvE wave fallback" hook
+-- (brainstorm §2.1: "NPC alien wave fallback when raid queue is empty").
+-- Decoupled via signal to avoid a Raid → Combat require dependency.
+local onDeadlinePop = Instance.new("BindableEvent")
+RaidMatchmaker.OnDeadlinePop = onDeadlinePop.Event
+
 local function pushQueueState(player: Player)
 	local state = localQueueState[player] or { queued = false, matched = false }
 	local remote = Remotes.RaidQueueState :: RemoteEvent
@@ -322,9 +329,10 @@ local function matchmakerLoop()
 end
 
 -- Per-second deadline pop: any local queued player past their deadline
--- gets cancelled with a "deadline" hint so the client can offer the
--- E2 PvE fallback. The MemoryStore TTL also expires the row, but we
--- enforce client-side feedback here so the UI reacts promptly.
+-- gets cancelled with a "deadline" hint AND the OnDeadlinePop signal
+-- fires so WaveDirector can launch a PvE fallback (brainstorm §2.1).
+-- The MemoryStore TTL also expires the row, but we enforce here for
+-- prompt UI reaction + the wave hook.
 local function deadlineLoop()
 	while true do
 		task.wait(1)
@@ -338,6 +346,7 @@ local function deadlineLoop()
 					error = "deadline",
 				}
 				pushQueueState(player)
+				onDeadlinePop:Fire(player)
 			end
 		end
 	end

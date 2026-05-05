@@ -37,6 +37,10 @@
 	`raidsRaided` for offensive + defensive raid counters. These are
 	the canonical inputs for E5's weekly leaderboard. Additive; older
 	saves get 0 from defaults via Reconcile.
+	Phase E2: adds `wavesSurvived` for the PvE wave system's lifetime
+	counter. Drives a future "wave_survived" quest objective entry
+	(Phase G expands the quest pool) and a possible E5 leaderboard
+	column. Additive; older saves get 0.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -99,6 +103,8 @@ export type PlayerData = {
 	raidLosses: number, -- offensive raids lost
 	raidsDefended: number, -- successful defenses (defender survived a raid)
 	raidsRaided: number, -- total times this player has been raided
+	-- Phase E2 — PvE wave stats.
+	wavesSurvived: number, -- lifetime count of waves survived
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -124,6 +130,7 @@ ProfileSchema.DEFAULT_DATA = {
 	raidLosses = 0,
 	raidsDefended = 0,
 	raidsRaided = 0,
+	wavesSurvived = 0,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

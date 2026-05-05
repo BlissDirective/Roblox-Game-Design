@@ -124,6 +124,19 @@ local Remotes = {
 	-- ADR-006). Server is the source of truth.
 	OwnershipState = getOrCreate("OwnershipState", "RemoteEvent") :: RemoteEvent,
 
+	-- Phase E2 — PvE waves:
+	-- Server → Client. Args: (info: WaveDirector.StartInfo).
+	-- Fires when a wave begins for this player. Carries `waveNumber`,
+	-- `alienCount`, `endsAt` (os.time). Client renders the wave HUD off
+	-- this. Server is authoritative — the client renders countdown but
+	-- can't end the wave early.
+	WaveStarted = getOrCreate("WaveStarted", "RemoteEvent") :: RemoteEvent,
+	-- Server → Client. Args: (result: WaveDirector.EndResult).
+	-- Fires when a wave ends (timer expired, all aliens dead, or player
+	-- character died). Client uses this to clear the wave HUD + fire
+	-- the result toast.
+	WaveEnded = getOrCreate("WaveEnded", "RemoteEvent") :: RemoteEvent,
+
 	-- Phase E1 — Raid / matchmaking + match flow:
 	-- Client → Server (RemoteFunction). Args: ("queue" | "cancel").
 	-- Returns RaidMatchmaker.QueueResult. Server enqueues / cancels via
