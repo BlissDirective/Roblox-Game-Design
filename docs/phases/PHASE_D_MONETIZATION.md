@@ -392,9 +392,142 @@ raid wins (Phase E) automatically advance battle pass progress.
 
 ---
 
-## D4 — Battle Pass scaffolding ⏳
+## D4 — Battle Pass scaffolding ✅
 
-_Pending._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### Tactical decisions made (surfaced for your audit)
+
+1. **Premium track ships as a GamePass**, not a per-season DevProduct.
+   One-time purchase covers all seasons. Simpler V1 implementation;
+   lower lifetime revenue per payer than industry-standard per-season
+   DevProducts. Framework supports a swap (read profile flag instead
+   of `GamePassService.Owns`); revisit at V1.5 if revenue model needs
+   to shift.
+2. **V1 tier rewards are placeholder Credits/Cores** because the
+   cosmetic system isn't built yet (Phase G). **Important:** this
+   technically violates the brainstorm §2.7 "cosmetic-only" rule.
+   Phase G must replace tier rewards with real cosmetics
+   (operator skins, drone trails, nameplate flairs) before launch
+   to honor the no-pay-to-win invariant.
+
+### What was built
+
+- **`ProfileSchema`** — added `battlePassXP`, `battlePassTier`,
+  `battlePassClaimed: { [string]: BattlePassClaimEntry }`,
+  `battlePassSeasonId`. Plus the `BattlePassClaimEntry` type
+  (`{ free, premium }`). String tier keys avoid Lua/JSON integer-
+  key edge cases on DataStore round-trip. **Premium ownership is
+  not a profile field** — read on demand via `GamePassService.Owns`.
+- **`Constants.MONETIZATION.GamePasses.BattlePassPremium`** — new
+  4th GamePass entry (799 R$, placeholder ID 0).
+- **`Constants.BATTLE_PASS`** — new section: `SeasonId = "S1"`,
+  `MaxTier = 30`, `XpPerTier = 1000` (linear curve), `XpRewards`
+  (event → XP map, currently `quest_claimed = 100`,
+  `claim_daily = 25`), `*RewardCreditsPerTier` / `*RewardCoresPerTier`
+  formulas for free + premium tracks.
+- **`Monetization/BattlePass/BattlePassService.luau`** — the core.
+  Public API: `GetState`, `GrantXP`, `TryClaim`, `GetTierReward`,
+  `Init`. Lazy season reset on `ensureFreshSeason` (XP/tier/claimed
+  wiped when `SeasonId` flips). `tierForXP` derives tier from XP,
+  capped at `MaxTier`. State pushes to client on every XP change
+  + claim + premium ownership flip.
+- **`Monetization/BattlePass/BattlePassXP.luau`** — subscribes
+  to `QuestObjectives.OnEmit`. On whitelisted events (`quest_claimed`,
+  `claim_daily`), grants XP via `BattlePassService.GrantXP`. Per-event
+  amounts read from `Constants.BATTLE_PASS.XpRewards`. Phase E adds
+  `raid_won`, `wave_survived`.
+- **`Monetization/BattlePass/ClaimService.luau`** — wires the
+  `ClaimBattlePassTier` RemoteFunction to `BattlePassService.TryClaim`
+  with type checks at the wire boundary.
+- **`DailyQuestManager.TryClaim`** — emits `quest_claimed` after
+  successful claim so `BattlePassXP` can grant battle pass progress.
+- **`MonetizationService.Init`** — wires `BattlePassService.Init`,
+  `BattlePassXP.Init`, `BattlePassClaimService.Init` after
+  `PassEffects.Init`.
+- **Remotes**: `BattlePassState` (Server → Client Event) +
+  `ClaimBattlePassTier` (Client → Server RemoteFunction).
+
+### XP-to-tier math (V1 cadence sanity)
+
+At `XpPerTier = 1000` and `quest_claimed = 100` XP per claim,
+30 tiers = 30,000 XP. A player who claims all 3 daily quests + the
+daily login (3×100 + 25 = 325 XP/day) reaches tier 30 in ~92 days.
+Active raid players (Phase E adds `raid_won` XP) and holders of
+the +1 quest slot (VIP) close to ~30 days. Tunable in Phase G after
+playtest data shows where the curve actually lands.
+
+### Audit (D4-scope, sandbox-side)
+
+- 47 `.luau` files — `--!strict` on all (gained 3 from D4: BattlePass
+  service, XP, ClaimService)
+- `stylua --check` clean
+- `rojo build` produces a `.rbxl` with the new tree
+- Composition cap holds: max multiplier (D3) × max tier reward (D4)
+  is bounded by the explicit per-tier formulas; no unbounded grant
+  paths
+
+### Audit (D4-scope, Studio-side — pending your local run)
+
+After F5, with no real Pass IDs (placeholder 0):
+
+1. **Default state.** `BattlePassState` arrives on join showing
+   `xp = 0`, `tier = 0`, `premiumOwned = false`, 30 tier views.
+2. **Manual XP grant** in Server Command Bar:
+   ```luau
+   local BPS = require(game.ServerScriptService.Server.Modules.Monetization.BattlePass.BattlePassService)
+   local p = game.Players:GetPlayers()[1]
+   BPS.GrantXP(p, 1000)   -- expect tier-up 0 → 1 in Output
+   BPS.GrantXP(p, 5000)   -- 6000 XP total → tier 6
+   ```
+3. **Claim path** (free track):
+   ```luau
+   print(BPS.TryClaim(p, 1, "free"))   -- ok=true, +100 credits
+   print(BPS.TryClaim(p, 1, "free"))   -- already claimed (free)
+   print(BPS.TryClaim(p, 7, "free"))   -- tier not yet reached
+   print(BPS.TryClaim(p, 1, "premium")) -- "Premium track required"
+   ```
+4. **Quest claim → BP XP cascade**: claim a daily quest via
+   `DailyQuestManager.TryClaim`; verify Output shows
+   `[BattlePassService] <Name> tier-up: ...` if the +100 XP crossed
+   a 1000-boundary.
+5. **Season reset** (manual sim):
+   ```luau
+   local DM = require(game.ServerScriptService.Server.Modules.Player.DataManager)
+   DM.GetData(p).battlePassSeasonId = "S0-old"
+   print(BPS.GetState(p))   -- ensureFreshSeason wipes XP/tier/claimed
+   ```
+
+### Tech debt / deferred
+
+- **Tier rewards are placeholders** (Phase G replaces with cosmetics).
+  **Don't ship to prod** until G lands or it's pay-to-win-ish.
+- **Premium-purchase model is GamePass not DevProduct**. V1.5 may
+  swap if revenue model needs shifting.
+- **No client-side BP panel UI** — D5 builds it. Until then,
+  `BattlePassState` pushes into a void on the client.
+- **No XP-source attribution.** `GrantXP` doesn't track whether XP
+  came from quests, login, or future raids. If Phase G wants
+  per-source XP charts, add `event` parameter.
+- **No retroactive XP grant on premium purchase.** If a player buys
+  premium late in the season, they unlock premium claim on
+  already-reached tiers (correct), but they don't get a "make-up"
+  XP injection. Standard battle-pass behavior.
+- **BattlePassXP doesn't grant XP for `earn_credits` / `play_session`
+  / `place_*` events.** Only `quest_claimed` and `claim_daily` are
+  whitelisted. This is intentional — XP should reward meaningful
+  retention loops, not raw activity. Phase G may add minor weights
+  for `play_session` if data shows it boosts engagement.
+
+### What's next
+
+D5 — monetization UI. Pass display panel (extends Shop-style
+panel with "Owned" badges), Battle Pass progress bar + tier view,
+Cores HUD readout (paired with `CoresChanged` Remote — adds in D5).
+Closes Phase D.
+
+---
 
 ## D5 — Monetization UI ⏳
 

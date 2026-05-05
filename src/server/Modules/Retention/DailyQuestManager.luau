@@ -307,6 +307,11 @@ function DailyQuestManager.TryClaim(player: Player, questId: string): ClaimResul
 		CurrencyService.AddCores(player, quest.rewardCores)
 	end
 
+	-- D4: emit so BattlePassXP can grant Battle Pass progress for
+	-- claimed quests. Done after the actual reward grants so a failure
+	-- to grant XP doesn't roll back the Credits/Cores reward.
+	QuestObjectives.Emit("quest_claimed", player, 1)
+
 	print(
 		string.format(
 			"[DailyQuestManager] %s claimed %s (+%d credits, +%d cores)",

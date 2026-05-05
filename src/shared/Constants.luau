@@ -124,6 +124,21 @@ local Constants = {
 				description = "Exclusive armor skin, +1 daily quest slot, VIP-only blueprints.",
 				priceRobux = 499,
 			},
+			-- D4: Battle Pass Premium track. Tactical V1 decision —
+			-- ship as a one-time GamePass (all seasons covered)
+			-- rather than per-season DevProduct (industry standard).
+			-- Tradeoff: simpler V1 implementation vs. lower lifetime
+			-- revenue per payer. Revisit at V1.5 if revenue model
+			-- needs to shift; framework already supports DevProduct
+			-- swap (just stop reading GamePassService.Owns and start
+			-- reading a per-season profile flag set in ProcessReceipt).
+			BattlePassPremium = {
+				key = "BattlePassPremium",
+				id = 0, -- REPLACE_BEFORE_LAUNCH
+				displayName = "Battle Pass — Premium Track",
+				description = "Unlocks the Premium reward track for all seasons.",
+				priceRobux = 799,
+			},
 		},
 
 		-- Developer Products (consumable; per-purchase grants).
@@ -161,6 +176,33 @@ local Constants = {
 				grantCores = 50,
 			},
 		},
+	},
+
+	-- Battle Pass (Phase D4). Season-scoped progression with a free
+	-- and premium track. Premium ownership reads from
+	-- MONETIZATION.GamePasses.BattlePassPremium via GamePassService.
+	--
+	-- V1 ships placeholder Credits/Cores tier rewards because the
+	-- cosmetic system isn't built yet. Phase G replaces with real
+	-- cosmetics per finalized-brainstorm.md §2.7's "cosmetic-only"
+	-- rule. Important: Phase G must replace before launch — V1
+	-- placeholder rewards technically violate the no-pay-to-win
+	-- invariant.
+	BATTLE_PASS = {
+		SeasonId = "S1",
+		MaxTier = 30,
+		XpPerTier = 1000, -- linear curve; tunable in Phase G after playtest data
+		-- XP awarded by event. Subscribed via QuestObjectives by
+		-- BattlePassXP. Phase E adds raid_won and wave_survived.
+		XpRewards = {
+			quest_claimed = 100,
+			claim_daily = 25,
+		},
+		-- Tier reward formulas (Phase G replaces with cosmetic grants).
+		-- Reading these as functions keeps the curve in one place.
+		FreeRewardCreditsPerTier = 100, -- free track tier N → 100*N credits
+		PremiumRewardCreditsPerTier = 250, -- premium tier N → 250*N credits
+		PremiumRewardCoresPerTier = 5, -- premium tier N → 5*N cores
 	},
 
 	-- World layout. V1 ships with a single shared server containing

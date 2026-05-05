@@ -26,6 +26,13 @@
 	for the VIP Operator pass's "+1 daily quest slot" effect. The 4th
 	quest rolled per day is flagged at reset; only VIP-owning players
 	can see / claim it. Additive — older entries default to non-vipOnly.
+	Phase D4: adds `battlePassXP`, `battlePassTier`,
+	`battlePassClaimed`, `battlePassSeasonId` for the Battle Pass.
+	Premium-track ownership is **not** a profile field — it's a
+	GamePass (`Constants.MONETIZATION.GamePasses.BattlePassPremium`)
+	read on demand via `GamePassService.Owns`. Season transitions
+	reset XP/tier/claims lazily on the next GetState/GrantXP/TryClaim
+	when `battlePassSeasonId != Constants.BATTLE_PASS.SeasonId`.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -51,6 +58,14 @@ export type QuestProgress = {
 	vipOnly: boolean?, -- D3: 4th-rolled quest each day; visible/claimable only with VIP Operator pass
 }
 
+-- D4: per-tier, per-track claim flags. Keys are stringified tier
+-- numbers ("1".."30") so JSON serialization in DataStore round-trips
+-- cleanly regardless of Lua/JSON integer-key edge cases.
+export type BattlePassClaimEntry = {
+	free: boolean,
+	premium: boolean,
+}
+
 export type PlayerData = {
 	_version: number,
 	credits: number,
@@ -70,6 +85,11 @@ export type PlayerData = {
 	lastQuestReset: string?, -- "YYYY-MM-DD" UTC of last roll
 	-- Phase D2 — Monetization / receipt idempotency
 	purchaseHistory: { [string]: boolean }, -- Roblox PurchaseId → true
+	-- Phase D4 — Battle Pass (premium ownership reads from GamePassService)
+	battlePassXP: number, -- accumulated XP for the current season
+	battlePassTier: number, -- derived from XP; capped at MaxTier
+	battlePassClaimed: { [string]: BattlePassClaimEntry }, -- key = tostring(tier)
+	battlePassSeasonId: string?, -- season-reset detector
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -87,6 +107,10 @@ ProfileSchema.DEFAULT_DATA = {
 	dailyQuests = {},
 	lastQuestReset = nil,
 	purchaseHistory = {},
+	battlePassXP = 0,
+	battlePassTier = 0,
+	battlePassClaimed = {},
+	battlePassSeasonId = nil,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

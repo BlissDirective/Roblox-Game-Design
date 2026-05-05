@@ -19,6 +19,9 @@
 local GamePassService = require(script.Parent.GamePassService)
 local DevProductService = require(script.Parent.DevProductService)
 local PassEffects = require(script.Parent.PassEffects)
+local BattlePassService = require(script.Parent.BattlePass.BattlePassService)
+local BattlePassXP = require(script.Parent.BattlePass.BattlePassXP)
+local BattlePassClaimService = require(script.Parent.BattlePass.ClaimService)
 
 local MonetizationService = {}
 
@@ -28,7 +31,13 @@ function MonetizationService.Init()
 	-- PassEffects must Init AFTER GamePassService so its subscription
 	-- to OnOwnershipChanged is in place before the first prime.
 	PassEffects.Init()
-	-- D4: BattlePassService.Init().
+	-- BattlePassService also subscribes to OnOwnershipChanged for the
+	-- premium track flip; same ordering rule.
+	BattlePassService.Init()
+	-- BattlePassXP subscribes to QuestObjectives; idempotent to call
+	-- Init in any order relative to DailyQuestManager.
+	BattlePassXP.Init()
+	BattlePassClaimService.Init()
 end
 
 return MonetizationService

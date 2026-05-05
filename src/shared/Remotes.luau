@@ -97,6 +97,16 @@ local Remotes = {
 	-- Fired once per join when the player has accrued offline income.
 	-- Skipped silently for new players or players with no extractors.
 	WelcomeBack = getOrCreate("WelcomeBack", "RemoteEvent") :: RemoteEvent,
+
+	-- Phase D4 — Monetization / Battle Pass:
+	-- Server → Client. Args: (state: BattlePassService.State).
+	-- Pushed on join, on every GrantXP that bumps the tier or XP,
+	-- after every successful ClaimBattlePassTier, and when premium
+	-- ownership flips mid-session.
+	BattlePassState = getOrCreate("BattlePassState", "RemoteEvent") :: RemoteEvent,
+	-- Client → Server (RemoteFunction). Args: (tier: number, track: "free" | "premium").
+	-- Returns BattlePassService.ClaimResult.
+	ClaimBattlePassTier = getOrCreate("ClaimBattlePassTier", "RemoteFunction") :: RemoteFunction,
 }
 
 return Remotes

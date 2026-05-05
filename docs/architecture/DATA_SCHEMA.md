@@ -48,6 +48,33 @@ subscribes to `GamePassService.OnOwnershipChanged` for the
 without the field default to "not vipOnly" via the standard nil-
 check pattern.
 
+### Battle Pass fields (D4)
+
+```luau
+battlePassXP        : number              -- accumulated this season
+battlePassTier      : number              -- derived from XP (capped at MaxTier)
+battlePassClaimed   : { [string]: { free, premium } }   -- key = tostring(tier)
+battlePassSeasonId  : string?             -- season-reset detector
+```
+
+`BattlePassClaimEntry` is a separate exported type
+(`{ free: boolean, premium: boolean }`). String tier keys avoid
+Lua/JSON integer-key edge cases on DataStore round-trip.
+
+**Premium ownership is not a profile field** — it lives in Roblox's
+GamePass system and is read on demand via
+`GamePassService.Owns(player, "BattlePassPremium")`. This makes
+premium ownership sticky across season transitions: a player who
+bought premium in S1 still has it in S2 without any per-season
+profile bookkeeping.
+
+Season transition: when `data.battlePassSeasonId !=
+Constants.BATTLE_PASS.SeasonId`, `BattlePassService` lazily
+resets `battlePassXP`, `battlePassTier`, and `battlePassClaimed`
+on the next `GetState`/`GrantXP`/`TryClaim`. Unclaimed rewards
+from the previous season are lost (standard battle-pass behavior;
+the social pressure to log in and claim drives retention).
+
 ### `purchaseHistory` shape (D2)
 
 Keyed by Roblox-issued `PurchaseId` (string, unique per receipt).
