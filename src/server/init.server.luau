@@ -45,11 +45,18 @@ else
 	local MonetizationService = require(script.Modules.Monetization.MonetizationService)
 	local RaidMatchmaker = require(script.Modules.Raid.RaidMatchmaker)
 	local RaidRewardService = require(script.Modules.Raid.RaidRewardService)
+	local TurretService = require(script.Modules.Combat.TurretService)
 	local WaveDirector = require(script.Modules.Combat.WaveDirector)
 
 	PlotManager.Init()
 	ResourceNodeSpawner.Init()
 	CurrencyService.Init()
+	-- TurretService must Init BEFORE PlacementService because turret
+	-- placements register with the service synchronously at place time.
+	-- (Init only sets up loops + cleanup; RegisterTurret is callable
+	-- before Init too — but ordering this way makes the dependency
+	-- explicit.)
+	TurretService.Init()
 	PlacementService.Init()
 	BuildRestorer.Init()
 	DailyLoginManager.Init()

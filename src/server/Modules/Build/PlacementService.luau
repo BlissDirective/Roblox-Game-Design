@@ -44,6 +44,7 @@ local PlotManager = require(script.Parent.Parent.World.PlotManager)
 local BaseSerializer = require(script.Parent.BaseSerializer)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
+local TurretService = require(script.Parent.Parent.Combat.TurretService)
 
 type Buildable = BuildableRegistry.Buildable
 type PlotInfo = PlotManager.PlotInfo
@@ -166,6 +167,15 @@ function PlacementService.TryPlace(
 	-- 1Hz tick aggregates them into the owner's per-second income.
 	if buildable.income > 0 then
 		CurrencyService.RegisterExtractor(player, buildable, part)
+	end
+
+	-- Combat-role buildables (E2.5+): turrets register with TurretService
+	-- so the targeting tick can find them. Both fresh placements and
+	-- restorations (trusted) register — the runtime registry is per-
+	-- session, not persisted, so a rejoin restoring 5 turrets needs all
+	-- 5 added back.
+	if buildable.combatRole == "turret" then
+		TurretService.RegisterTurret(player, part)
 	end
 
 	-- 8. Persist to baseLayout — fresh placements only; restorations

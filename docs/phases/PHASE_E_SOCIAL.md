@@ -448,3 +448,164 @@ requires leader approval; logged.
 ### Commit
 
 `feat(phaseE2): PvE wave system + raid-queue fallback`
+
+---
+
+## E2.5 — Turret service (auto-targeting + raycast damage) ✅
+
+**Date:** 2026-05-05
+**Branch:** `claude/audit-phases-a-d-2BAuW`
+
+### Why a 2.5
+
+E2 shipped wave defense without a player offensive option — survival
+meant "outlive the timer while aliens swarm you." That isn't the
+brainstorm gameplay loop ("turrets, walls, and drone swarm hold the
+line — or don't"). E2.5 closes the loop with the turret half. Drone
+swarm + player FP weapon land in their own future sub-phase or
+Phase G.
+
+### What was built
+
+#### Server
+
+- **`Constants.COMBAT`** — added `TurretRange = 40`, `TurretDamage = 25`
+  (4 shots to kill a 100HP Stalker), `TurretFireSeconds = 1.0` (one
+  shot per second per turret), `TurretTickSeconds = 0.5` (targeting
+  cadence; decoupled from fire so a moving alien is re-targeted
+  between shots).
+- **`Modules/Registry/BuildableRegistry.luau`** — added `combatRole`
+  field to the `Buildable` type. New `turret` entry: cost 200,
+  steel-blue tactical visual, `combatRole = "turret"`. PlacementService
+  branches on this field at place time.
+- **`Combat/TurretService.luau`** — runtime turret registry +
+  targeting tick. Public API:
+  - `RegisterTurret(player, part)` / `UnregisterTurret(part)` — keyed
+    by Part for O(1) operations
+  - `GetTurretsForPlayer(player)` — count
+  - `Init` — wires PlayerRemoving cleanup + the 2Hz tick loop
+  Per tick: scan `Workspace.AlienActors`, find nearest live alien
+  within range per turret, fire if cooldown elapsed. Damage routes
+  through `DamageService.ApplyToHumanoid`. Kill-credit goes to the
+  turret owner only on the shot that drops HP to 0 (multi-turret
+  damage on the same alien doesn't split credit). Brief 0.1s neon-
+  red Part beam visual via `Debris:AddItem`. Phase G replaces with
+  proper Beam + projectile VFX.
+- **`Build/PlacementService.luau`** — new branch: if
+  `buildable.combatRole == "turret"`, call
+  `TurretService.RegisterTurret(player, part)` after the part lands.
+  Both fresh placements AND restorations register, since the runtime
+  registry is per-session (not persisted).
+- **`init.server.luau`** — wired `TurretService.Init()` BEFORE
+  `PlacementService.Init()`. Init only sets up the tick + cleanup
+  hooks; `RegisterTurret` works pre-Init too. The ordering makes the
+  dependency explicit.
+- **`ProfileSchema.luau`** — added `turretsKilled: number` (default 0).
+  Additive; older saves get 0 via Reconcile. Single-writer
+  invariant: `TurretService.fireTurret` is the only mutator
+  (verified by grep).
+
+#### Client
+
+- **`Build/BuildPalette.luau`** — `PALETTE_ORDER` extended to include
+  `"turret"`. Container width adjusted from 320 → 460 to fit the third
+  button at 140 wide + 12 padding.
+
+#### Documentation
+
+- `DATA_SCHEMA.md` — `turretsKilled` documented under "Turret kill
+  field (E2.5)".
+
+### Audit (E2.5-scope, sandbox-side)
+
+- 63 `.luau` files — `--!strict` on all
+- TurretService uses `task.spawn` / `task.wait` for the tick loop
+  (no legacy `wait()`)
+- Damage chokepoint invariant maintained: turret damage routes
+  through `DamageService.ApplyToHumanoid("turret_raycast")`
+- Single-writer invariant on `data.turretsKilled`: only
+  `TurretService.fireTurret` mutates it (verified via grep)
+- Turret part lifecycle: parts created via `PlacementService` →
+  parented under `plot.buildings`. When the plot is wiped on
+  PlayerRemoving (PlotManager.release destroys the plot folder),
+  the turret parts go with it; `TurretService.PlayerRemoving`
+  cleanup runs in parallel and clears the registry by ownerUserId
+- `GetTurretsForPlayer` is non-yielding (linear scan, but turret
+  count per player is bounded by plot capacity — V1 plot fits at
+  most ~256 turrets at 1-cell × 4-stud grid, in practice far fewer)
+
+### Audit (E2.5-scope, Studio-side — pending your local run)
+
+After F5:
+
+1. **Build palette shows three buttons**: Extractor, Wall, Turret.
+2. **Place a turret:**
+   ```luau
+   -- Server context Command Bar:
+   local PlacementService = require(game.ServerScriptService.Server.Modules.Build.PlacementService)
+   local PlotManager      = require(game.ServerScriptService.Server.Modules.World.PlotManager)
+   local CurrencyService  = require(game.ServerScriptService.Server.Modules.Economy.CurrencyService)
+   local p = game.Players:GetPlayers()[1]
+   CurrencyService.Add(p, 500)  -- 200 cost
+   print(PlacementService.TryPlace(p, "turret", 0, 0))
+   -- Expect: { ok = true, part = ... } and a steel-blue 2x4x2 part on the plot
+   ```
+3. **Fire a wave; watch turret shoot:**
+   ```luau
+   local WaveDirector = require(game.ServerScriptService.Server.Modules.Combat.WaveDirector)
+   WaveDirector.StartWave(p)
+   -- Aliens spawn at perimeter; turret fires neon-red beams at the
+   -- nearest one within 40 studs every 1s; alien dies after 4 shots.
+   -- `data.turretsKilled` increments on the killing shot.
+   ```
+4. **Multiple turrets:** place 3 turrets at different cells on the
+   plot; each independently targets the nearest alien. Beam visuals
+   should fire from all three when aliens are in range.
+5. **Range cutoff:** alien at >40 studs from a turret should not be
+   targeted; the alien crosses into range → the turret immediately
+   targets it on the next 0.5s tick.
+6. **Restore path:** place a turret, leave, rejoin. Expect:
+   - `[BuildRestorer] Plot1 for <Name>: restored 1/1`
+   - turret part visible at the saved cell
+   - turret registered (verify via `TurretService.GetTurretsForPlayer(p)`
+     returns 1)
+   - next wave: turret fires correctly
+
+### Tech debt / deferred
+
+- **Turrets are invincible.** Aliens can walk past them without
+  damage. Phase G adds turret HP, an alien priority-targeting rule
+  (turret > player when in range), and a turret-destroyed signal so
+  the wave-defense gameplay loop has real stakes.
+- **No Drone Swarm yet.** V1 must-have per brainstorm §2.7 (3 preset
+  swarm types — Recon / Combat / Engineering). Their own sub-phase
+  (E2.6 or E2.7) before E5, OR Phase G if data shows turrets alone
+  carry the wave gameplay.
+- **No turret VFX beyond the 0.1s neon beam.** No muzzle flash, no
+  impact spark, no audio. Phase G ships per-pass.
+- **No targeting priorities.** "Nearest alien" is V1 simplistic.
+  Phase G can add weighting (low-HP aliens vs full-HP, or aliens
+  closest to the player vs aliens at the perimeter).
+- **`turret_kill` quest event not yet emitted.** TurretService
+  could emit `QuestObjectives.Emit("turret_kill", owner, 1)` on
+  every kill — deferred until Phase G expands the quest pool with
+  turret-related entries.
+- **Player FP weapon system** still V1 must-have, deferred. Players
+  who run out of turrets mid-wave have no recourse other than
+  running away. Phase G or follow-up.
+- **No PathfindingService for aliens** (E2 carryover). Walls + turrets
+  don't block AI pathing properly; aliens line-of-sight steer past
+  them. Phase G upgrades when biome terrain lands.
+
+### What's next
+
+E3 — Clan/squad system. New `Social/ClanService.luau` +
+`Social/ClanStashLedger.luau`; cross-server clan chat via
+MessagingService topic `outpost.clan.<clanId>`. New DataStore
+`ClanData_v1` (separate keyspace from PlayerData). New
+ProfileSchema field `clanId: string?`. Stash withdrawal > N
+requires leader approval; logged.
+
+### Commit
+
+`feat(phaseE2.5): turret service (auto-targeting + raycast damage)`

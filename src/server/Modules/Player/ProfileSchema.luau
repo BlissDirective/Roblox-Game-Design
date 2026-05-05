@@ -41,6 +41,11 @@
 	counter. Drives a future "wave_survived" quest objective entry
 	(Phase G expands the quest pool) and a possible E5 leaderboard
 	column. Additive; older saves get 0.
+	Phase E2.5: adds `turretsKilled` — lifetime aliens killed by
+	this player's turrets. Mutated only by `TurretService` on the
+	frame the alien's HP transitions from > 0 to <= 0 from a turret
+	shot. Future quest objective ("turret_kill") and Phase G "PvE
+	hero" leaderboard candidate.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -105,6 +110,8 @@ export type PlayerData = {
 	raidsRaided: number, -- total times this player has been raided
 	-- Phase E2 — PvE wave stats.
 	wavesSurvived: number, -- lifetime count of waves survived
+	-- Phase E2.5 — turret kill stats.
+	turretsKilled: number, -- lifetime aliens killed by this player's turrets
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -131,6 +138,7 @@ ProfileSchema.DEFAULT_DATA = {
 	raidsDefended = 0,
 	raidsRaided = 0,
 	wavesSurvived = 0,
+	turretsKilled = 0,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

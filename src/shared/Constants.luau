@@ -363,6 +363,17 @@ local Constants = {
 		-- player. `SpawnRingPadding` is the additional distance outside
 		-- the plot bounds where they spawn (so they don't clip the wall).
 		SpawnRingPadding = 6,
+		-- Turret stats (E2.5). The first offensive option for the player —
+		-- auto-targets nearest alien within range, raycasts for damage.
+		-- Phase G adds turret HP (currently invincible), targeting
+		-- priorities, and projectile VFX.
+		TurretRange = 40, -- studs; alien must be within this radius
+		TurretDamage = 25, -- HP per shot (4 shots to kill a Stalker)
+		TurretFireSeconds = 1.0, -- one shot per second per turret
+		-- Turret tick cadence. Decoupled from fire cadence so a low fire
+		-- rate doesn't starve targeting (e.g. tracking a moving alien
+		-- between shots).
+		TurretTickSeconds = 0.5,
 	},
 }
 

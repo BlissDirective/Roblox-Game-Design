@@ -20,6 +20,9 @@
 	  requiresNode  — extractor must overlap a resource node cell
 	  size          — Vector3 in studs; used to build the visual Part
 	  color         — visual tint
+	  combatRole    — E2.5 dispatch: "turret" registers with
+	                  Combat.TurretService on placement; nil for purely
+	                  passive structures (walls, extractors)
 --]]
 
 local BuildableRegistry = {}
@@ -32,6 +35,7 @@ export type Buildable = {
 	requiresNode: boolean,
 	size: Vector3,
 	color: Color3,
+	combatRole: string?,
 }
 
 local BUILDABLES: { [string]: Buildable } = {
@@ -52,6 +56,17 @@ local BUILDABLES: { [string]: Buildable } = {
 		requiresNode = false,
 		size = Vector3.new(4, 5, 1),
 		color = Color3.fromRGB(120, 120, 130),
+	},
+	turret = {
+		id = "turret",
+		displayName = "Turret",
+		cost = 200,
+		income = 0,
+		requiresNode = false,
+		size = Vector3.new(2, 4, 2),
+		-- Steel-blue tactical visual; Phase G replaces with a real model.
+		color = Color3.fromRGB(80, 130, 180),
+		combatRole = "turret",
 	},
 }
 

@@ -40,6 +40,8 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     raidsRaided     = 0, -- total times this player has been the defender of a raid
     -- Phase E2 — Wave stats:
     wavesSurvived   = 0, -- lifetime count of PvE waves survived
+    -- Phase E2.5 — Turret kill stats:
+    turretsKilled   = 0, -- lifetime aliens killed by this player's turrets
 }
 ```
 
@@ -62,6 +64,18 @@ counts as a loss; no increment. Drives a future `wave_survived`
 quest objective (Phase G expands the quest pool) and is a candidate
 column for E5's secondary leaderboard if Phase G playtest data shows
 PvE engagement.
+
+### Turret kill field (E2.5)
+
+```luau
+turretsKilled: number  -- lifetime aliens killed by this player's turrets
+```
+
+Mutated only by `TurretService.fireTurret` on the shot that drops
+an alien's HP from > 0 to <= 0. Multi-turret kill credit goes to
+whichever turret landed the killing blow (no split). Drives a future
+`turret_kill` quest objective and a Phase G "PvE hero" leaderboard
+candidate.
 
 ### `dailyQuests[id].vipOnly` (D3)
 
