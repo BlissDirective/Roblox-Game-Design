@@ -253,7 +253,7 @@
 ## ADR-007: Single-PlaceId reserved-instance raid architecture for V1
 
 - **Date:** 2026-05-05 (Phase E1)
-- **Status:** Accepted.
+- **Status:** ⛔ **Superseded by ADR-009** (2026-05-05, same day, before any code that depended on the single-PlaceId pattern beyond a single config field had landed). Reasoning preserved below.
 - **Context:** Brainstorm §4.6 calls for a "separate place" for raids
   to keep the defender's live server untouched. Two readings:
   1. **True split** — a second PlaceId in the same Universe, with its
@@ -354,3 +354,96 @@
     Bounded; pruned every 5 minutes.
   - Future cross-server features (clan stash transfers in E3, gift
     sending in V1.5) can reuse this MessagingService relay pattern.
+
+---
+
+## ADR-009: True two-PlaceId raid split for V1
+
+- **Date:** 2026-05-05 (Phase E1, same-day supersession of ADR-007)
+- **Status:** Accepted. Supersedes ADR-007.
+- **Context:** ADR-007 chose the single-PlaceId reserved-instance pattern
+  for V1 on the basis of operational simplicity (one CI pipeline, one
+  PlaceId, one CSG/EditableMesh authoring pass). User pushed back with
+  the same reframe that converted ADR-004 → ADR-005 in Phase B: *"I want
+  to be as best prepared for long-term success from the start."* The
+  single-PlaceId pattern is reversible; the V1.5 split would require a
+  config change *plus* a re-publish of every CSG/EditableMesh asset to
+  a new place — twice as much work as just doing the split now while no
+  such assets exist yet.
+- **Decision:** **V1 ships true two-PlaceId split.** Two Rojo project
+  files, two `.rbxl` artifacts, two PlaceIds in the same Universe.
+  - `default.project.json` → `Game.rbxl` → main PlaceId.
+  - `raid.project.json` → `Raid.rbxl` → raid PlaceId.
+  Both project files map the same `src/`, but the raid project sets
+  smaller streaming radii (the raid plot is a fixed 64×64-stud square,
+  no need for the 256/512 main-world streaming targets). Future Phase G
+  can specialize raid-only Workspace properties (lighting, fog,
+  ambient) without touching main.
+  Bootstrap branching on `game.PrivateServerId` is unchanged from
+  ADR-007 — same code, two PlaceIds. The branching now correctly
+  matches the deployment topology: main place servers are public
+  (`PrivateServerId == ""`), raid place servers are reserved
+  (`PrivateServerId ~= ""`).
+- **Why over ADR-007:**
+  - **CSG / EditableMesh authoring cost is zero today, infinite later.**
+    Outpost-7 currently has no such assets. Splitting now means the
+    future raid-place CSG geometry is authored once into the raid
+    PlaceId. Splitting at V1.5 (after a season of raid CSG has shipped
+    to the single PlaceId) means re-authoring every asset.
+  - **CI complexity is low.** `release.yml` adds a parallel build +
+    publish step for the raid place; the steps already exist for main
+    and just need duplication with raid-scoped vars/secrets.
+  - **Workspace specialization unlocked.** Raid-only lighting, fog, and
+    StreamingEnabled radii live in `raid.project.json`. Main-only
+    config (day/night cycle, biome ambient, retention popups that
+    shouldn't replicate to raid clients) lives in
+    `default.project.json`. The place files own their place-shaped
+    concerns.
+  - **Asset isolation.** Raid-only `assets/world/raid_arena/` won't
+    bloat the main `.rbxl`; main-only `assets/world/biome_jungle/`
+    won't bloat the raid `.rbxl`. V1 size delta is small but compounds
+    as Phase G assets land.
+- **Risks accepted:**
+  1. **Two CI pipelines to maintain.** Mitigation: single `release.yml`
+     with two parallel build/publish steps (DRY via shared setup
+     steps); a `workflow_dispatch` input lets a contributor target one
+     place at a time if needed.
+  2. **Two PlaceIds to provision in Phase H.** Mitigation: Open Cloud
+     `place:create` (or manual dashboard creation) for the raid place
+     when `Constants.RAID.RaidPlaceId` is replaced. Documented in
+     `docs/playbooks/PUBLISHING.md`.
+  3. **API key scope.** Mitigation: a single key scoped to both
+     places in the same Universe is sufficient — Open Cloud key
+     permissions are universe-level for the relevant grants.
+  4. **Code drift between project files.** Mitigation: both
+     `.project.json` files map the same `src/` paths; the only
+     legitimate divergence is `$properties` on Workspace and a few
+     other top-level services. PR review catches drift.
+- **Alternatives considered:**
+  - **Stay on ADR-007 (single PlaceId)** — strictly worse for V1.5+
+    asset migration.
+  - **Two project files, single PlaceId** — defeats the purpose; you
+    build two `.rbxl` files but publish only one. Rejected.
+  - **Single project file, runtime PlaceId switch** — impossible; Rojo
+    builds one tree per project file, and each tree gets one PlaceId
+    at upload.
+- **Consequences:**
+  - `Constants.RAID` gains `MainPlaceId` (new) alongside `RaidPlaceId`.
+    `RaidSession.teleportAttackerHome` reads `MainPlaceId` to know
+    where to send the attacker after the round. Both are 0
+    placeholders until Phase H.
+  - `default.project.json` unchanged. New `raid.project.json` lives
+    at repo root, mirroring the main project shape with raid-tuned
+    Workspace properties (smaller streaming radii — Phase G adds
+    lighting + ambient differentiators).
+  - `.github/workflows/ci.yml` builds *both* `.rbxl` files and uploads
+    them as separate artifacts — catches `raid.project.json` schema
+    drift on every PR.
+  - `.github/workflows/release.yml` extends to publish both places in
+    parallel jobs. Required new GitHub var: `RAID_PLACE_ID`. The
+    single `ROBLOX_API_KEY` (universe-scoped) covers both publishes.
+  - `docs/playbooks/PUBLISHING.md` updated for the two-place flow,
+    including the §3 CSG inventory table gaining a "place" column.
+  - First commit of any raid-only CSG/EditableMesh/EditableImage
+    asset goes to the raid place via Studio publish — never the main
+    `.rbxl`.

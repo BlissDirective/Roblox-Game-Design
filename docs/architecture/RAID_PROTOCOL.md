@@ -6,6 +6,16 @@
 > **Status:** Phase E1 — infrastructure layer (queue, match, reserve, timer,
 > outcome relay). E2 fills in the actual raid gameplay (waves attacking
 > the snapshot during the round).
+>
+> **Place topology (per ADR-009):** Two PlaceIds in the same Universe.
+> `default.project.json` builds the **main** `.rbxl` (public servers,
+> matchmaker, all retention systems). `raid.project.json` builds the
+> **raid** `.rbxl` (reserved-server-only round runner). Both bootstraps
+> live in `src/server/init.server.luau` and branch on
+> `game.PrivateServerId` — the deployment topology guarantees the right
+> branch fires (main place servers are public, raid place servers are
+> reserved). `Constants.RAID.MainPlaceId` / `RaidPlaceId` are 0
+> placeholders until Phase H.
 
 ---
 

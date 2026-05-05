@@ -63,21 +63,12 @@ local function announceOutcome(outcome: Outcome)
 end
 
 local function teleportAttackerHome(player: Player)
-	-- V1: teleport back to the same main place id. ReserveServerAsync
-	-- only reserves *raid* servers; the main place uses regular public
-	-- servers, so we use Teleport (auto-route to a public server).
-	-- placeId 0 fallback: stay in the raid place (dev-only path).
-	-- We use the universe's main PlaceId, which for the
-	-- single-PlaceId pattern equals game.PlaceId of the original main
-	-- place. Players:GetPlayerByUserId on the home server is what
-	-- routes the player back to *their* server via Roblox's matchmaker.
-	local mainPlaceId = game.PlaceId -- raid place == reserved instance of same id (V1)
-	if Constants.RAID.RaidPlaceId > 0 and Constants.RAID.RaidPlaceId ~= game.PlaceId then
-		-- Two-PlaceId mode: route to the configured main place. For V1
-		-- this is symmetric (same PlaceId), so this branch is unreached
-		-- until V1.5+ split lands.
-		mainPlaceId = game.PlaceId -- placeholder; configure once true split lands
-	end
+	-- ADR-009: true two-PlaceId split. Configured `MainPlaceId` is the
+	-- public-facing place; we teleport the attacker there and Roblox's
+	-- matchmaker routes them into a public server. If the placeholder
+	-- value is still 0 (V1 dev before Phase H), fall back to the
+	-- current PlaceId so dev sessions don't soft-lock the attacker.
+	local mainPlaceId = if Constants.RAID.MainPlaceId > 0 then Constants.RAID.MainPlaceId else game.PlaceId
 	local ok, err = pcall(function()
 		TeleportService:Teleport(mainPlaceId, player)
 	end)

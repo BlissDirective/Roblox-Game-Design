@@ -258,19 +258,26 @@ local Constants = {
 	-- for matched broadcasts and outcome relay, and TeleportService's
 	-- ReserveServerAsync for the raid instance.
 	--
-	-- Two-place architecture per ADR-007: V1 ships a single .rbxl that
-	-- detects raid mode at boot via `game.PrivateServerId ~= ""`. The
-	-- raid place is a reserved instance of the same place id; V1.1+ may
-	-- split into a separate PlaceId once specialization justifies the
-	-- operational cost.
+	-- Two-place architecture per ADR-009: V1 ships true two-PlaceId
+	-- split. `default.project.json` builds the main `.rbxl`;
+	-- `raid.project.json` builds the raid `.rbxl`. Both are published
+	-- to separate PlaceIds in the same Universe via release.yml. Each
+	-- bootstrap branches on `game.PrivateServerId` so the same server
+	-- code can run in either context — matchmaker on main, raid round
+	-- on raid place — without cross-contamination. Future Phase G can
+	-- specialize raid.project.json's Workspace properties (e.g.,
+	-- always-night lighting for the bioluminescent jungle ambush vibe)
+	-- without touching main.
 	--
 	-- All real-money / placement-id-sensitive values are placeholders
 	-- (REPLACE_BEFORE_LAUNCH per the protocol's escalation rule). The
 	-- ReservedServerLauncher refuses to teleport with id = 0 and warns.
 	RAID = {
-		-- Reserved-server target. V1 launch sets to the main PlaceId
-		-- (single-PlaceId reserved-instance pattern). V1.1+ split routes
-		-- to a separate PlaceId in the same Universe.
+		-- Main place id. V1 dev = 0; Phase H sets to the public-facing
+		-- PlaceId. Used by the raid place to teleport attackers home.
+		MainPlaceId = 0, -- REPLACE_BEFORE_LAUNCH
+		-- Reserved-server target. V1 dev = 0; Phase H sets to a separate
+		-- PlaceId in the same Universe (the raid place id).
 		RaidPlaceId = 0, -- REPLACE_BEFORE_LAUNCH
 		-- Round duration. Brainstorm §2.1: "queue into a 5-min round".
 		RoundSeconds = 5 * 60,

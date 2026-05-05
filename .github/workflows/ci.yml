@@ -19,6 +19,7 @@ on:
       - "tests/**"
       - "assets/**"
       - "default.project.json"
+      - "raid.project.json"
       - "wally.toml"
       - "wally.lock"
       - "selene.toml"
@@ -31,6 +32,7 @@ on:
       - "tests/**"
       - "assets/**"
       - "default.project.json"
+      - "raid.project.json"
       - "wally.toml"
       - "wally.lock"
       - "selene.toml"
@@ -86,14 +88,28 @@ jobs:
       - name: Format check (StyLua)
         run: stylua --check src/ tests/
 
-      - name: Build place file (Rojo)
+      - name: Build main place (Rojo)
         run: |
           mkdir -p build
-          rojo build --output build/Game.rbxl
+          rojo build default.project.json --output build/Game.rbxl
 
-      - name: Upload build artifact
+      - name: Build raid place (Rojo)
+        # Per ADR-009, V1 ships a true two-PlaceId split. Building both
+        # `.rbxl` files in CI catches `raid.project.json` schema drift on
+        # every PR — same coverage as `default.project.json`.
+        run: |
+          rojo build raid.project.json --output build/Raid.rbxl
+
+      - name: Upload main build artifact
         uses: actions/upload-artifact@v4
         with:
           name: Game.rbxl
           path: build/Game.rbxl
+          retention-days: 7
+
+      - name: Upload raid build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Raid.rbxl
+          path: build/Raid.rbxl
           retention-days: 7

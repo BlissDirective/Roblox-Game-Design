@@ -49,13 +49,18 @@ No deprecated APIs surfaced beyond `ReserveServer`.
 
 ### Architectural decisions (logged before code)
 
-- **ADR-007** — Single-PlaceId reserved-instance raid architecture for
-  V1. `Constants.RAID.RaidPlaceId` placeholder = 0; Phase H sets it to
-  the main PlaceId. V1.1+ may split into a separate PlaceId without
-  changing the bootstrap branching logic.
+- **ADR-007** — *Superseded same-day by ADR-009.* Original V1 plan was
+  single-PlaceId reserved-instance for operational simplicity. User
+  reframed for long-term success: doing the split now is cheaper than
+  re-authoring CSG / EditableMesh assets at V1.5.
 - **ADR-008** — Raid server never writes the defender's profile.
   Outcomes flow via MessagingService topic `outpost.raid.outcome`;
   home servers are the sole authoritative writers.
+- **ADR-009** — True two-PlaceId raid split for V1. Two Rojo project
+  files (`default.project.json` + `raid.project.json`), two `.rbxl`
+  artifacts published to two PlaceIds in the same Universe via
+  `release.yml`. Constants gain `MainPlaceId` alongside `RaidPlaceId`.
+  CI builds both `.rbxl` files on every PR to catch project-file drift.
 
 ### What was built
 
@@ -217,8 +222,10 @@ token-bucket rate floor.
 
 ### Tech debt / deferred
 
-- **`RaidPlaceId` placeholder (0)** until Phase H. Single-line edit
-  in `Constants.RAID`. Per protocol's REPLACE_BEFORE_LAUNCH gate.
+- **`MainPlaceId` + `RaidPlaceId` placeholders (0)** until Phase H.
+  Two-line edit in `Constants.RAID`; ADR-009 paths are otherwise
+  ready. The CI raid publish step short-circuits with a warning while
+  `RAID_PLACE_ID` is unset.
 - **PvE wave fallback (E2 dependency).** When `state.error == "deadline"`
   fires, the client currently shows the error string but doesn't
   offer the player a wave. E2 wires `WaveDirector.StartFallbackWave`

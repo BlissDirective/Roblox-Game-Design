@@ -9,18 +9,20 @@
 ## 0. TL;DR — the happy path
 
 ```bash
-# Local sanity check
+# Local sanity check (both places per ADR-009 two-PlaceId split)
 aftman install
 wally install
 selene src/ && stylua --check src/
 rojo build default.project.json --output build/Game.rbxl
+rojo build raid.project.json    --output build/Raid.rbxl
 
 # Release (tag-driven, runs in CI)
 git tag v0.1.0 && git push origin v0.1.0
-# → .github/workflows/release.yml uploads build/Game.rbxl to PLACE_ID via Open Cloud
+# → .github/workflows/release.yml builds Game.rbxl + Raid.rbxl, publishes
+#   each to its respective PlaceId (PLACE_ID and RAID_PLACE_ID) via Open Cloud.
 ```
 
-If any of those four lines is unfamiliar, read the rest of this doc before you ship.
+If any of those five lines is unfamiliar, read the rest of this doc before you ship.
 
 ---
 
@@ -28,10 +30,11 @@ If any of those four lines is unfamiliar, read the rest of this doc before you s
 
 | Kind | Name | Scope | Where to get it |
 |---|---|---|---|
-| Secret | `ROBLOX_API_KEY` | repo | https://create.roblox.com/dashboard/credentials → **Open Cloud API Keys** → new key. Permissions: `universe.place:write` on the target universe. IP allowlist: `0.0.0.0/0` for GitHub-hosted runners (or pin to a self-hosted runner range if you have one). |
+| Secret | `ROBLOX_API_KEY` | repo | https://create.roblox.com/dashboard/credentials → **Open Cloud API Keys** → new key. Permissions: `universe.place:write` on the target universe (covers both PlaceIds since they share a Universe). IP allowlist: `0.0.0.0/0` for GitHub-hosted runners (or pin to a self-hosted runner range if you have one). |
 | Var | `UNIVERSE_ID` | repo | Creator Dashboard → game → ⋯ → **Copy Universe ID**. |
-| Var | `PLACE_ID` | repo | Creator Dashboard → game → place → ⋯ → **Copy Place ID**. The *root* place for a single-place game; per-place for multi-place experiences. |
-| Var (optional) | `STAGING_PLACE_ID` | repo | A separate place under the same universe used for dry-runs. Recommended — you do not want the first Open Cloud test to be against the live game. |
+| Var | `PLACE_ID` | repo | Creator Dashboard → game → main place → ⋯ → **Copy Place ID**. The public-facing start place; what the game listing points at. |
+| Var | `RAID_PLACE_ID` | repo | Creator Dashboard → game → raid place → ⋯ → **Copy Place ID**. Created in Phase H per ADR-009; until then leave the var unset (or 0) and `release.yml` short-circuits the raid publish step with a warning. |
+| Var (optional) | `STAGING_PLACE_ID` | repo | A separate place under the same universe used for dry-runs of the main place. Recommended — you do not want the first Open Cloud test to be against the live game. (A raid-staging place is also valuable but ships only if Phase H beta surfaces raid-place-specific issues.) |
 
 **Never commit any of these to git.** The API key in particular grants write access to the live game.
 
@@ -42,8 +45,11 @@ If any of those four lines is unfamiliar, read the rest of this doc before you s
 ## 2. Build artifact format
 
 - **Use `.rbxl` (binary), not `.rbxlx` (XML).** Smaller, faster to upload, matches the Roblox sample-repo convention. `.rbxlx` is fine for local diffing but not for shipping.
-- Build command: `rojo build default.project.json --output build/Game.rbxl`
-- Artifact lives in `build/` which is gitignored. CI uploads it as a workflow artifact (30-day retention) before publishing, so a release can be re-pushed without rebuilding if needed.
+- Build commands (per ADR-009 two-PlaceId split):
+  - Main: `rojo build default.project.json --output build/Game.rbxl`
+  - Raid: `rojo build raid.project.json    --output build/Raid.rbxl`
+- Both `.project.json` files map the same `src/` tree but specialize Workspace `$properties` per place (raid uses smaller streaming radii since the raid plot is fixed at 64×64 studs). Phase G adds raid-only lighting, fog, and ambient differentiators.
+- Artifacts live in `build/` which is gitignored. CI uploads each as a separate workflow artifact (`Game.rbxl`, `Raid.rbxl`) with 7-day retention so a release can be re-pushed without rebuilding.
 
 ---
 
@@ -59,9 +65,11 @@ If any of those four lines is unfamiliar, read the rest of this doc before you s
 
 **Inventory of CSG / EditableMesh / EditableImage assets in Outpost-7:**
 
-| Asset name | Type | AssetId | Studio-publish date | Owner |
-|---|---|---|---|---|
-| _TBD — fill in during Phase G/H_ | | | | |
+Per ADR-009, raid-only geometry / images are authored against the *raid* PlaceId; main-only against the *main* PlaceId. The "place" column tracks the publish target so re-authoring on PlaceId churn is bounded.
+
+| Asset name | Type | Place | AssetId | Studio-publish date | Owner |
+|---|---|---|---|---|---|
+| _TBD — fill in during Phase G/H_ | | | | | |
 
 If this table grows past ~20 rows, consider whether the design is leaning on these types too heavily — every row is a manual step a future-you has to remember.
 
@@ -119,16 +127,20 @@ The Open Cloud key used by `upload-assets.yml` needs **`asset:read` + `asset:wri
 
 The release workflow is live. Two trigger modes:
 
-- **Tag push** — push a `v*.*.*` tag (e.g. `git tag -s v0.1.0 && git push origin v0.1.0`). Runs the full pipeline and publishes a new `Published` (live) place version.
-- **Manual** — `workflow_dispatch` from the Actions UI. Lets you choose `Saved` (draft, not live) or `Published` (live) via the `version_type` input. Use `Saved` for staging dry-runs.
+- **Tag push** — push a `v*.*.*` tag (e.g. `git tag -s v0.1.0 && git push origin v0.1.0`). Runs the full pipeline and publishes new `Published` (live) versions of *both* places.
+- **Manual** — `workflow_dispatch` from the Actions UI. Inputs:
+  - `version_type` — `Saved` (draft) or `Published` (live). Use `Saved` for staging dry-runs.
+  - `target` — `both` (default), `main`, or `raid`. Lets you publish one place without re-publishing the other (useful when only the raid logic changed).
 
 **Pipeline steps** (see the file for exact details):
 1. `setup-aftman` → installs the pinned toolchain (Rojo, Selene, StyLua, Wally, Lune)
 2. `wally install`
 3. `selene src/` and `stylua --check src/`
-4. `rojo build --output build/Game.rbxl`
-5. POST the binary to `https://apis.roblox.com/universes/v1/$UNIVERSE_ID/places/$PLACE_ID/versions?versionType=$VERSION_TYPE` with `x-api-key: $ROBLOX_API_KEY`. Fails the job if any of those env vars is missing.
-6. On tag pushes only: opens a GitHub Release with `build/Game.rbxl` attached and auto-generated release notes.
+4. `rojo build default.project.json --output build/Game.rbxl`
+5. `rojo build raid.project.json    --output build/Raid.rbxl`
+6. **Main publish** — POST `build/Game.rbxl` to `https://apis.roblox.com/universes/v1/$UNIVERSE_ID/places/$PLACE_ID/versions?versionType=$VERSION_TYPE` with `x-api-key: $ROBLOX_API_KEY`. Skipped if `target=raid`.
+7. **Raid publish** — POST `build/Raid.rbxl` to the same endpoint with `$RAID_PLACE_ID`. Skipped if `target=main` OR if `RAID_PLACE_ID` is unset / 0 (Phase H prerequisite).
+8. On tag pushes only: opens a GitHub Release with both `.rbxl` files attached, release notes including both published version numbers.
 
 The job runs in the `production` environment, so any required reviewers / wait timers configured on that environment apply. Concurrency is `release` with `cancel-in-progress: false` — releases queue, never cancel each other mid-upload.
 
@@ -143,11 +155,14 @@ The job runs in the `production` environment, so any required reviewers / wait t
 - [ ] `aftman install && wally install` clean on a fresh clone
 - [ ] `selene src/` zero warnings
 - [ ] `stylua --check src/` zero diffs
-- [ ] `rojo build` produces a `.rbxl` that opens in Studio without errors
-- [ ] All CSG / EditableMesh / EditableImage assets in §3 inventory have a non-TBD AssetId
+- [ ] `rojo build default.project.json` produces a `.rbxl` that opens in Studio without errors
+- [ ] `rojo build raid.project.json` produces a `.rbxl` that opens in Studio without errors
+- [ ] All CSG / EditableMesh / EditableImage assets in §3 inventory have a non-TBD AssetId, with the right "place" column entry
 - [ ] `src/shared/AssetIds.luau` has no placeholder `0000000000` IDs left
-- [ ] DataStore schema version in `DataManager` matches what's on the live place (no surprise migration)
-- [ ] Dry-run release against `STAGING_PLACE_ID` first, join the staging place, smoke-test the core loop
+- [ ] `Constants.RAID.MainPlaceId` and `Constants.RAID.RaidPlaceId` are set to real PlaceIds (no `0` placeholders)
+- [ ] DataStore schema version in `DataManager` matches what's on the live places (no surprise migration)
+- [ ] Dry-run release with `target=main version_type=Saved` against `STAGING_PLACE_ID`; join staging, smoke-test the core loop
+- [ ] Dry-run release with `target=raid version_type=Saved` if a raid-staging place exists
 - [ ] Tag is signed (`git tag -s vX.Y.Z`) and the tag message names the V1 phase or hotfix scope
 
 ---
