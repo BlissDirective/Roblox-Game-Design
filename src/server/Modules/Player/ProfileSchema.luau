@@ -22,6 +22,10 @@
 	`MarketplaceService.ProcessReceipt` idempotency. Additive — older
 	saves get an empty table on next load via Reconcile. Keys are
 	Roblox-issued purchase IDs (strings); values are always `true`.
+	Phase D3: extends `QuestProgress` with optional `vipOnly: boolean`
+	for the VIP Operator pass's "+1 daily quest slot" effect. The 4th
+	quest rolled per day is flagged at reset; only VIP-owning players
+	can see / claim it. Additive — older entries default to non-vipOnly.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -44,6 +48,7 @@ export type SerializedBuilding = {
 export type QuestProgress = {
 	progress: number,
 	claimed: boolean,
+	vipOnly: boolean?, -- D3: 4th-rolled quest each day; visible/claimable only with VIP Operator pass
 }
 
 export type PlayerData = {

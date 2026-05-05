@@ -18,13 +18,16 @@
 
 local GamePassService = require(script.Parent.GamePassService)
 local DevProductService = require(script.Parent.DevProductService)
+local PassEffects = require(script.Parent.PassEffects)
 
 local MonetizationService = {}
 
 function MonetizationService.Init()
 	GamePassService.Init()
 	DevProductService.Init()
-	-- D3: PassEffects.Init() — subscribes to GamePassService.OnOwnershipChanged.
+	-- PassEffects must Init AFTER GamePassService so its subscription
+	-- to OnOwnershipChanged is in place before the first prime.
+	PassEffects.Init()
 	-- D4: BattlePassService.Init().
 end
 

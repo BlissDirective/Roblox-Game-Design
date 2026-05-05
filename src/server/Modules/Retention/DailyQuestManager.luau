@@ -29,6 +29,7 @@ local DataManager = require(script.Parent.Parent.Player.DataManager)
 local ProfileSchema = require(script.Parent.Parent.Player.ProfileSchema)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local QuestObjectives = require(script.Parent.QuestObjectives)
+local GamePassService = require(script.Parent.Parent.Monetization.GamePassService)
 
 type QuestProgress = ProfileSchema.QuestProgress
 
@@ -159,7 +160,14 @@ local QUEST_POOL: { [string]: Quest } = {
 	},
 }
 
-local QUESTS_PER_DAY = 3
+-- We roll 4 quests per day. The first 3 are visible to everyone;
+-- the 4th is gated by the VIP Operator pass (D3 effect: "+1 daily
+-- quest slot"). The set is rolled identically for everyone — VIP
+-- ownership only changes which slots the player sees and can claim,
+-- not the underlying picks. See PHASE_D_MONETIZATION.md §D3.
+local QUESTS_PER_DAY_BASE = 3
+local QUESTS_PER_DAY_TOTAL = 4
+local VIP_PASS_KEY = "VipOperator"
 
 local function utcDateString(t: number): string
 	return os.date("!%Y-%m-%d", t) :: string
@@ -201,11 +209,16 @@ local function ensureFreshDay(data: any)
 	if data.lastQuestReset == today then
 		return
 	end
-	-- New day: pick 3 quests, reset progress + claimed flags.
-	local ids = selectQuestsForDay(getDaySeed(), QUESTS_PER_DAY)
+	-- New day: pick 4 quests, reset progress + claimed flags. Mark
+	-- the 4th as vipOnly — visible only to VIP Operator owners.
+	local ids = selectQuestsForDay(getDaySeed(), QUESTS_PER_DAY_TOTAL)
 	local fresh: { [string]: QuestProgress } = {}
-	for _, id in ids do
-		fresh[id] = { progress = 0, claimed = false }
+	for index, id in ids do
+		fresh[id] = {
+			progress = 0,
+			claimed = false,
+			vipOnly = if index > QUESTS_PER_DAY_BASE then true else nil,
+		}
 	end
 	data.dailyQuests = fresh
 	data.lastQuestReset = today
@@ -218,11 +231,20 @@ function DailyQuestManager.GetState(player: Player): State?
 	end
 	ensureFreshDay(data)
 
+	-- Hide the 4th-rolled quest from non-VIP players. VIP ownership
+	-- can flip mid-session — DailyQuestManager.Init subscribes to
+	-- GamePassService.OnOwnershipChanged so a fresh state pushes
+	-- when VIP is purchased / lost.
+	local hasVip = GamePassService.Owns(player, VIP_PASS_KEY)
+
 	local quests: { QuestView } = {}
 	for id, progress in data.dailyQuests do
 		local quest = QUEST_POOL[id]
 		if not quest then
 			-- Quest removed from pool since save; skip silently.
+			continue
+		end
+		if progress.vipOnly and not hasVip then
 			continue
 		end
 		table.insert(quests, {
@@ -267,6 +289,11 @@ function DailyQuestManager.TryClaim(player: Player, questId: string): ClaimResul
 	end
 	if entry.claimed then
 		return { ok = false, error = "already claimed" }
+	end
+	if entry.vipOnly and not GamePassService.Owns(player, VIP_PASS_KEY) then
+		-- Defense in depth — server enforces VIP gate even if a
+		-- modded client tries to claim a vipOnly questId directly.
+		return { ok = false, error = "VIP Operator required" }
 	end
 	if entry.progress < quest.objective.target then
 		return { ok = false, error = "objective incomplete" }
@@ -354,6 +381,15 @@ function DailyQuestManager.Init()
 	-- Subscribe to the global event bus.
 	QuestObjectives.OnEmit(function(event, player, amount)
 		DailyQuestManager.RecordProgress(player, event, amount)
+	end)
+
+	-- VIP Operator ownership flips affect quest visibility (the 4th
+	-- quest slot). Re-push state so the panel adds/removes the slot
+	-- without requiring a rejoin. Other passes don't change quests.
+	GamePassService.OnOwnershipChanged:Connect(function(player, passKey)
+		if passKey == VIP_PASS_KEY then
+			pushStateToClient(player)
+		end
 	end)
 
 	-- ClaimQuest is a RemoteFunction.

@@ -272,10 +272,125 @@ land alongside.
 
 ---
 
-## D3 — Pass effects wired ⏳
+## D3 — Pass effects wired ✅
 
-_Pending. Awaiting your decision on Auto-Collect's V1 effect (A / B / C
-options surfaced at Phase D kickoff)._
+**Date:** 2026-05-04
+**Branch:** `claude/review-claude-docs-LiZZS`
+
+### Decision applied
+
+Auto-Collect locked at **+50% income while online** (Option B from
+the Phase D kickoff Q). Composes multiplicatively with 2× Credits:
+both passes owned → `2.0 × 1.5 = 3.0` total multiplier on the
+`CurrencyService` tick. `CurrencyService.SetMultiplier` clamps to
+(0, 10] defensively so even a future bug-stacked 6-pass combo
+can't push us past the cap.
+
+### What was built
+
+- **`Constants.MONETIZATION.GamePasses`** — added `multiplier`
+  field on `DoubleCredits` (2.0) and `AutoCollect` (1.5). VIP
+  Operator has no multiplier (its effect is the +1 quest slot,
+  handled in `DailyQuestManager` directly).
+- **`Monetization/PassEffects.luau`** — single chokepoint for
+  income-multiplier composition. Subscribes to
+  `GamePassService.OnOwnershipChanged`; on every flip,
+  `RecomputeFor(player)` walks the GamePasses table, multiplies
+  in any owned pass's `multiplier`, and writes via
+  `CurrencyService.SetMultiplier`. Initial prime on join fires
+  once per pass (3 events for V1) — each triggers a recompute,
+  trivially cheap. Defensive seed loop for already-present
+  players covers Studio script-reload during dev.
+- **`MonetizationService.Init`** — wires `PassEffects.Init()`
+  after `GamePassService.Init()` so the subscription is in place
+  before the first prime fires.
+- **`ProfileSchema.QuestProgress`** — added optional
+  `vipOnly: boolean?`. Additive; older entries default
+  not-vipOnly. Documented in `DATA_SCHEMA.md`.
+- **`Retention/DailyQuestManager.luau`** — refactored from 3 to 4
+  rolls per day. The 4th-rolled quest is flagged `vipOnly = true`
+  at `ensureFreshDay`. `GetState` filters out vipOnly entries
+  unless the player owns `VipOperator` (read via
+  `GamePassService.Owns`). `TryClaim` enforces the same gate as
+  defense-in-depth against a modded client. Subscribes to
+  `GamePassService.OnOwnershipChanged` so VIP toggles mid-session
+  push fresh state immediately.
+
+### Audit (D3-scope, sandbox-side)
+
+- 43 `.luau` files — `--!strict` on all
+- `stylua --check` clean
+- `rojo build` produces a `.rbxl` with the new tree
+- Multiplier composition cap verified by code inspection: max
+  product of declared multipliers is 2.0 × 1.5 = 3.0; well under
+  the SetMultiplier clamp ceiling of 10
+
+### Audit (D3-scope, Studio-side — pending your local run)
+
+After F5:
+
+1. **Default state** — no passes owned. CurrencyService multiplier
+   is 1.0; income tick produces base rate (1 credit/sec per
+   extractor).
+2. **Force-grant a pass** in the Server Command Bar (sim-only,
+   doesn't actually charge real Robux):
+   ```luau
+   local GP = require(game.ServerScriptService.Server.Modules.Monetization.GamePassService)
+   local CS = require(game.ServerScriptService.Server.Modules.Economy.CurrencyService)
+   local p = game.Players:GetPlayers()[1]
+
+   -- Synthesize ownership directly via the OnOwnershipChanged path
+   -- (mimics what PromptGamePassPurchaseFinished does):
+   -- (Cannot mutate the private cache from here; instead, call the
+   --  real internal flow by invoking the private setOwned via a
+   --  Studio-only helper. For V1, simplest: temporarily edit
+   --  Constants.MONETIZATION.GamePasses.DoubleCredits.id to a real
+   --  Pass ID and run the prompt flow. Or test PassEffects directly:)
+   local PE = require(game.ServerScriptService.Server.Modules.Monetization.PassEffects)
+   PE.RecomputeFor(p)  -- with no passes owned, multiplier = 1.0
+   ```
+3. **Live prompt test** (requires real Pass IDs in
+   `Constants.MONETIZATION` — Phase H):
+   - Player owns DoubleCredits → multiplier = 2.0; income visibly
+     doubles (1/sec → 2/sec per extractor).
+   - Player additionally owns AutoCollect → multiplier = 3.0;
+     income triples vs. base (1/sec → 3/sec per extractor).
+4. **VIP quest slot test** (requires real VIP ID):
+   - Default state: Quests panel shows 3 quest rows.
+   - Player buys VIP via prompt → on
+     `PromptGamePassPurchaseFinished(true)`,
+     `GamePassService.OnOwnershipChanged` fires →
+     `DailyQuestManager` re-pushes state → panel auto-refreshes
+     to 4 rows.
+   - `TryClaim` with the 4th questId before owning VIP returns
+     `{ ok = false, error = "VIP Operator required" }`.
+
+### Tech debt / deferred
+
+- **VIP cosmetic effects** (armor skin, drone trail) deferred to
+  Phase G — no skin/cosmetic system exists yet. The pass description
+  still mentions them; ship-blocking question for Phase G/H.
+- **VIP-only blueprints** in the shop (per brainstorm §2.7)
+  deferred. Will land in Phase E or G with a `vipOnly` flag on
+  blueprint catalog entries; ShopService.GetState would filter the
+  same way DailyQuestManager does.
+- **Multiplier doesn't yet apply to the offline-progression grant**
+  (C4 OfflineProgression reads raw `incomePerSecond`). Wire when
+  a player rejoins and ownership has been primed — could be done
+  by reading `multipliers[player]` directly, but currently
+  CurrencyService doesn't expose a getter. Add
+  `CurrencyService.GetMultiplier` and read in `OfflineProgression`.
+  **Tracked**: ship before Phase D closes (D5 worklog) or in F1.
+
+### What's next
+
+D4 — Battle Pass scaffolding. ProfileSchema gets `battlePassXP`,
+`battlePassTier`, `battlePassClaimed` (per-tier flags), and
+`battlePassPremium`. New module `Monetization/BattlePass/{BattlePassService,BattlePassXP,ClaimService}.luau`.
+XP grant rules wire into `QuestObjectives` so quest claims and
+raid wins (Phase E) automatically advance battle pass progress.
+
+---
 
 ## D4 — Battle Pass scaffolding ⏳
 

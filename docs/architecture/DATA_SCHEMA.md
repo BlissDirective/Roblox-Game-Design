@@ -36,6 +36,18 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
 }
 ```
 
+### `dailyQuests[id].vipOnly` (D3)
+
+The 4th-rolled daily quest each UTC day is flagged `vipOnly = true`
+at reset. Non-VIP players don't see this entry in
+`DailyQuestManager.GetState`; `TryClaim` rejects with
+`"VIP Operator required"` if a modded client tries to claim it
+directly. VIP ownership can flip mid-session — `DailyQuestManager`
+subscribes to `GamePassService.OnOwnershipChanged` for the
+`VipOperator` key and re-pushes state. Older `QuestProgress` entries
+without the field default to "not vipOnly" via the standard nil-
+check pattern.
+
 ### `purchaseHistory` shape (D2)
 
 Keyed by Roblox-issued `PurchaseId` (string, unique per receipt).
