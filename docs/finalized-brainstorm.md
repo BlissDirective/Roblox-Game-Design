@@ -236,6 +236,14 @@ This is the **definitive V1 feature list.** Anything not on this list is V1.5+ u
 - [ ] Game icon + 3 thumbnails (per `02_ROBLOX_PLATFORM.md` discovery best practices)
 - [ ] Game description + tags
 
+**Asset concepts (added 2026-05-05; full design + integration in Phase G — see `docs/playbooks/ASSETS.md`):**
+- [ ] 3 biome arches — Bioluminescent Jungle, Volcanic, Ice Cave (signature colony entry gates per biome)
+- [ ] 3 operator skin packs — Recon, Combatant (default V1 silhouette), Heavy Defender
+- [ ] 3 alien variants — Stalker (jungle, V1 active), Magmaling (volcanic), Cryowraith (ice cave)
+- [ ] 3 turret tiers — Auto-Turret (basic, V1 active), Heavy Cannon (anti-armor), Burst Laser (anti-swarm)
+- [ ] 3 drone swarm presets — Recon (V1.5 spotting), Combat (V1 active), Engineering (V1.5 repair)
+- [ ] 3 vehicles — All-Terrain Rover, Sleek Hover Bike, Armed Hover Tank (driver + gunner)
+
 ### 2.9 V1.5+ deferred list
 
 - Trading marketplace between players (V1.5 or V2)
