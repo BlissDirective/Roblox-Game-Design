@@ -36,6 +36,7 @@ local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
 
 local FriendsService = {}
 
@@ -208,6 +209,12 @@ function FriendsService.Init()
 	-- RefreshFriends Remote — manual user-triggered refresh.
 	local refreshRemote = Remotes.RefreshFriends :: RemoteFunction
 	refreshRemote.OnServerInvoke = function(player: Player): Result
+		-- F1 token-bucket rate limit (defensive — server-side throttle
+		-- already caps at 60s in RefreshNow; the bucket adds protection
+		-- against cheaper invocations being spammed past the throttle).
+		if not AntiExploit.RateCheck(player, "RefreshFriends") then
+			return { ok = false, error = "rate-limited" }
+		end
 		return FriendsService.RefreshNow(player)
 	end
 

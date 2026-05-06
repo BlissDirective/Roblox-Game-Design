@@ -18,12 +18,17 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local BattlePassService = require(script.Parent.BattlePassService)
+local AntiExploit = require(script.Parent.Parent.Parent.Security.AntiExploit)
 
 local ClaimService = {}
 
 function ClaimService.Init()
 	local remote = Remotes.ClaimBattlePassTier :: RemoteFunction
 	remote.OnServerInvoke = function(player: Player, tier: any, track: any)
+		-- F1 token-bucket rate limit.
+		if not AntiExploit.RateCheck(player, "ClaimBattlePassTier") then
+			return { ok = false, error = "rate-limited" }
+		end
 		if typeof(tier) ~= "number" then
 			return { ok = false, error = "invalid tier" }
 		end

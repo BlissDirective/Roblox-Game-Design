@@ -41,6 +41,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local DataManager = require(script.Parent.Parent.Player.DataManager)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
 local ClanService = require(script.Parent.ClanService)
 
 type ClanData = ClanService.ClanData
@@ -324,18 +325,31 @@ local function subscribeWithdrawalGrant()
 end
 
 function ClanStashLedger.Init()
+	-- F1 token-bucket rate limit. Stash ops share the ClanStashOp bucket
+	-- (5/sec) — deposit / withdraw / approve all spend from the same
+	-- per-player budget so an exploiter can't dodge the limit by
+	-- alternating Remote names.
 	local depositRemote = Remotes.ClanStashDeposit :: RemoteFunction
 	depositRemote.OnServerInvoke = function(player: Player, amount: any): Result
+		if not AntiExploit.RateCheck(player, "ClanStashDeposit") then
+			return { ok = false, error = "rate-limited" }
+		end
 		return ClanStashLedger.TryDeposit(player, amount)
 	end
 
 	local withdrawRemote = Remotes.ClanStashWithdraw :: RemoteFunction
 	withdrawRemote.OnServerInvoke = function(player: Player, amount: any): Result
+		if not AntiExploit.RateCheck(player, "ClanStashWithdraw") then
+			return { ok = false, error = "rate-limited" }
+		end
 		return ClanStashLedger.TryWithdraw(player, amount)
 	end
 
 	local approveRemote = Remotes.ClanStashApprove :: RemoteFunction
 	approveRemote.OnServerInvoke = function(player: Player, withdrawalId: any, approve: any): Result
+		if not AntiExploit.RateCheck(player, "ClanStashApprove") then
+			return { ok = false, error = "rate-limited" }
+		end
 		return ClanStashLedger.TryApprove(player, withdrawalId, approve)
 	end
 

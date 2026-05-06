@@ -59,6 +59,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local RaidSnapshot = require(script.Parent.RaidSnapshot)
 local ReservedServerLauncher = require(script.Parent.ReservedServerLauncher)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
 
 local RaidMatchmaker = {}
 
@@ -426,6 +427,10 @@ function RaidMatchmaker.Init()
 	-- Wire RaidQueue Remote.
 	local queueRemote = Remotes.RaidQueue :: RemoteFunction
 	queueRemote.OnServerInvoke = function(player: Player, action: any): QueueResult
+		-- F1 token-bucket rate limit. 1/sec sustained anti-spam queue.
+		if not AntiExploit.RateCheck(player, "RaidQueue") then
+			return { ok = false, error = "rate-limited" }
+		end
 		if typeof(action) ~= "string" then
 			return { ok = false, error = "invalid action" }
 		end

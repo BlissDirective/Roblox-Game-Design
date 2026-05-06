@@ -52,11 +52,36 @@ rows as Remotes are introduced.
 ## Conventions
 
 - Every inbound (Client → Server) Remote passes through
-  `Security.AntiExploit:RateCheck` + `Security.RemoteValidator` before any
-  game-state mutation.
+  `Security.AntiExploit:RateCheck` (F1, token-bucket) before any
+  game-state mutation. F2 adds central `Security.RemoteValidator` for
+  type/range/structure validation.
 - Default rate limit: **10 calls/sec/player**. Per-Remote overrides live in
   `Constants.RATE_LIMITS` and are documented in this table.
 - Outbound (Server → Client) Remotes are notification-only. Clients never trust
   outbound payloads as sources of truth — they're display hints.
 - Adding a Remote: add row here in the same PR that adds the registry entry,
   or CI fails the docs check.
+
+## F1 token-bucket rate-limit summary
+
+Per `Constants.RATE_LIMITS` post-F1 tuning. Capacity for rates ≥1 = `rate × 2` (allows
+legitimate UI burst); for sub-Hz rates capacity = 1 (no burst). Exceeded buckets log + reject
+with `{ ok = false, error = "rate-limited" }` (no game-state mutation). Names match
+`AntiExploit.RATE_LIMITS_BY_REMOTE`:
+
+| Remote | Bucket name | Sustained rate | Capacity |
+|---|---|---|---|
+| `PlaceBuilding` | `Placement` | 60 / s | 120 |
+| `ClaimDailyReward` | `DailyLogin` | 1 / s | 2 |
+| `BuyShopItem` | `ShopBuy` | 5 / s | 10 |
+| `ClaimQuest` | `QuestClaim` | 5 / s | 10 |
+| `ClaimBattlePassTier` | `BattlePassClaim` | 2 / s | 4 |
+| `RaidQueue` | `RaidQueue` | 1 / s | 2 |
+| `CreateClan` | `ClanCreate` | 0.2 / s (1 per 5s) | 1 |
+| `JoinClan` | `ClanJoin` | 0.5 / s (1 per 2s) | 1 |
+| `LeaveClan` | `ClanLeave` | 1 / s | 2 |
+| `KickFromClan` | `ClanKick` | 1 / s | 2 |
+| `ClanStashDeposit` / `ClanStashWithdraw` / `ClanStashApprove` | `ClanStashOp` | 5 / s shared | 10 |
+| `ClanChatSend` | `ClanChatSend` | 0.5 / s (1 per 2s) | 1 |
+| `RefreshFriends` | `FriendsRefresh` | 0.05 / s (1 per 20s) | 1 |
+| (any unlisted) | `Default` | 10 / s | 20 |

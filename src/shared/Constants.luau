@@ -40,10 +40,34 @@ local Constants = {
 	-- Server.Security.AntiExploit.RateCheck. The default is the floor;
 	-- specific Remotes override per docs/architecture/REMOTES_REGISTRY.md.
 	-- Tuned in Phase F1.
+	--
+	-- Phase F1 token-bucket model:
+	--   - Each (player, remoteName) has a bucket with `capacity` tokens
+	--     and refill rate equal to the rate-limit value (tokens/sec).
+	--   - Each Remote call consumes 1 token.
+	--   - Empty bucket = denied + logged.
+	--   - Capacity = burst size; refill rate = sustained rate.
+	-- Default capacity scales with rate (capacity = rate × 2) so a
+	-- 10/sec limit allows up to 20-token bursts before rate-limiting.
+	-- Override per Remote where burst behavior shouldn't apply.
 	RATE_LIMITS = {
 		Default = 10,
 		Placement = 60, -- build-mode placement bursts
 		Purchase = 1, -- monetization Remotes
+		-- Phase F1 — fine-grained per-Remote tuning. Values < 1 = sub-Hz
+		-- (e.g., Chat = 0.5 means 1 message per 2 seconds sustained).
+		ClanCreate = 0.2, -- 1 per 5s sustained — anti-spam clan creation
+		ClanJoin = 0.5, -- 1 per 2s — anti-spam join
+		ClanLeave = 1, -- 1/s
+		ClanKick = 1, -- 1/s
+		ClanStashOp = 5, -- 5/s — deposit / withdraw / approve combined
+		ClanChatSend = 0.5, -- 1 per 2s sustained — chat anti-spam
+		RaidQueue = 1, -- 1/s — anti queue spam
+		FriendsRefresh = 0.05, -- 1 per 20s — server-side throttle is 60s; this is defensive
+		BattlePassClaim = 2, -- 2/s — players may claim multiple tiers in quick burst
+		ShopBuy = 5, -- 5/s — shop browsing speed
+		QuestClaim = 5, -- 5/s — multiple quests claimed in burst
+		DailyLogin = 1, -- 1/s — server-side semantic limit (1/UTC-day) is dominant
 	},
 
 	-- Game cadence (seconds unless noted). Per-system tick rates.

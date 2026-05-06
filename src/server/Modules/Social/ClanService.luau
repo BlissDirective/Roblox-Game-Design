@@ -59,6 +59,7 @@ local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
 
 local ClanService = {}
 
@@ -623,24 +624,39 @@ local function subscribeInvalidate()
 end
 
 function ClanService.Init()
-	-- RemoteFunction wires.
+	-- RemoteFunction wires. F1 token-bucket rate limit on every C→S
+	-- entry. Tight buckets on Create/Join (anti-spam clan churn);
+	-- looser on Leave/Kick (legitimate moderation actions can occur
+	-- in quick burst).
 	local createRemote = Remotes.CreateClan :: RemoteFunction
 	createRemote.OnServerInvoke = function(player: Player, name: any, tag: any): Result
+		if not AntiExploit.RateCheck(player, "CreateClan") then
+			return { ok = false, error = "rate-limited" }
+		end
 		return ClanService.TryCreateClan(player, name, tag)
 	end
 
 	local joinRemote = Remotes.JoinClan :: RemoteFunction
 	joinRemote.OnServerInvoke = function(player: Player, clanId: any): Result
+		if not AntiExploit.RateCheck(player, "JoinClan") then
+			return { ok = false, error = "rate-limited" }
+		end
 		return ClanService.TryJoinClan(player, clanId)
 	end
 
 	local leaveRemote = Remotes.LeaveClan :: RemoteFunction
 	leaveRemote.OnServerInvoke = function(player: Player): Result
+		if not AntiExploit.RateCheck(player, "LeaveClan") then
+			return { ok = false, error = "rate-limited" }
+		end
 		return ClanService.TryLeaveClan(player)
 	end
 
 	local kickRemote = Remotes.KickFromClan :: RemoteFunction
 	kickRemote.OnServerInvoke = function(player: Player, targetUserId: any): Result
+		if not AntiExploit.RateCheck(player, "KickFromClan") then
+			return { ok = false, error = "rate-limited" }
+		end
 		return ClanService.TryKickMember(player, targetUserId)
 	end
 

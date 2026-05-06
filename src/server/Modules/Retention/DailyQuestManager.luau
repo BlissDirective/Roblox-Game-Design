@@ -30,6 +30,7 @@ local ProfileSchema = require(script.Parent.Parent.Player.ProfileSchema)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local QuestObjectives = require(script.Parent.QuestObjectives)
 local GamePassService = require(script.Parent.Parent.Monetization.GamePassService)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
 
 type QuestProgress = ProfileSchema.QuestProgress
 
@@ -400,6 +401,10 @@ function DailyQuestManager.Init()
 	-- ClaimQuest is a RemoteFunction.
 	local claimRemote = Remotes.ClaimQuest :: RemoteFunction
 	claimRemote.OnServerInvoke = function(player: Player, questId: any): ClaimResult
+		-- F1 token-bucket rate limit.
+		if not AntiExploit.RateCheck(player, "ClaimQuest") then
+			return { ok = false, error = "rate-limited" }
+		end
 		if typeof(questId) ~= "string" then
 			return { ok = false, error = "invalid quest id" }
 		end

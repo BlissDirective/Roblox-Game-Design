@@ -35,6 +35,7 @@ local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
 
 local ClanChatService = {}
 
@@ -200,6 +201,12 @@ end
 function ClanChatService.Init()
 	local sendRemote = Remotes.ClanChatSend :: RemoteFunction
 	sendRemote.OnServerInvoke = function(player: Player, message: any): Result
+		-- F1 token-bucket rate limit. Tightest bucket in the system
+		-- (0.5/sec sustained, capacity 1 — no burst). Chat spam is the
+		-- highest-volume exploit vector.
+		if not AntiExploit.RateCheck(player, "ClanChatSend") then
+			return { ok = false, error = "rate-limited" }
+		end
 		return ClanChatService.TrySend(player, message)
 	end
 

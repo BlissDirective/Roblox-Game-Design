@@ -30,6 +30,7 @@ local DataManager = require(script.Parent.Parent.Player.DataManager)
 local CurrencyService = require(script.Parent.CurrencyService)
 local BlueprintRegistry = require(script.Parent.BlueprintRegistry)
 local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
 
 type Blueprint = BlueprintRegistry.Blueprint
 
@@ -244,6 +245,10 @@ function ShopService.Init()
 
 	local buyRemote = Remotes.BuyShopItem :: RemoteFunction
 	buyRemote.OnServerInvoke = function(player: Player, blueprintId: any): BuyResult
+		-- F1 token-bucket rate limit.
+		if not AntiExploit.RateCheck(player, "BuyShopItem") then
+			return { ok = false, error = "rate-limited" }
+		end
 		if typeof(blueprintId) ~= "string" then
 			return { ok = false, error = "invalid blueprint id" }
 		end

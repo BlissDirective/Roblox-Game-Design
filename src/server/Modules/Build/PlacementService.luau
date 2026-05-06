@@ -46,6 +46,7 @@ local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
 local TurretService = require(script.Parent.Parent.Combat.TurretService)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
 
 type Buildable = BuildableRegistry.Buildable
 type PlotInfo = PlotManager.PlotInfo
@@ -222,8 +223,14 @@ function PlacementService.TryPlace(
 end
 
 local function onRemote(player: Player, buildableId: any, cellX: any, cellZ: any)
-	-- F1 will route this through Security.AntiExploit + RemoteValidator;
-	-- B1 does the type checks inline so the audit can exercise the path.
+	-- F1 token-bucket rate limit. Build-mode allows 60/sec bursts (60 ×
+	-- 2 = 120 token capacity for legitimate rapid placement); spam beyond
+	-- that is rejected + logged.
+	if not AntiExploit.RateCheck(player, "PlaceBuilding") then
+		return
+	end
+	-- F2 will extend this with central RemoteValidator type checks; F1
+	-- keeps the inline checks for now.
 	if typeof(buildableId) ~= "string" then
 		return
 	end
