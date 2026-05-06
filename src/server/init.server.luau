@@ -14,6 +14,7 @@ local Constants = require(Shared:WaitForChild("Constants"))
 local ServerAuthorityBootstrap = require(script.Modules.Lifecycle.ServerAuthorityBootstrap)
 local DataManager = require(script.Modules.Player.DataManager)
 local AntiExploit = require(script.Modules.Security.AntiExploit)
+local AuditLog = require(script.Modules.Security.AuditLog)
 
 local IS_RAID_SERVER = game.PrivateServerId ~= ""
 
@@ -22,6 +23,9 @@ DataManager.Init()
 -- F1: AntiExploit init runs before any C->S Remote handler is wired.
 -- Per-Remote handlers call AntiExploit.RateCheck on every invoke.
 AntiExploit.Init()
+-- F2: AuditLog connects PlayerRemoving cleanup; per-Remote handlers
+-- call AuditLog.Record on rate-limit denials and validation failures.
+AuditLog.Init()
 
 if IS_RAID_SERVER then
 	-- Raid place: minimal stack. No plots, no currency tick, no shop —

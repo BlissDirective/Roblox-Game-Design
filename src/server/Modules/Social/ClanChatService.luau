@@ -36,6 +36,8 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
+local RemoteValidator = require(script.Parent.Parent.Security.RemoteValidator)
 
 local ClanChatService = {}
 
@@ -205,7 +207,16 @@ function ClanChatService.Init()
 		-- (0.5/sec sustained, capacity 1 — no burst). Chat spam is the
 		-- highest-volume exploit vector.
 		if not AntiExploit.RateCheck(player, "ClanChatSend") then
+			AuditLog.Record(player, "rate_limited", "ClanChatSend")
 			return { ok = false, error = "rate-limited" }
+		end
+		-- F2 central wire-shape validation: bounded message length.
+		-- Domain validation (sanitize control chars, non-empty) lives
+		-- in TrySend.
+		local msgOk = RemoteValidator.IsString(message, 1, Constants.CLAN.ChatMessageMaxLength)
+		if not msgOk then
+			AuditLog.Record(player, "validation_failed", "ClanChatSend: message invalid")
+			return { ok = false, error = "invalid message" }
 		end
 		return ClanChatService.TrySend(player, message)
 	end

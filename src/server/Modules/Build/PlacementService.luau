@@ -47,6 +47,8 @@ local DataManager = require(script.Parent.Parent.Player.DataManager)
 local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
 local TurretService = require(script.Parent.Parent.Combat.TurretService)
 local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
+local RemoteValidator = require(script.Parent.Parent.Security.RemoteValidator)
 
 type Buildable = BuildableRegistry.Buildable
 type PlotInfo = PlotManager.PlotInfo
@@ -223,31 +225,35 @@ function PlacementService.TryPlace(
 end
 
 local function onRemote(player: Player, buildableId: any, cellX: any, cellZ: any)
-	-- F1 token-bucket rate limit. Build-mode allows 60/sec bursts (60 ×
-	-- 2 = 120 token capacity for legitimate rapid placement); spam beyond
-	-- that is rejected + logged.
+	-- F1 token-bucket rate limit.
 	if not AntiExploit.RateCheck(player, "PlaceBuilding") then
+		AuditLog.Record(player, "rate_limited", "PlaceBuilding")
 		return
 	end
-	-- F2 will extend this with central RemoteValidator type checks; F1
-	-- keeps the inline checks for now.
-	if typeof(buildableId) ~= "string" then
+	-- F2 central wire-shape validation. Reject + audit-log invalid
+	-- payloads before any game-state read. The cell range uses
+	-- PlotSlotSize (V1.5-ready max) rather than PlotSize so V1.5 tier
+	-- expansion doesn't reject placements; PlacementService.TryPlace
+	-- still does the per-tier IsInsidePlot check for the actual
+	-- bounds.
+	local maxCells = Constants.WORLD.PlotSlotSize / Constants.GRID.Size + 4
+	local idOk, idValue = RemoteValidator.IsString(buildableId, 1, Constants.VALIDATION.MaxBuildableIdLength)
+	if not idOk then
+		AuditLog.Record(player, "validation_failed", "PlaceBuilding: buildableId invalid")
 		return
 	end
-	if typeof(cellX) ~= "number" or cellX ~= math.floor(cellX) then
+	local xOk, xValue = RemoteValidator.IsInteger(cellX, -maxCells, maxCells)
+	if not xOk then
+		AuditLog.Record(player, "validation_failed", "PlaceBuilding: cellX out of range")
 		return
 	end
-	if typeof(cellZ) ~= "number" or cellZ ~= math.floor(cellZ) then
-		return
-	end
-	-- Sanity bounds — cell coords beyond ±2× the plot grid are
-	-- nonsensical; reject before doing more work.
-	local maxCells = Constants.WORLD.PlotSize / Constants.GRID.Size + 4
-	if math.abs(cellX) > maxCells or math.abs(cellZ) > maxCells then
+	local zOk, zValue = RemoteValidator.IsInteger(cellZ, -maxCells, maxCells)
+	if not zOk then
+		AuditLog.Record(player, "validation_failed", "PlaceBuilding: cellZ out of range")
 		return
 	end
 
-	PlacementService.TryPlace(player, buildableId, cellX, cellZ)
+	PlacementService.TryPlace(player, idValue :: string, xValue :: number, zValue :: number)
 end
 
 function PlacementService.Init()

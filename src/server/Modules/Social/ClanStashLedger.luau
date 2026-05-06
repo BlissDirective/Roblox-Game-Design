@@ -42,6 +42,8 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
+local RemoteValidator = require(script.Parent.Parent.Security.RemoteValidator)
 local ClanService = require(script.Parent.ClanService)
 
 type ClanData = ClanService.ClanData
@@ -332,25 +334,50 @@ function ClanStashLedger.Init()
 	local depositRemote = Remotes.ClanStashDeposit :: RemoteFunction
 	depositRemote.OnServerInvoke = function(player: Player, amount: any): Result
 		if not AntiExploit.RateCheck(player, "ClanStashDeposit") then
+			AuditLog.Record(player, "rate_limited", "ClanStashDeposit")
 			return { ok = false, error = "rate-limited" }
 		end
-		return ClanStashLedger.TryDeposit(player, amount)
+		-- F2 central validation: amount positive integer, bounded by
+		-- MaxAmountValue to guard integer overflow on stash totals.
+		local amtOk, amtValue = RemoteValidator.IsInteger(amount, 1, Constants.VALIDATION.MaxAmountValue)
+		if not amtOk then
+			AuditLog.Record(player, "validation_failed", "ClanStashDeposit: amount invalid")
+			return { ok = false, error = "invalid amount" }
+		end
+		return ClanStashLedger.TryDeposit(player, amtValue)
 	end
 
 	local withdrawRemote = Remotes.ClanStashWithdraw :: RemoteFunction
 	withdrawRemote.OnServerInvoke = function(player: Player, amount: any): Result
 		if not AntiExploit.RateCheck(player, "ClanStashWithdraw") then
+			AuditLog.Record(player, "rate_limited", "ClanStashWithdraw")
 			return { ok = false, error = "rate-limited" }
 		end
-		return ClanStashLedger.TryWithdraw(player, amount)
+		local amtOk, amtValue = RemoteValidator.IsInteger(amount, 1, Constants.VALIDATION.MaxAmountValue)
+		if not amtOk then
+			AuditLog.Record(player, "validation_failed", "ClanStashWithdraw: amount invalid")
+			return { ok = false, error = "invalid amount" }
+		end
+		return ClanStashLedger.TryWithdraw(player, amtValue)
 	end
 
 	local approveRemote = Remotes.ClanStashApprove :: RemoteFunction
 	approveRemote.OnServerInvoke = function(player: Player, withdrawalId: any, approve: any): Result
 		if not AntiExploit.RateCheck(player, "ClanStashApprove") then
+			AuditLog.Record(player, "rate_limited", "ClanStashApprove")
 			return { ok = false, error = "rate-limited" }
 		end
-		return ClanStashLedger.TryApprove(player, withdrawalId, approve)
+		local idOk, idValue = RemoteValidator.IsString(withdrawalId, 1, Constants.VALIDATION.MaxWithdrawalIdLength)
+		if not idOk then
+			AuditLog.Record(player, "validation_failed", "ClanStashApprove: withdrawalId invalid")
+			return { ok = false, error = "invalid withdrawal id" }
+		end
+		local approveOk, approveValue = RemoteValidator.IsBoolean(approve)
+		if not approveOk then
+			AuditLog.Record(player, "validation_failed", "ClanStashApprove: approve flag invalid")
+			return { ok = false, error = "invalid approve flag" }
+		end
+		return ClanStashLedger.TryApprove(player, idValue, approveValue)
 	end
 
 	subscribeWithdrawalGrant()

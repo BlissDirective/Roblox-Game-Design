@@ -60,6 +60,8 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
+local RemoteValidator = require(script.Parent.Parent.Security.RemoteValidator)
 
 local ClanService = {}
 
@@ -631,7 +633,17 @@ function ClanService.Init()
 	local createRemote = Remotes.CreateClan :: RemoteFunction
 	createRemote.OnServerInvoke = function(player: Player, name: any, tag: any): Result
 		if not AntiExploit.RateCheck(player, "CreateClan") then
+			AuditLog.Record(player, "rate_limited", "CreateClan")
 			return { ok = false, error = "rate-limited" }
+		end
+		-- F2 wire-shape: name + tag length caps. Domain validation
+		-- (character class, exact length per Constants.CLAN.NameMinLength
+		-- etc.) lives in TryCreateClan.
+		local nameOk = RemoteValidator.IsString(name, 1, Constants.CLAN.NameMaxLength)
+		local tagOk = RemoteValidator.IsString(tag, 1, Constants.CLAN.TagMaxLength)
+		if not (nameOk and tagOk) then
+			AuditLog.Record(player, "validation_failed", "CreateClan: name/tag invalid")
+			return { ok = false, error = "invalid name or tag" }
 		end
 		return ClanService.TryCreateClan(player, name, tag)
 	end
@@ -639,14 +651,21 @@ function ClanService.Init()
 	local joinRemote = Remotes.JoinClan :: RemoteFunction
 	joinRemote.OnServerInvoke = function(player: Player, clanId: any): Result
 		if not AntiExploit.RateCheck(player, "JoinClan") then
+			AuditLog.Record(player, "rate_limited", "JoinClan")
 			return { ok = false, error = "rate-limited" }
 		end
-		return ClanService.TryJoinClan(player, clanId)
+		local idOk, idValue = RemoteValidator.IsString(clanId, 1, Constants.VALIDATION.MaxClanIdLength)
+		if not idOk then
+			AuditLog.Record(player, "validation_failed", "JoinClan: clanId invalid")
+			return { ok = false, error = "invalid clan id" }
+		end
+		return ClanService.TryJoinClan(player, idValue)
 	end
 
 	local leaveRemote = Remotes.LeaveClan :: RemoteFunction
 	leaveRemote.OnServerInvoke = function(player: Player): Result
 		if not AntiExploit.RateCheck(player, "LeaveClan") then
+			AuditLog.Record(player, "rate_limited", "LeaveClan")
 			return { ok = false, error = "rate-limited" }
 		end
 		return ClanService.TryLeaveClan(player)
@@ -655,9 +674,15 @@ function ClanService.Init()
 	local kickRemote = Remotes.KickFromClan :: RemoteFunction
 	kickRemote.OnServerInvoke = function(player: Player, targetUserId: any): Result
 		if not AntiExploit.RateCheck(player, "KickFromClan") then
+			AuditLog.Record(player, "rate_limited", "KickFromClan")
 			return { ok = false, error = "rate-limited" }
 		end
-		return ClanService.TryKickMember(player, targetUserId)
+		local userIdOk, userIdValue = RemoteValidator.IsUserId(targetUserId)
+		if not userIdOk then
+			AuditLog.Record(player, "validation_failed", "KickFromClan: targetUserId invalid")
+			return { ok = false, error = "invalid target user id" }
+		end
+		return ClanService.TryKickMember(player, userIdValue)
 	end
 
 	-- State push on join.

@@ -37,6 +37,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
 
 local FriendsService = {}
 
@@ -213,6 +214,7 @@ function FriendsService.Init()
 		-- already caps at 60s in RefreshNow; the bucket adds protection
 		-- against cheaper invocations being spammed past the throttle).
 		if not AntiExploit.RateCheck(player, "RefreshFriends") then
+			AuditLog.Record(player, "rate_limited", "RefreshFriends")
 			return { ok = false, error = "rate-limited" }
 		end
 		return FriendsService.RefreshNow(player)

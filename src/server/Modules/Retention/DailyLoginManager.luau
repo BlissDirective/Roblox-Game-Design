@@ -37,6 +37,7 @@ local DataManager = require(script.Parent.Parent.Player.DataManager)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local QuestObjectives = require(script.Parent.QuestObjectives)
 local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
 
 local DailyLoginManager = {}
 
@@ -189,6 +190,7 @@ function DailyLoginManager.Init()
 		-- (1/UTC-day) is dominant, but the rate check rejects spam
 		-- before we even compute eligibility.
 		if not AntiExploit.RateCheck(player, "ClaimDailyReward") then
+			AuditLog.Record(player, "rate_limited", "ClaimDailyReward")
 			return { ok = false, error = "rate-limited" }
 		end
 		local result = DailyLoginManager.TryClaim(player)

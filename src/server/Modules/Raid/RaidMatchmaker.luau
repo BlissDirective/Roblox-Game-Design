@@ -60,6 +60,8 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local RaidSnapshot = require(script.Parent.RaidSnapshot)
 local ReservedServerLauncher = require(script.Parent.ReservedServerLauncher)
 local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
+local RemoteValidator = require(script.Parent.Parent.Security.RemoteValidator)
 
 local RaidMatchmaker = {}
 
@@ -427,19 +429,20 @@ function RaidMatchmaker.Init()
 	-- Wire RaidQueue Remote.
 	local queueRemote = Remotes.RaidQueue :: RemoteFunction
 	queueRemote.OnServerInvoke = function(player: Player, action: any): QueueResult
-		-- F1 token-bucket rate limit. 1/sec sustained anti-spam queue.
 		if not AntiExploit.RateCheck(player, "RaidQueue") then
+			AuditLog.Record(player, "rate_limited", "RaidQueue")
 			return { ok = false, error = "rate-limited" }
 		end
-		if typeof(action) ~= "string" then
+		-- F2 central validation: action enum (queue|cancel only).
+		local ok = RemoteValidator.IsOption(action, { "queue", "cancel" })
+		if not ok then
+			AuditLog.Record(player, "validation_failed", "RaidQueue: action invalid")
 			return { ok = false, error = "invalid action" }
 		end
 		if action == "queue" then
 			return RaidMatchmaker.Enqueue(player)
-		elseif action == "cancel" then
-			return RaidMatchmaker.Cancel(player)
 		end
-		return { ok = false, error = "unknown action" }
+		return RaidMatchmaker.Cancel(player)
 	end
 
 	-- Push initial empty state on join so the client renders correctly.

@@ -70,6 +70,36 @@ local Constants = {
 		DailyLogin = 1, -- 1/s — server-side semantic limit (1/UTC-day) is dominant
 	},
 
+	-- Phase F2 — central validation primitives. Length / range / depth
+	-- caps used by `Server.Security.RemoteValidator`. Defensive caps —
+	-- legitimate clients send well below these; exploiters get rejected
+	-- + audit-logged.
+	VALIDATION = {
+		-- String length caps per category.
+		MaxBuildableIdLength = 32, -- "extractor" / "wall" / specialty extractor IDs
+		MaxQuestIdLength = 32, -- daily quest IDs
+		MaxBlueprintIdLength = 32, -- shop blueprint IDs
+		MaxClanIdLength = 40, -- HttpService:GenerateGUID(false) is 36 chars; 40 = defensive
+		MaxWithdrawalIdLength = 40, -- same shape as clanId
+		MaxActionLength = 16, -- enum-style action strings (e.g., "queue" / "cancel")
+		-- Integer range caps.
+		MaxAmountValue = 1e9, -- max stash deposit / withdraw — guards integer overflow
+		MaxUserIdValue = 2 ^ 53, -- Roblox UserIds are bounded by JS-safe integer range
+		-- Table primitives (forward-looking — V1 has no table-typed
+		-- C→S Remote payloads, but V1.5+ may add them).
+		MaxTableDepth = 4, -- nested {} levels permitted
+		MaxTableKeys = 64, -- top-level + per-level key count cap
+	},
+
+	-- Phase F2 — audit log retention.
+	AUDIT_LOG = {
+		-- In-memory ring buffer per player. Keeps the most recent N
+		-- suspicious events for diagnostics. Cleared on PlayerRemoving
+		-- (Phase H prep adds DataStore persistence + cross-server
+		-- aggregation for live-monitoring).
+		MaxRecordsPerPlayer = 50,
+	},
+
 	-- Game cadence (seconds unless noted). Per-system tick rates.
 	TICK = {
 		Currency = 1, -- Phase B2

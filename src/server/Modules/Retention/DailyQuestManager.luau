@@ -23,6 +23,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
@@ -31,6 +32,8 @@ local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local QuestObjectives = require(script.Parent.QuestObjectives)
 local GamePassService = require(script.Parent.Parent.Monetization.GamePassService)
 local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
+local RemoteValidator = require(script.Parent.Parent.Security.RemoteValidator)
 
 type QuestProgress = ProfileSchema.QuestProgress
 
@@ -401,13 +404,16 @@ function DailyQuestManager.Init()
 	-- ClaimQuest is a RemoteFunction.
 	local claimRemote = Remotes.ClaimQuest :: RemoteFunction
 	claimRemote.OnServerInvoke = function(player: Player, questId: any): ClaimResult
-		-- F1 token-bucket rate limit.
 		if not AntiExploit.RateCheck(player, "ClaimQuest") then
+			AuditLog.Record(player, "rate_limited", "ClaimQuest")
 			return { ok = false, error = "rate-limited" }
 		end
-		if typeof(questId) ~= "string" then
+		local idOk, idValue = RemoteValidator.IsString(questId, 1, Constants.VALIDATION.MaxQuestIdLength)
+		if not idOk then
+			AuditLog.Record(player, "validation_failed", "ClaimQuest: questId invalid")
 			return { ok = false, error = "invalid quest id" }
 		end
+		questId = idValue
 		local result = DailyQuestManager.TryClaim(player, questId)
 		pushStateToClient(player)
 		return result
