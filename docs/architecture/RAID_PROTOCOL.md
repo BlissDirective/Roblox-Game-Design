@@ -107,9 +107,14 @@ Attacker (main A)        Defender (main B)        Leader (main C)        Raid pl
    leader can pair an attacker with an online defender. Offline
    targets are deferred to V1.5+ (would require a `PendingRaidRewards`
    DataStore for the defender-side reward).
-5. **Voice gates only inside the raid place.** E4 wires the gate via
-   the place-level `VoiceChatService` config. The main place's voice
-   stays disabled.
+5. **Voice gates only inside the raid place.** Implemented in E4:
+   `raid.project.json` sets `VoiceChatService.EnableDefaultVoice = true`
+   at build time; `default.project.json` inherits the platform default
+   (off). `Server.Voice.VoiceGate` is a defensive verifier + state
+   pusher (per-player `VoiceChatService:IsVoiceEnabledForUserIdAsync`)
+   so the client HUD renders an indicator when voice is actually
+   transmitting. Phase H prerequisite: enable voice chat at the
+   universe level in the Creator Dashboard (Rojo can't configure that).
 
 ## Failure modes & recovery
 

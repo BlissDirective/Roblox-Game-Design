@@ -60,6 +60,13 @@
       "$properties": {
         "RespectFilteringEnabled": true
       }
+    },
+
+    "VoiceChatService": {
+      "$className": "VoiceChatService",
+      "$properties": {
+        "EnableDefaultVoice": true
+      }
     }
   }
 }

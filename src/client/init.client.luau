@@ -27,6 +27,7 @@ local MonetizationController = require(script.Modules.Shop.MonetizationControlle
 local RaidController = require(script.Modules.Raid.RaidController)
 local CombatController = require(script.Modules.Combat.CombatController)
 local ClanController = require(script.Modules.Social.ClanController)
+local VoiceController = require(script.Modules.Voice.VoiceController)
 
 HudController.Init()
 CameraController.Init()
@@ -40,6 +41,7 @@ MonetizationController.Init()
 RaidController.Init()
 CombatController.Init()
 ClanController.Init()
+VoiceController.Init()
 
 print(
 	string.format(

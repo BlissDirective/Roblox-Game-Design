@@ -191,6 +191,17 @@ local Remotes = {
 	-- this server (either originated here or arrived via MessagingService).
 	ClanChatReceived = getOrCreate("ClanChatReceived", "RemoteEvent") :: RemoteEvent,
 
+	-- Phase E4 — Spatial Voice gate:
+	-- Server → Client. Args: (state: VoiceGate.State).
+	-- Pushed on join (after the place identity is determined) + on every
+	-- voice availability change. Carries `enabled` (place-level
+	-- VoiceChatService.EnableDefaultVoice), `userVoiceAvailable` (this
+	-- specific player's account has voice permission), and `inRaidPlace`
+	-- (whether the indicator should render at all). Notification-only —
+	-- the client HUD shows a mic indicator off this; mic toggle itself
+	-- is owned by Roblox's native voice UI.
+	VoiceState = getOrCreate("VoiceState", "RemoteEvent") :: RemoteEvent,
+
 	-- Phase E1 — Raid / matchmaking + match flow:
 	-- Client → Server (RemoteFunction). Args: ("queue" | "cancel").
 	-- Returns RaidMatchmaker.QueueResult. Server enqueues / cancels via

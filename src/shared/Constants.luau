@@ -433,6 +433,34 @@ local Constants = {
 		-- broadcasts).
 		CacheTtlSeconds = 60,
 	},
+
+	-- Spatial Voice (Phase E4). Enabled at the *place* level via
+	-- raid.project.json's `VoiceChatService.EnableDefaultVoice = true`.
+	-- The main place inherits the platform default (off). Server-side
+	-- VoiceGate is a defensive verifier + state-push so the client HUD
+	-- can render an indicator when voice is active.
+	--
+	-- Universe-level voice toggle lives in the Roblox Creator Dashboard
+	-- (NOT something Rojo can configure). Phase H prerequisite.
+	--
+	-- Voice availability also depends on per-account permissions:
+	--   - Account is 13+
+	--   - Account has voice chat enabled in Roblox account settings
+	--   - User is in a region where voice chat is available
+	-- We surface "voice unavailable for this user" via the VoiceState
+	-- payload so the client HUD can show a muted indicator instead of
+	-- a misleading "voice active" one.
+	VOICE = {
+		-- How often the gate verifies VoiceChatService is still in the
+		-- expected state (defensive — catches a future Roblox API rename
+		-- or property change). Logs once per state flip.
+		VerifyIntervalSeconds = 30,
+		-- Roblox 2026 Feb API: GetChatGroupsAsync diagnostic call. We
+		-- use it to verify chat group membership at raid round start.
+		-- If it fails, voice is degraded but not blocking — we log and
+		-- continue.
+		UseChatGroupDiagnostic = true,
+	},
 }
 
 return Constants

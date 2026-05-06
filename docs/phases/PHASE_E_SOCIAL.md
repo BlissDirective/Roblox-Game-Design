@@ -966,3 +966,142 @@ diagnostics + verifies the place-level enable.
 ### Commit
 
 `feat(phaseE3): clan/squad system + shared stash + cross-server chat`
+
+---
+
+## E4 — Spatial Voice (raid-only) ✅
+
+**Date:** 2026-05-05
+**Branch:** `claude/audit-phases-a-d-2BAuW`
+
+### What was built
+
+Voice opens at the **place level** per ADR-009 (two-PlaceId split):
+the raid place enables `VoiceChatService.EnableDefaultVoice = true`
+at build time; the main place inherits the platform default (off).
+This matches the brainstorm §2.6 "voice during raids only" rule via
+deployment topology — no runtime toggle, no race window.
+
+#### Build configuration
+
+- **`raid.project.json`** — added `VoiceChatService` node with
+  `EnableDefaultVoice = true`. The main `default.project.json`
+  remains untouched (no VoiceChatService config = platform default,
+  which is off).
+
+#### Server
+
+- **`Constants.VOICE`** — `VerifyIntervalSeconds = 30` (defensive
+  re-check cadence; logs once per state flip), `UseChatGroupDiagnostic
+  = true` (toggles the Feb 2026 `GetChatGroupsAsync` log on raid round
+  start).
+- **`Voice/VoiceGate.luau`** — branches on `game.PrivateServerId` to
+  decide raid-place vs main-place behavior. Reads
+  `VoiceChatService.EnableDefaultVoice` defensively (pcall — Roblox
+  has renamed voice properties before; fail-safe to false). Per-
+  player voice availability via `VoiceChatService:IsVoiceEnabledForUserIdAsync`
+  — surfaces "voice unavailable" (under-13, region-blocked, account-
+  level voice off) so the client HUD shows a muted indicator instead
+  of misleading the player.
+- **`Remotes.luau`** — registered `VoiceState` (S→C event, render-
+  only). The mic toggle itself is owned by Roblox's native voice UI;
+  no client→server voice Remote exists.
+- **`init.server.luau`** — wired `VoiceGate.Init()` in BOTH branches:
+  - Raid place: pushes `inRaidPlace = true` so the HUD renders the
+    indicator
+  - Main place: pushes `inRaidPlace = false` so the HUD clears any
+    stale indicator (e.g. lingering after a raid teleport home)
+
+#### Client
+
+- **`Voice/VoiceController.luau`** — top-right indicator. Three
+  visual states: hidden (`inRaidPlace = false`), muted-grey (in raid
+  place but voice unavailable for this account), active-red (in raid
+  place AND voice transmitting). Phase G replaces with proper mic
+  icons + amplitude visualization.
+- **`init.client.luau`** — wired `VoiceController.Init()` last.
+
+#### Documentation
+
+- `REMOTES_REGISTRY.md` — `VoiceState` row added.
+- `RAID_PROTOCOL.md` — voice invariant updated to point at the place-
+  level enable + the gate module.
+
+### Audit (E4-scope, sandbox-side)
+
+- 71 `.luau` files — `--!strict` on all
+- VoiceGate uses `task.spawn` / `task.wait` (no legacy patterns)
+- Trust boundary: no client → server voice Remote exists; the gate is
+  render-only state push
+- Defensive reads: `pcall` wraps `EnableDefaultVoice` property read
+  AND `IsVoiceEnabledForUserIdAsync` call — Roblox API churn or
+  network blip degrades to "voice off" rather than crashing
+- Place isolation: `VoiceChatService.EnableDefaultVoice = true` only
+  appears in `raid.project.json` (verified by grep); `default.project.json`
+  has no voice config → platform-default off
+
+### Audit (E4-scope, Studio-side — pending your local run)
+
+E4's full audit needs the universe-level voice chat toggle enabled in
+the Roblox Creator Dashboard (Phase H prerequisite). Until then,
+`IsVoiceEnabledForUserIdAsync` returns false universe-wide and the
+client always shows the muted indicator in the raid place. Deferred
+audits:
+
+1. **Place-level enable verified.** Open the built `Raid.rbxl` in
+   Studio → check `VoiceChatService.EnableDefaultVoice = true` in
+   the Properties pane. Open the built `Game.rbxl` → property is
+   default false.
+2. **Main place HUD stays clean.** Join the main place; the voice
+   indicator never appears.
+3. **Raid place muted indicator.** Pre-Phase H (universe voice off):
+   queue + match into a raid, the indicator appears with the muted-
+   grey "Voice Off" text. Server log: `[VoiceGate] Init: raidPlace=true,
+   EnableDefaultVoice=true`.
+4. **Raid place active indicator.** Post-Phase H universe voice
+   enable: same flow, indicator flips to red "Voice Active" because
+   `IsVoiceEnabledForUserIdAsync` returns true.
+5. **GetChatGroupsAsync diagnostic.** Server log on raid round start
+   includes `[VoiceGate] <Name> chat groups: N`. If it fails, the
+   warn is non-blocking — voice still works, the diagnostic is just
+   absent.
+
+### Tech debt / deferred
+
+- **Universe-level voice chat toggle** must be flipped in the Roblox
+  Creator Dashboard before voice actually transmits. NOT Rojo-
+  configurable. Phase H checklist item.
+- **No mic-amplitude visualization.** The current indicator is binary
+  (active / muted / hidden). Phase G adds per-speaker amplitude bars
+  + speaker name list during raid round.
+- **No moderation hooks.** Roblox handles voice moderation natively;
+  V1 doesn't surface "this player was reported" to the host server.
+  V1.5 may add a `MarkAsActioned` callback once Roblox's API
+  surfaces.
+- **No verified-account requirement gate.** Brainstorm §8.3 flags
+  voice toxicity as a risk; if reports spike post-launch, gate voice
+  behind ID-verified accounts. Tunable via universe-level setting at
+  that point, not a code change.
+- **VoiceChatService property names may rename.** Roblox has done it
+  before (the older `Enabled` / `EnableDefault` flip). The defensive
+  pcall reads keep the gate from hard-failing on a rename, but the
+  `raid.project.json` `$properties` block would need updating in
+  the same Rojo build that adopts the new schema. Watch for
+  release-notes churn.
+- **No audio cue on voice activation.** Phase G adds a soft chirp
+  when the indicator flips to active so the player knows their mic
+  is hot.
+
+### What's next
+
+E5 — Leaderboards + friends. `Social/LeaderboardService.luau`
+(OrderedDataStore — global Credits, weekly raid wins keyed by ISO
+week per ADR-009-style "one store per bucket"),
+`Social/FriendsService.luau` (cached `Players:GetFriendsAsync` per
+session, refreshed on hour boundary),
+`Social/ObserveColonyService.luau` (read-only friend visit). Client
+`Social/LeaderboardController.luau` + `FriendsPanel`.
+
+### Commit
+
+`feat(phaseE4): spatial voice gate (raid-place enabled, main-place silent)`

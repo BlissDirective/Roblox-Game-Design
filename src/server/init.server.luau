@@ -23,7 +23,12 @@ if IS_RAID_SERVER then
 	-- Raid place: minimal stack. No plots, no currency tick, no shop —
 	-- the round runs against a snapshot, not a persistent base.
 	local RaidSession = require(script.Modules.Raid.RaidSession)
+	local VoiceGate = require(script.Modules.Voice.VoiceGate)
 	RaidSession.Init()
+	-- Voice is enabled at the place level via raid.project.json's
+	-- VoiceChatService.EnableDefaultVoice = true. VoiceGate.Init is
+	-- the defensive verifier + state pusher.
+	VoiceGate.Init()
 	print(
 		string.format(
 			"[Outpost-7] Raid bootstrap complete. privateServerId=%s, roundSeconds=%d",
@@ -51,6 +56,7 @@ else
 	local ClanService = require(script.Modules.Social.ClanService)
 	local ClanStashLedger = require(script.Modules.Social.ClanStashLedger)
 	local ClanChatService = require(script.Modules.Social.ClanChatService)
+	local VoiceGate = require(script.Modules.Voice.VoiceGate)
 
 	PlotManager.Init()
 	ResourceNodeSpawner.Init()
@@ -91,6 +97,11 @@ else
 	ClanService.Init()
 	ClanStashLedger.Init()
 	ClanChatService.Init()
+	-- VoiceGate (E4) — main-place init pushes `inRaidPlace = false` so
+	-- the client clears any stale indicator. Voice is OFF in main per
+	-- brainstorm §2.6 (build mode is silent; voice opens during raids
+	-- only).
+	VoiceGate.Init()
 
 	print(
 		string.format(
