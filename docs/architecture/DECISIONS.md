@@ -520,3 +520,105 @@
   - Schema migration if needed (e.g., switching to monthly buckets in
     V2): bump `WeeklyRaidWinsStorePrefix` to `_v2`, leave `_v1`
     historical buckets read-only-archive. No data loss.
+
+---
+
+## ADR-011: Shared raid-place reserved-instance dispatch (no separate Expedition / BossArena PlaceIds)
+
+- **Date:** 2026-05-05 (Phase F0 — pre-Phase-F foundational decision)
+- **Status:** Accepted.
+- **Context:** Two V1.5/V2 expansions need reserved-server-instance
+  architecture similar to E1's raid system:
+  1. **Expedition pockets** (V1.5 — `V1_5_SCOUTING_EXPEDITIONS.md`) —
+     procedural 200×200 stud pockets per mission; player teleports via
+     `ReserveServerAsync` + teleport data; round duration 3–15 min.
+  2. **Boss arenas** (V2 — `V2_LIVING_JUNGLE.md`) — 4-player co-op
+     dedicated arenas; same `ReserveServerAsync` + teleport data; round
+     up to 30 min.
+  Both follow the exact same architectural shape as raid:
+  reserved-server-with-teleport-data + bootstrap-branches-on-context.
+  Question: do these get their own PlaceIds (4 total: main + raid +
+  expedition + boss), or do they share the raid PlaceId with bootstrap
+  dispatch on teleport-data type (still 2 PlaceIds)?
+- **Decision:** **Shared raid-place reserved-instance dispatch.** The
+  raid place's bootstrap (`src/server/init.server.luau` raid branch)
+  extends to dispatch further on `joinData.placeMode` carried in
+  teleport data:
+  - `placeMode = "raid"` → existing `RaidSession.Init()` flow
+  - `placeMode = "expedition"` → V1.5 `PocketSession.Init()` flow
+  - `placeMode = "boss"` → V2 `BossArenaSession.Init()` flow
+  Same `.rbxl`, same PlaceId, same Roblox dashboard place entry. The
+  reserved instance's behavior depends on the teleport data, not on
+  the place identity.
+- **Why over per-feature PlaceIds:**
+  1. **Operational simplicity.** 2 PlaceIds instead of 4 means one
+     CI publish per place, one Open Cloud upload per release, half
+     the dashboard provisioning at Phase H, half the moderation
+     surface area.
+  2. **CSG / EditableMesh consolidation.** Per `PUBLISHING.md` §3,
+     these asset types must be authored manually per-PlaceId. With
+     shared reserved-instance: any raid/expedition/boss CSG asset is
+     authored once into the raid place. With 4 PlaceIds: the asset
+     pipeline 4× the manual work.
+  3. **Already-proven pattern.** `init.server.luau` already branches
+     on `game.PrivateServerId` per ADR-009. Adding a sub-branch on
+     `joinData.placeMode` is the same architectural shape, one level
+     deeper.
+  4. **Easy to split later.** If V2 boss arenas grow specialization
+     needs (different lighting, different streaming radii, different
+     audio profile), promote one mode to its own PlaceId as a
+     surgical change: split `raid.project.json` per-mode + add a new
+     PlaceId. The dispatch code stays; only the place mapping moves.
+- **Risks accepted:**
+  1. **Boot-time bloat.** All raid/expedition/boss server modules
+     load into the raid place's `ServerScriptService` even when only
+     one mode runs. **Mitigation:** server modules require lazily
+     (only the dispatched mode's modules `require()` on boot); other
+     modules' source sits dormant in the .rbxl tree. Roblox lazy-
+     loads ModuleScripts on first require; runtime memory cost is
+     ~zero for unused modules.
+  2. **Streaming radius compromise.** Raid place currently uses
+     128/256 (per `raid.project.json`). Expeditions use 200×200
+     pockets (fits within 256 streaming target); boss arenas may
+     want different radii. **Mitigation:** runtime override via
+     `Workspace.StreamingMinRadius = ...` on bootstrap dispatch.
+     Values per mode tuned in V1.5 / V2 prep.
+  3. **PlaceId teleport routing.** `ReserveServerAsync` returns an
+     access code scoped to the source PlaceId. Same PlaceId for
+     raid/expedition/boss = same access-code scope. **No issue.**
+- **Alternatives considered:**
+  - **Separate PlaceIds per mode (4 total).** Strictly worse for V1.5
+    operational cost; only justifies if mode specialization becomes
+    severe. Defer to that future if/when. Rejected for V1.5/V2
+    foundation.
+  - **Same place + shared bootstrap (no dispatch on placeMode).**
+    Raid + expedition + boss code all run simultaneously in any
+    reserved instance — wasteful, possibly conflicting. Rejected.
+  - **Single Place reserved-instance pattern (no raid place at all,
+    same as ADR-007's superseded approach).** Would dispatch at the
+    main-place level on PrivateServerId. Reverts ADR-009; rejected
+    on the same long-term-success grounds that drove ADR-009.
+- **Consequences:**
+  - V1.5 Expedition place teleport carries `joinData.placeMode = "expedition"`
+    + procedural seed + pocket type. `ReservedServerLauncher.luau`
+    extends to accept a `placeMode` parameter; raid path defaults to
+    `"raid"`.
+  - V2 BossArena teleport carries `joinData.placeMode = "boss"` +
+    boss id + 4-player team list.
+  - `src/server/init.server.luau` raid branch extends to a dispatch
+    table:
+    ```luau
+    local mode = (player:GetJoinData() :: any).TeleportData.placeMode or "raid"
+    if mode == "raid" then RaidSession.Init()
+    elseif mode == "expedition" then PocketSession.Init()
+    elseif mode == "boss" then BossArenaSession.Init()
+    end
+    ```
+    (Uses the *first* joining player's teleport data — all four boss
+    co-op players carry identical placeMode; dispatch is consistent.)
+  - `Constants.RAID.MainPlaceId` and `Constants.RAID.RaidPlaceId`
+    remain the only Place ID constants. No new `ExpeditionPlaceId`
+    or `BossArenaPlaceId` constants.
+  - Phase H provisioning: still 2 PlaceIds in the dashboard.
+  - V1.5/V2 documentation cross-references this ADR for the
+    place-mode dispatch mechanism.

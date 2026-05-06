@@ -23,9 +23,35 @@
 	  combatRole    — E2.5 dispatch: "turret" registers with
 	                  Combat.TurretService on placement; nil for purely
 	                  passive structures (walls, extractors)
+
+	F0 generalization (V1.5 expansion prep — additive fields):
+	  placementBehaviors — array of behavior tags; generalizes combatRole
+	                       so a buildable can simultaneously act as a
+	                       turret + material extractor + interact target
+	                       (e.g. V1.5 specialty extractors are
+	                       {"extractor", "materialDrop"})
+	  unlockTier         — V1.5 Tier system gate (0 = always available;
+	                       3 = unlocked at Tier 3 Operating Base; etc.).
+	                       Phase G's BuildPalette filters by player's
+	                       current tier. V1 ignores (no tier system yet).
+	  materialDrop       — V1.5 specialty extractors drop a specific
+	                       material per second instead of (or in addition
+	                       to) Credits. Currency vs material is decided
+	                       by which fields are populated.
+	  interactRemote     — name of a Remote in `Remotes.luau` that fires
+	                       when a player interacts with this building.
+	                       Used for Workshop, Expedition Pad, Pen,
+	                       Vehicle Factory, Boss Beacon, Archive, etc.
+	                       V1 buildables (extractor / wall / turret)
+	                       have no interact prompt (nil here).
 --]]
 
 local BuildableRegistry = {}
+
+export type MaterialDrop = {
+	id: string, -- material id from V1.5 MaterialRegistry
+	ratePerSec: number, -- materials produced per second per extractor
+}
 
 export type Buildable = {
 	id: string,
@@ -36,6 +62,11 @@ export type Buildable = {
 	size: Vector3,
 	color: Color3,
 	combatRole: string?,
+	-- F0 V1.5 prep (all optional, additive — V1 callers ignore):
+	placementBehaviors: { string }?,
+	unlockTier: number?,
+	materialDrop: MaterialDrop?,
+	interactRemote: string?,
 }
 
 local BUILDABLES: { [string]: Buildable } = {

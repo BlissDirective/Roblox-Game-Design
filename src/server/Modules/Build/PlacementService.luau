@@ -43,6 +43,7 @@ local BuildableRegistry =
 local PlotManager = require(script.Parent.Parent.World.PlotManager)
 local BaseSerializer = require(script.Parent.BaseSerializer)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
+local DataManager = require(script.Parent.Parent.Player.DataManager)
 local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
 local TurretService = require(script.Parent.Parent.Combat.TurretService)
 
@@ -186,6 +187,14 @@ function PlacementService.TryPlace(
 		-- + a generic "place_any" so quest authors can target either.
 		QuestObjectives.Emit("place_" .. buildable.id, player, 1)
 		QuestObjectives.Emit("place_any", player, 1)
+		-- F0: V1.5 Tier system foundation — track lifetime tycoon spend
+		-- on placements (NOT shop / quest grants). Sticky signal; never
+		-- decremented on demolish/refund. See V1_5_TIER_PROGRESSION.md §3.
+		local data = DataManager.GetData(player)
+		if data and buildable.cost > 0 then
+			data.creditsInvestedLifetime = (data.creditsInvestedLifetime or 0) + buildable.cost
+			QuestObjectives.Emit("credits_invested", player, buildable.cost)
+		end
 	end
 
 	if trusted then

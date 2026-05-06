@@ -55,6 +55,15 @@
 	successful create / join / leave / kick / disband. Clan member
 	role + the clan's full state lives in the separate `ClanData_v1`
 	DataStore keyed by clanId.
+	Phase F0 (V1.5 expansion prep): adds `creditsInvestedLifetime`
+	for the V1.5 Tier system gate (60% weight per
+	`docs/architecture/V1_5_TIER_PROGRESSION.md` §3). Mutated only by
+	`PlacementService` on successful (non-trusted) placement; never
+	decremented on demolish/refund — sticky tycoon-spend signal.
+	Tracking starts in V1 so V1.5 doesn't need a lossy backfill from
+	`baseLayout`. Also adds `tier: number` (default 0) — gates the
+	tier UI hidden in V1, set by `TierService` in V1.5; V1→V1.5
+	migration sets to 4 (Outpost) for existing V1 profiles.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -125,6 +134,9 @@ export type PlayerData = {
 	dronesKilled: number, -- lifetime aliens killed by this player's drone swarm
 	-- Phase E3 — clan membership.
 	clanId: string?, -- nil = unaffiliated; set by ClanService on join, cleared on leave / disband / kick
+	-- Phase F0 — V1.5 expansion prep (foundation tracking; no V1 UI).
+	creditsInvestedLifetime: number, -- sticky tycoon-spend signal for V1.5 Tier gate
+	tier: number, -- 0 = Drop Pod (V1 default); V1.5 TierService sets > 0
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -154,6 +166,8 @@ ProfileSchema.DEFAULT_DATA = {
 	turretsKilled = 0,
 	dronesKilled = 0,
 	clanId = nil,
+	creditsInvestedLifetime = 0,
+	tier = 0,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

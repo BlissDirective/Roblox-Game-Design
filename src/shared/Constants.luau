@@ -209,12 +209,33 @@ local Constants = {
 	-- N fixed plots. Each plot is a square of `PlotSize` studs centered
 	-- on its origin. Plots are arranged in a 2×2 grid with a `PlotGap`
 	-- gutter between them.
+	--
+	-- F0 (V1.5 expansion prep): plot slots reserve enough space for the
+	-- V1.5 max tier (128×128). V1 plots render at PlotSize (64) but the
+	-- inter-plot stride is `PlotSlotSize + PlotGap` so V1.5 tier-up
+	-- expansion stays inside the reserved slot — no world re-layout
+	-- needed when tier system ships. Cost: more empty space between V1
+	-- plots than would otherwise exist. Worth it to avoid V1.5 migration
+	-- pain. Per `docs/architecture/V1_5_TIER_PROGRESSION.md` §2.
 	WORLD = {
 		PlotCount = 4, -- 2×2 grid; matches squad max (4) per finalized-brainstorm.md §2.6
-		PlotSize = 64, -- studs; mobile-camera-friendly footprint
-		PlotGap = 32, -- studs between adjacent plots
+		PlotSize = 64, -- V1 default plot footprint (Tier 4 in V1.5 terms)
+		PlotSlotSize = 128, -- V1.5 max tier plot size; reserves world-slot space NOW for V1.5 expansion
+		PlotGap = 32, -- studs between adjacent plot slots
 		BaseY = 0, -- world Y of all plot floors
 		PlotFloorThickness = 1,
+		-- V1.5 lookup; V1 ignores this and uses PlotSize directly. F0
+		-- ships the lookup so V1.5 TierService has a single source of
+		-- truth without a Constants migration.
+		PlotSizePerTier = {
+			[0] = 8, -- Drop Pod
+			[1] = 16, -- Pioneer Tent
+			[2] = 32, -- Forward Shelter
+			[3] = 48, -- Operating Base
+			[4] = 64, -- Outpost (V1 default)
+			[5] = 96, -- Settlement
+			[6] = 128, -- Megacity
+		},
 	},
 
 	-- Resource node spawner params (Phase B1). Per-plot Poisson disk

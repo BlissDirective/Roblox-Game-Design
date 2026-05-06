@@ -79,7 +79,10 @@ local function ensureFolders()
 	end
 end
 
-local function buildActor(def: AlienDef): Model
+-- F0 V2 prep: factored geometry construction so V2 can swap to a
+-- mesh-template clone path with one branch instead of an architectural
+-- refactor. V1 always takes the programmatic branch.
+local function buildProcedural(def: AlienDef): Model
 	local model = Instance.new("Model")
 	model.Name = def.id .. "_alien"
 
@@ -92,19 +95,47 @@ local function buildActor(def: AlienDef): Model
 	root.Material = Enum.Material.Neon
 	root.TopSurface = Enum.SurfaceType.Smooth
 	root.BottomSurface = Enum.SurfaceType.Smooth
-	-- Phase G replaces with real geometry; the neon glow is the V1
-	-- placeholder for the bioluminescent vibe.
+	-- V1 placeholder — neon glow for the bioluminescent vibe.
 	root.Parent = model
 	model.PrimaryPart = root
 
-	local humanoid = Instance.new("Humanoid")
+	return model
+end
+
+local function buildFromTemplate(def: AlienDef, template: Model): Model
+	-- V2 path: clone the imported mesh rig. Caller guarantees template
+	-- has a PrimaryPart already (the imported rig must be authored
+	-- correctly per `docs/playbooks/ASSETS.md`).
+	local model = template:Clone()
+	model.Name = def.id .. "_alien"
+	-- The cloned model's PrimaryPart is preserved; we don't re-set it.
+	return model
+end
+
+local function buildActor(def: AlienDef): Model
+	-- F0 V2 prep: dispatch on meshTemplate. V1 defs all leave nil →
+	-- programmatic. V2 defs ship with template references → clone path.
+	local model: Model
+	if def.meshTemplate then
+		model = buildFromTemplate(def, def.meshTemplate)
+	else
+		model = buildProcedural(def)
+	end
+
+	-- Humanoid is universal — both procedural and template paths get one.
+	-- Template imports may already include a Humanoid; in that case the
+	-- cloned model already has it and we just configure stats.
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		humanoid = Instance.new("Humanoid")
+		humanoid.Parent = model
+	end
 	humanoid.MaxHealth = def.hp
 	humanoid.Health = def.hp
 	humanoid.WalkSpeed = def.walkSpeed
 	humanoid.AutoRotate = true
 	humanoid.RequiresNeck = false
 	humanoid.BreakJointsOnDeath = false
-	humanoid.Parent = model
 
 	-- Pool buildable id attribute so debugging tools can find them.
 	model:SetAttribute("AlienId", def.id)

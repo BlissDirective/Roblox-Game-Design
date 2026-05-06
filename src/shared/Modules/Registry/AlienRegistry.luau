@@ -25,10 +25,17 @@ export type AlienDef = {
 	meleeDamage: number,
 	meleeCooldown: number,
 	walkSpeed: number,
-	-- Phase G replaces with real model templates.
+	-- V1 placeholder geometry — programmatic Part-with-Humanoid in
+	-- AlienPool.buildActor. Phase G replaces with real model templates.
 	visualSize: Vector3,
 	visualColor: Color3,
 	emissive: number,
+	-- F0 V2 prep: optional pre-built model template. If provided,
+	-- AlienPool clones this Model instead of constructing geometry
+	-- programmatically. Phase G / V2 wires this field with imported
+	-- MeshPart rigs from `assets/characters/`. V1 leaves nil and uses
+	-- the visualSize/visualColor fields for procedural construction.
+	meshTemplate: Model?,
 }
 
 AlienRegistry.Catalog = {
