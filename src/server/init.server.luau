@@ -56,6 +56,8 @@ else
 	local ClanService = require(script.Modules.Social.ClanService)
 	local ClanStashLedger = require(script.Modules.Social.ClanStashLedger)
 	local ClanChatService = require(script.Modules.Social.ClanChatService)
+	local LeaderboardService = require(script.Modules.Social.LeaderboardService)
+	local FriendsService = require(script.Modules.Social.FriendsService)
 	local VoiceGate = require(script.Modules.Voice.VoiceGate)
 
 	PlotManager.Init()
@@ -97,6 +99,12 @@ else
 	ClanService.Init()
 	ClanStashLedger.Init()
 	ClanChatService.Init()
+	-- Leaderboards + friends (E5). Independent of the rest of the
+	-- social stack — own DataStore keyspaces, own Remotes. Init last
+	-- in the social group; the score-push loop reads from already-
+	-- loaded profiles via DataManager.WaitForData.
+	LeaderboardService.Init()
+	FriendsService.Init()
 	-- VoiceGate (E4) — main-place init pushes `inRaidPlace = false` so
 	-- the client clears any stale indicator. Voice is OFF in main per
 	-- brainstorm §2.6 (build mode is silent; voice opens during raids

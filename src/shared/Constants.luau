@@ -434,6 +434,35 @@ local Constants = {
 		CacheTtlSeconds = 60,
 	},
 
+	-- Leaderboards + friends (Phase E5). OrderedDataStore-backed
+	-- per ADR-010: one store per ISO-week bucket for weekly boards
+	-- (key shape `RaidWins_<isoYear>W<isoWeek>`); a single perpetual
+	-- store for the lifetime global Credits board.
+	--
+	-- Score push cadence: each home server pushes its online players'
+	-- current credits + raid-wins to the relevant OrderedDataStore
+	-- every `ScorePushIntervalSeconds`. Reads (top-N for the leaderboard
+	-- panel) cache per-server and refresh every `ReadCacheTtlSeconds`.
+	-- The asymmetric cadence (push 60s, read 300s) keeps DataStore call
+	-- volume bounded under the 2026 per-Experience quota.
+	LEADERBOARD = {
+		ScorePushIntervalSeconds = 60,
+		ReadCacheTtlSeconds = 300,
+		TopN = 50, -- entries fetched per board; client UI shows top 10 by default
+		-- Store name prefixes (suffixed with bucket key for weekly).
+		GlobalCreditsStoreName = "Outpost_GlobalCredits_v1",
+		WeeklyRaidWinsStorePrefix = "Outpost_RaidWins_v1",
+	},
+
+	-- Friends (Phase E5). Cache `Players:GetFriendsAsync` per-session
+	-- with hourly refresh. V1 only surfaces "online in this server"
+	-- presence; cross-server friend presence is V1.5+ (would need a
+	-- MemoryStoreService presence map; flagged as tech debt).
+	FRIENDS = {
+		RefreshIntervalSeconds = 60 * 60, -- 1 hour
+		MaxFriendsListed = 200, -- safety cap; Roblox account caps friends at 200
+	},
+
 	-- Spatial Voice (Phase E4). Enabled at the *place* level via
 	-- raid.project.json's `VoiceChatService.EnableDefaultVoice = true`.
 	-- The main place inherits the platform default (off). Server-side

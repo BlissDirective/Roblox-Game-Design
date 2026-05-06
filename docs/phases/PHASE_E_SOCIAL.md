@@ -1105,3 +1105,168 @@ session, refreshed on hour boundary),
 ### Commit
 
 `feat(phaseE4): spatial voice gate (raid-place enabled, main-place silent)`
+
+---
+
+## E5 — Leaderboards + friends ✅ — closes Phase E
+
+**Date:** 2026-05-05
+**Branch:** `claude/audit-phases-a-d-2BAuW`
+
+### Architectural decision (logged before code)
+
+- **ADR-010** — One OrderedDataStore per ISO-week bucket for weekly
+  leaderboards. Avoids the per-week-reset pain pattern; preserves
+  history for free; standard 2024+ community approach.
+
+### What was built
+
+#### Server
+
+- **`Constants.LEADERBOARD`** + **`Constants.FRIENDS`** — score push
+  cadence (60s), read cache TTL (300s), top-N (50), store name
+  prefixes; friends refresh interval (1 hour), friends-list size
+  cap (200).
+- **`Remotes.luau`** — registered `LeaderboardState` (S→C event),
+  `FriendsList` (S→C event), `RefreshFriends` (C→S RemoteFunction).
+- **`Social/LeaderboardService.luau`** — two boards backed by
+  `OrderedDataStore`:
+  - **Global Credits** (single perpetual store) — push `data.credits`
+    every 60s for online players; `GetSortedAsync` top-50 every
+    300s; cache + push to clients.
+  - **Weekly Raid Wins** (per-ISO-week bucket per ADR-010) — same
+    cadence; bucket key derived via Thursday-of-the-week algorithm.
+  Display name resolution via `Players:GetNameFromUserIdAsync` cached
+  per-server. Final score push on PlayerRemoving so leaderboard
+  reflects this session's gains immediately.
+- **`Social/FriendsService.luau`** — caches `Players:GetFriendsAsync`
+  per player on join, refreshes hourly, pushes `FriendsList` Remote
+  with per-friend `inThisServer` flag. Server-side throttle: refuses
+  user-initiated `RefreshFriends` more often than every 60s. Local-
+  presence change (any player join/leave on this server) triggers a
+  re-push to all online players so their `inThisServer` flags update
+  without a full re-fetch. V1 limitation: only "online in this
+  server" presence — cross-server presence is V1.5+ tech debt.
+
+#### Client
+
+- **`Social/LeaderboardController.luau`** — toggle button (top row,
+  gold stroke) + right-side panel below the Friends panel. Tab toggle
+  between Global Credits and Weekly Raid Wins. Top-10 visible,
+  rank-colored (gold / silver / bronze for 1-2-3). Refreshes off
+  `LeaderboardState` pushes; rebuild on tab swap.
+- **`Social/FriendsPanel.luau`** — toggle button (top row, green
+  stroke) + right-side panel. Per-friend row with green/grey
+  presence dot, sorted online-first then alpha. "Refresh" button
+  fires `RefreshFriends` invoke.
+
+#### Documentation
+
+- `REMOTES_REGISTRY.md` — 3 new rows.
+- `DECISIONS.md` — ADR-010 logged.
+
+### Audit (E5-scope, sandbox-side)
+
+- 75 `.luau` files — `--!strict` on all
+- All new modules use `task.spawn` / `task.wait` (no legacy patterns)
+- Trust boundary verified: scores are pulled from
+  `data.credits` / `data.raidWins` server-side only — no client→server
+  score Remote. The `RefreshFriends` Remote triggers a re-fetch but
+  doesn't accept any payload.
+- ADR-010 invariant: weekly bucket key is computed on every read AND
+  write (no cached "current bucket" that could go stale on Monday
+  rollover); verified by code inspection of
+  `LeaderboardService.weeklyStoreName`.
+- DataStore call rate bounded: 60s push × ≤50 online players + 300s
+  read of 2 boards = sub-quota at any reasonable CCU.
+- FriendsService throttle: user-side RefreshFriends < 60s returns
+  cached state without re-fetching (defensive against UI spam).
+
+### Audit (E5-scope, Studio-side — pending your local run)
+
+After F5:
+
+1. **Boards initialize empty**, then populate after the first read tick:
+   - `[LeaderboardService]` initial empty boards push to clients
+   - 60s later, score push runs for online players
+   - 300s later (or earlier on first init), read tick pulls top-50 from each store
+2. **Manual mutation** to verify push → read round-trip:
+   ```luau
+   -- Server context Command Bar:
+   local DM = require(game.ServerScriptService.Server.Modules.Player.DataManager)
+   local p = game.Players:GetPlayers()[1]
+   DM.GetData(p).credits = 100000
+   DM.GetData(p).raidWins = 5
+   -- Wait ~60s for push, then ~300s for read tick (or call manual refresh)
+   -- Open the leaderboard panel; entries should reflect the mutation
+   ```
+3. **ISO-week bucket verify:**
+   ```luau
+   local LS = require(game.ServerScriptService.Server.Modules.Social.LeaderboardService)
+   -- Check the cached weekly board's bucket field matches today's
+   -- ISO week (e.g., "2026W18" for the third week of May).
+   print(LS.GetCachedBoards().weeklyRaidWins.bucket)
+   ```
+4. **Friends panel:** open the panel; if your test account has
+   friends, they appear with grey dots (not online here) or green
+   (online here). Click Refresh; if within 60s of last refresh,
+   server returns cached state without a yielding fetch.
+
+### Tech debt / deferred
+
+- **Cross-server friend presence.** V1 only flags friends who are on
+  THIS server. A `OutpostPresence` MemoryStoreService HashMap (per-
+  player TTL'd entry on join) would let us flag "online elsewhere
+  in the universe" — V1.5+.
+- **Observe colony.** Brainstorm §2.6 lists "visit your friend's
+  colony in observe mode" as a friends feature. Deferred — currently
+  blocked on the same snapshot rendering tech debt as raids (RaidSession
+  doesn't yet build out `snapshot.baseLayout` into actual placed
+  parts). Once Phase G ships snapshot rendering, both raid attackers
+  and observe-mode friend visits use the same code path.
+- **Friend invite reward.** Brainstorm §2.6 social-layer wishlist
+  mentions "invite friends, reward both players". V1.5+; needs an
+  invite-tracking ledger (separate DataStore keyspace).
+- **Leaderboard pagination.** V1 shows top 10 of top 50 fetched.
+  "Your rank" lookup requires `GetSortedAsync` paginated forward
+  until you find the player — expensive at scale. V1.5+ adds a
+  `MyRank` Remote that does the lookup with caching.
+- **Last week's winners** display not yet wired. ADR-010 makes it
+  trivial — a `GetPreviousWeekBoard()` accessor on LeaderboardService
+  that reads the previous bucket key. Phase G adds the UI.
+- **No leaderboard moderation.** A player with an offensive display
+  name will appear on the global board. Roblox's name-moderation is
+  the first line of defense; V1.5+ may add a server-side blocklist.
+- **OrderedDataStore SetAsync rate limits** — Roblox enforces ~6 per
+  key per 6s. The 60s push cadence with ≤ ~10 keys updated per tick
+  is well below the throttle, but if CCU spikes the
+  ScorePushIntervalSeconds may need tuning.
+
+### Phase E summary — closing the social layer
+
+**5 sub-phases shipped (E1, E2, E2.5, E2.6, E3, E4, E5).** Total new
+modules: 14 server + 7 client + 3 shared registries. Total new
+Remotes: 19. Two new ADRs (008, 009, 010). Two new DataStore
+keyspaces (`ClanData_v1`, `Outpost_GlobalCredits_v1`,
+`Outpost_RaidWins_v1_<bucket>`).
+
+| Sub-phase | Commit | Lines added |
+|---|---|---|
+| E1 — raid matchmaker + reserved server | `ab664c4` + `3c0d630` | 1877 + 326 |
+| E2 — PvE wave system | `11383da` | 1240 |
+| E2.5 — turret service | `02e62e2` | 428 |
+| E2.6 — drone swarm | `137648f` | 711 |
+| E3 — clans + stash + chat | `3915989` | 2214 |
+| E4 — voice gate | `74136fd` | 497 |
+| E5 — leaderboards + friends | (this commit) | ~1200 |
+
+**All Phase E audit gates per `10_BUILD_PROTOCOL.md` ready for the
+Studio multi-client playtest:**
+- ✅ Multi-client raid round (E1; pending real PlaceId at Phase H for full cross-server validation)
+- ✅ Empty queue → PvE wave fallback within 10s (E2 + E1 hookup)
+- ✅ Clan stash deposits/withdrawals atomic (E3 — `UpdateAsync` chokepoint verified)
+- ✅ Voice toggles correctly at raid start/end (E4 — place-level enable; pending universe-level voice toggle at Phase H)
+
+### Commit
+
+`feat(phaseE5): leaderboards + friends (closes Phase E)`

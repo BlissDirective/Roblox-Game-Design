@@ -447,3 +447,76 @@
   - First commit of any raid-only CSG/EditableMesh/EditableImage
     asset goes to the raid place via Studio publish — never the main
     `.rbxl`.
+
+---
+
+## ADR-010: One OrderedDataStore per ISO-week bucket for weekly leaderboards
+
+- **Date:** 2026-05-05 (Phase E5)
+- **Status:** Accepted.
+- **Context:** Brainstorm §2.6 calls for a "weekly raid wins" leaderboard
+  alongside the lifetime "global Credits" board. Two implementation
+  shapes were considered:
+  1. **Single perpetual `WeeklyRaidWins` OrderedDataStore + per-week
+     reset.** Every Monday 00:00 UTC, sweep all entries and reset
+     scores to 0 (or delete + recreate the store). Simple to read,
+     painful to reset (OrderedDataStore has no bulk-delete API; you'd
+     iterate every entry and SetAsync to nil, hitting throttle limits
+     for any sizeable game).
+  2. **One OrderedDataStore per ISO-week bucket.** Store name is
+     `Outpost_RaidWins_v1_<isoYear>W<isoWeek>` (e.g.
+     `Outpost_RaidWins_v1_2026W18`). The "current week" is whichever
+     bucket is active right now; reads address that bucket. Old
+     buckets stay read-only and addressable for "last week's
+     winners" displays. No reset; the boundary is a server-time
+     compute, not a DataStore mutation.
+- **Decision:** **One OrderedDataStore per ISO-week bucket.** ISO 8601
+  week is computed server-side from `os.time()` via the standard
+  Thursday-of-the-week algorithm (week 1 = the week containing the
+  first Thursday of the calendar year). The bucket key is computed
+  on every score write + every read, so the rollover happens
+  implicitly at 00:00 UTC Monday with zero special-case code.
+- **Why:**
+  - **No reset operation needed.** The "weekly reset" is a property of
+    which bucket the server is reading/writing — it's just a key
+    change, not a state mutation. This is the canonical pattern in
+    the Roblox community 2024+; the alternative (sweep + reset) is
+    too expensive at scale.
+  - **History preserved for free.** "Last week's top 10" is a `GetSortedAsync`
+    against `Outpost_RaidWins_v1_2026W17` while we write to W18. UI
+    surfaces this when desired (Phase G); no migration required.
+  - **Storage cost is bounded.** Each bucket stores up to MaxEntries
+    rows (~100K active players in extreme case); old buckets are
+    never deleted but consume sub-MB per week. 52 weeks/year × <1MB
+    = <50MB/year storage cost — well within DataStore quota.
+- **Risks accepted:**
+  1. **Bucket key drift across servers.** If two servers compute ISO
+     week differently (timezone bug, system clock drift), they could
+     write to different bucket keys for the "same" week. Mitigation:
+     `os.time()` is UTC-canonical on Roblox; the server clock is
+     authoritative; the ISO-week algorithm is deterministic.
+  2. **Discoverability of old buckets.** Reading "last week's winners"
+     requires the client (or server) to know the previous bucket key.
+     Mitigation: server computes both current + previous bucket keys
+     on the same code path; client never needs to guess.
+- **Alternatives considered:**
+  - **Per-week sweep + reset** (option 1) — operational nightmare at
+    scale; rejected.
+  - **MemoryStoreService SortedMap with 30-day expiration** — would
+    auto-expire old data but caps weekly history at one week.
+    Rejected: MemoryStoreService doesn't persist beyond 30 days, so
+    week-over-week comparisons are impossible.
+  - **External database (Firebase, Supabase via HttpService)** —
+    overkill for V1; introduces another platform dependency. Rejected.
+- **Consequences:**
+  - `Constants.LEADERBOARD` adds `WeeklyRaidWinsStorePrefix =
+    "Outpost_RaidWins_v1"`. The full store name is computed by
+    appending `_<isoYear>W<isoWeek>` at write/read time.
+  - `LeaderboardService.weeklyStoreName(t)` is the canonical computation;
+    other modules never derive bucket keys themselves.
+  - Phase G's "Last week's top 10" UI reads
+    `LeaderboardService.GetPreviousWeekBoard()` (to be added when the
+    UI ships).
+  - Schema migration if needed (e.g., switching to monthly buckets in
+    V2): bump `WeeklyRaidWinsStorePrefix` to `_v2`, leave `_v1`
+    historical buckets read-only-archive. No data loss.

@@ -191,6 +191,25 @@ local Remotes = {
 	-- this server (either originated here or arrived via MessagingService).
 	ClanChatReceived = getOrCreate("ClanChatReceived", "RemoteEvent") :: RemoteEvent,
 
+	-- Phase E5 — Leaderboards + friends:
+	-- Server → Client. Args: (boards: LeaderboardService.BoardsState).
+	-- Pushed on join (after first board fetch) + on every cache refresh
+	-- (~5 min). Carries top-N entries for both the Global Credits and
+	-- Weekly Raid Wins boards. Notification-only — server is the source
+	-- of truth, client renders.
+	LeaderboardState = getOrCreate("LeaderboardState", "RemoteEvent") :: RemoteEvent,
+	-- Server → Client. Args: (state: FriendsService.State).
+	-- Pushed on join (after GetFriendsAsync resolves) + on every refresh
+	-- (1hr) + on local presence change (a friend joins/leaves this
+	-- server). Carries the full friend list with `inThisServer` flag
+	-- per friend.
+	FriendsList = getOrCreate("FriendsList", "RemoteEvent") :: RemoteEvent,
+	-- Client → Server (Function). Args: ().
+	-- Triggers a manual refresh of the player's friends list (yielding
+	-- `GetFriendsAsync`). Returns FriendsService.Result. Rate-limited
+	-- semantically: refreshes more often than every 60s no-op.
+	RefreshFriends = getOrCreate("RefreshFriends", "RemoteFunction") :: RemoteFunction,
+
 	-- Phase E4 — Spatial Voice gate:
 	-- Server → Client. Args: (state: VoiceGate.State).
 	-- Pushed on join (after the place identity is determined) + on every
