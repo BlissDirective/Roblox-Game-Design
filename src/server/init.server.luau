@@ -48,6 +48,9 @@ else
 	local TurretService = require(script.Modules.Combat.TurretService)
 	local WaveDirector = require(script.Modules.Combat.WaveDirector)
 	local DroneSwarmService = require(script.Modules.Combat.DroneSwarmService)
+	local ClanService = require(script.Modules.Social.ClanService)
+	local ClanStashLedger = require(script.Modules.Social.ClanStashLedger)
+	local ClanChatService = require(script.Modules.Social.ClanChatService)
 
 	PlotManager.Init()
 	ResourceNodeSpawner.Init()
@@ -80,6 +83,14 @@ else
 	-- the combat group so the alien actors folder exists when the
 	-- targeting loop first runs.
 	DroneSwarmService.Init()
+	-- Social layer (E3). ClanService owns the cache + DataStore RW;
+	-- StashLedger and ChatService route through it. ClanService.Init
+	-- runs first so its MessagingService subscribe is in place before
+	-- the stash ledger's WithdrawalGrant subscribe (avoids ordering
+	-- footguns if a leader approves a withdrawal during boot).
+	ClanService.Init()
+	ClanStashLedger.Init()
+	ClanChatService.Init()
 
 	print(
 		string.format(

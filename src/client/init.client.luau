@@ -26,6 +26,7 @@ local WelcomeBackPopup = require(script.Modules.Retention.WelcomeBackPopup)
 local MonetizationController = require(script.Modules.Shop.MonetizationController)
 local RaidController = require(script.Modules.Raid.RaidController)
 local CombatController = require(script.Modules.Combat.CombatController)
+local ClanController = require(script.Modules.Social.ClanController)
 
 HudController.Init()
 CameraController.Init()
@@ -38,6 +39,7 @@ WelcomeBackPopup.Init()
 MonetizationController.Init()
 RaidController.Init()
 CombatController.Init()
+ClanController.Init()
 
 print(
 	string.format(

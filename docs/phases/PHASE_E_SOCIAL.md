@@ -761,3 +761,208 @@ requires leader approval; logged.
 ### Commit
 
 `feat(phaseE2.6): drone swarm (Combat preset; 3 orbiting drones)`
+
+---
+
+## E3 — Clan / squad system ✅
+
+**Date:** 2026-05-05
+**Branch:** `claude/audit-phases-a-d-2BAuW`
+
+### What was built
+
+#### Server
+
+- **`Constants.CLAN`** — full block: 4-member cap (brainstorm §2.6),
+  name 3-24 chars + tag 2-5 chars validation, `AutoApproveWithdrawalThreshold = 5000`
+  (large withdrawals require leader approval per brainstorm §4.6
+  anti-grief), `MaxPendingWithdrawals = 16` cap on the per-clan pending
+  table (bounds DataStore payload size below 4MB), MessagingService
+  topic strings, separate `ClanData_v1` DataStore name.
+- **`ProfileSchema.luau`** — added `clanId: string?` (default nil).
+  Additive; older saves get nil via Reconcile. Documented in
+  `DATA_SCHEMA.md` with cross-keyspace consistency notes.
+- **`Remotes.luau`** — registered 10 clan Remotes:
+  `ClanState`, `CreateClan`, `JoinClan`, `LeaveClan`, `KickFromClan`,
+  `ClanStashDeposit`, `ClanStashWithdraw`, `ClanStashApprove`,
+  `ClanChatSend`, `ClanChatReceived`. Documented in
+  `REMOTES_REGISTRY.md`.
+- **`Social/ClanService.luau`** — clan lifecycle owner. Per-server
+  in-memory cache (`{ [clanId]: { data, fetchedAt } }`) backed by
+  `DataStoreService` for the `ClanData_v1` keyspace; cross-server
+  cache invalidation via MessagingService `outpost.clan.invalidate`
+  (belt-and-suspenders next to a 60s TTL). All mutations route
+  through `MutateClan(clanId, mutator)` which wraps `UpdateAsync`
+  for atomic CAS — concurrent multi-server joins / deposits /
+  withdrawals can't lose updates. Public ops:
+  - `TryCreateClan(player, name, tag)` — validates name (alnum+space)
+    + tag (alnum); creates leader-role membership; sets profile pointer
+  - `TryJoinClan(player, clanId)` — atomic membership-cap check
+  - `TryLeaveClan(player)` — leader-leaving auto-promotes longest-
+    tenured officer (or oldest member if no officers); last-member
+    leave deletes the row via UpdateAsync `nil` return
+  - `TryKickMember(actor, targetUserId)` — server enforces role
+    hierarchy: only leader/officer can kick; only leader can kick
+    officer; no one can kick the leader. Defensive auto-clear of
+    stale `profile.clanId` in `PushStateToPlayer` covers the
+    cross-server-kick path.
+- **`Social/ClanStashLedger.luau`** — wraps `ClanService.MutateClan`
+  for stash-specific ops:
+  - **Deposit:** `CurrencyService.TrySpend` first, then UpdateAsync
+    increments `stashCredits`. Refund on UpdateAsync failure to keep
+    wallet+stash consistent.
+  - **Withdraw small (≤ threshold):** atomic decrement + grant
+    inline (requester is on this server).
+  - **Withdraw large (> threshold):** queue a `PendingWithdrawal`
+    entry; bounded by `MaxPendingWithdrawals`.
+  - **Approve:** leader-only role check inside the UpdateAsync
+    closure; on approve, decrement stash + remove pending entry,
+    then publish `outpost.clan.withdrawal.grant` MessagingService
+    payload so the requester's home server applies the credits via
+    `CurrencyService.Add`. Preserves single-writer-per-profile
+    invariant (ADR-008): the leader's server never writes the
+    requester's profile directly.
+- **`Social/ClanChatService.luau`** — per-clan MessagingService topic
+  (`outpost.clan.chat.<clanId>`). Lazy subscribe: each server
+  subscribes only to topics for clans whose members are currently
+  online here. Refcount-based sub/unsub (subscribe on first member,
+  unsubscribe on last leave) prevents the "subscribe to every clan"
+  scaling foot-gun. Sender + sanitize + length-cap server-side.
+  V1 has no chat history / scrollback — fresh joins miss prior messages.
+
+#### Client
+
+- **`Social/ClanController.luau`** — toggle button + right-side panel.
+  Two render paths:
+  - **No-clan view:** Create form (name + tag inputs) and Join form
+    (clanId input).
+  - **In-clan view:** title + role/stash header, members list with
+    role-gated Kick buttons, deposit + withdraw inputs, leader-only
+    Allow/Deny buttons on each pending withdrawal row, 100x540
+    chat scrollback (50-message ring on the client) + send box,
+    Leave button.
+  Subscribes to `ClanState` (full state replacement) and
+  `ClanChatReceived` (append message). All UI is placeholder
+  (Phase G replaces with the neon-tactical theme).
+
+#### Documentation
+
+- `REMOTES_REGISTRY.md` — 10 clan rows with trust model + rate-limit
+  classes documented.
+- `DATA_SCHEMA.md` — `clanId` pointer field + full `ClanData_v1`
+  keyspace shape + cross-keyspace consistency notes.
+
+### Audit (E3-scope, sandbox-side)
+
+- 68 `.luau` files — `--!strict` on all
+- All clan modules use `task.spawn` / `task.wait` (no legacy
+  patterns)
+- Atomicity invariant: every `ClanData_v1` mutation routes through
+  `ClanService.MutateClan` → `DataStoreService:UpdateAsync` (verified
+  by grep — no direct `clanStore:SetAsync` calls anywhere)
+- Trust boundary verified: every C→S Remote validates types
+  server-side; role checks (leader/officer/member) live in the server
+  closures inside `UpdateAsync`, not in client code
+- Single-writer-per-profile invariant (ADR-008) preserved: clan
+  withdrawals never write the requester's profile from another
+  server — they publish via MessagingService and the home server
+  applies. Verified by grep: only `CurrencyService.Add(requester, ...)`
+  call sites in the clan stack are inside the home-server-side
+  WithdrawalGrant subscription handler
+- Rollback safety: deposit Spend-before-UpdateAsync with refund on
+  failure (no orphaned credits); leader-leave transfer in same
+  UpdateAsync closure (no leaderless-clan window)
+- Chat refcount: `ClanChatService.refMember` / `unrefMember`
+  serialized on `ClanChatRef` player attribute — covers
+  PlayerAdded/PlayerRemoving + 30s membership-poll fallback for
+  mid-session clan changes
+- Defensive auto-clear: `PushStateToPlayer` checks `IsMember` against
+  the actual ClanData and clears stale `profile.clanId` if the
+  player isn't actually in the clan (covers the cross-server-kick
+  while-elsewhere case)
+
+### Audit (E3-scope, Studio-side — pending your local run)
+
+After F5 with two test clients (Test → Local Server → 2 clients):
+
+1. **Create clan (Player A):**
+   - Open Clan panel → enter name "Outpost Squad", tag "OPS" → Create
+   - Server log: `[ClanService] PlayerA created clan Outpost Squad (<guid>) [OPS]`
+   - Panel switches to in-clan view; Player A sees themselves as leader
+2. **Join clan (Player B):**
+   - Player A copies the clanId from the Studio Server console (or
+     `print(DataManager.GetData(playerA).clanId)`)
+   - Player B enters clanId → Join
+   - Both clients' panels refresh; both see 2 members
+3. **Deposit (Player B, member):**
+   - `CurrencyService.Add(playerB, 5000)` in command bar
+   - Player B types 1000 in deposit box → Deposit
+   - Both clients see stash 1000; player B's credits drop by 1000
+4. **Withdraw small (Player B, ≤ threshold):**
+   - Player B withdraws 500 → instant grant; stash 500
+5. **Withdraw large (Player B, > threshold):**
+   - Player B withdraws 5001 → response status `pending`; stash unchanged;
+     a pending withdrawal row appears for both players
+6. **Approve (Player A, leader):**
+   - Player A clicks Allow on the pending row → server publishes
+     WithdrawalGrant; player B receives credits via the
+     MessagingService loopback (or directly if same-server)
+7. **Cross-server case (single-Studio-server limitation):** the
+   single-server case exercises the SAME-server branch of the
+   WithdrawalGrant subscriber (PlayerB is online here too). True
+   cross-server validation requires a published universe with two
+   real PlaceIds; revisit in Phase H smoke tests.
+8. **Kick (Player A, leader):** kick Player B → both panels refresh;
+   B's profile.clanId clears inline; B's panel shows no-clan view
+9. **Chat:** Player A types "test"; both clients see it via
+   `ClanChatReceived` (sender loopback through the MessagingService
+   topic — no special-casing). 50-message ring on client.
+10. **Leave (last member):** clan disbands when the last member
+    leaves; Player A's profile.clanId clears.
+
+### Tech debt / deferred
+
+- **No invite codes / private clans.** V1 lets anyone with the
+  clanId join. V1.1+ adds invite-only flag + per-clan invite codes.
+- **No chat history / scrollback.** Players who join a clan miss
+  prior messages. V1.5 may add a 50-message ring buffer in
+  `MemoryStoreService` per clan.
+- **No promotion to officer.** V1 has only leader (creator) +
+  member. Leaders can leave (auto-promotion handles transfer) but
+  can't promote/demote others. V1.1+ adds `PromoteMember` Remote.
+- **Withdrawal grant lost if requester goes offline at approval
+  time.** MessagingService is best-effort; if the requester's
+  not on any server, the publish fires into a void. V1.5+ may add
+  a `PendingRaidRewards`-style fallback DataStore (`PendingClanRewards`)
+  read on next join.
+- **Cross-server kick latency.** The kicked player's
+  `profile.clanId` clears on their NEXT state push (next join, or
+  next clan invalidate broadcast they happen to be in). For prompt
+  clearing, add `outpost.clan.kicked.<userId>` MessagingService
+  topic in V1.5+.
+- **No clan-vs-clan weekly bracket** per brainstorm §2.6. V1.5+.
+- **No cross-server clan-state-on-mutation push to the affected
+  member specifically.** The current `pushStateForClanMembers` is
+  per-server-local; cross-server propagation goes through the
+  invalidate broadcast (which then re-fetches and re-pushes). Two
+  hops; for V1 the latency (a few hundred ms) is fine.
+- **No rate-limit floor on clan Remotes.** F1 wires
+  `Security.AntiExploit.RateCheck`; chat in particular needs a
+  tight bucket (5 msg / 10s).
+- **`outpost.clan.chat.<clanId>` topic count** scales with active
+  clans on this server. Lazy refcount mitigates but if a single
+  server hosts members of 100+ different clans simultaneously,
+  Roblox's per-server subscription cap (~80) becomes a problem.
+  V1 caps unlikely to hit at 50 CCU; flag for Phase H load test.
+
+### What's next
+
+E4 — Voice chat (raid-only). `Voice/VoiceGate.luau` enables
+`VoiceChatService` only inside the raid place; main place stays
+silent. UI affordance in raid HUD shows when voice is active.
+Uses Feb 2026's `VoiceChatService:GetChatGroupsAsync` API for
+diagnostics + verifies the place-level enable.
+
+### Commit
+
+`feat(phaseE3): clan/squad system + shared stash + cross-server chat`

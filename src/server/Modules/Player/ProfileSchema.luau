@@ -50,6 +50,11 @@
 	but for the drone swarm (DroneSwarmService). Counted separately
 	so future "PvE hero" leaderboards can weight player-owned vs
 	autonomous-defender kills differently.
+	Phase E3: adds `clanId: string?` — the player's current clan
+	membership. nil = no clan. Mutated only by `ClanService` on
+	successful create / join / leave / kick / disband. Clan member
+	role + the clan's full state lives in the separate `ClanData_v1`
+	DataStore keyed by clanId.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -118,6 +123,8 @@ export type PlayerData = {
 	turretsKilled: number, -- lifetime aliens killed by this player's turrets
 	-- Phase E2.6 — drone swarm kill stats.
 	dronesKilled: number, -- lifetime aliens killed by this player's drone swarm
+	-- Phase E3 — clan membership.
+	clanId: string?, -- nil = unaffiliated; set by ClanService on join, cleared on leave / disband / kick
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -146,6 +153,7 @@ ProfileSchema.DEFAULT_DATA = {
 	wavesSurvived = 0,
 	turretsKilled = 0,
 	dronesKilled = 0,
+	clanId = nil,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

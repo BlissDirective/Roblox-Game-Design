@@ -137,6 +137,60 @@ local Remotes = {
 	-- the result toast.
 	WaveEnded = getOrCreate("WaveEnded", "RemoteEvent") :: RemoteEvent,
 
+	-- Phase E3 — Clans / squads / shared stash / chat:
+	-- Server → Client. Args: (state: ClanService.State?).
+	-- Pushed on join (after profile load), on every clan mutation
+	-- (member join / leave / kick, deposit, withdraw, approve, chat),
+	-- and on cross-server cache invalidations. nil = player has no clan.
+	ClanState = getOrCreate("ClanState", "RemoteEvent") :: RemoteEvent,
+	-- Client → Server (Function). Args: (name: string, tag: string).
+	-- Returns ClanService.Result. Server validates name/tag length +
+	-- character set; deducts the create cost (placeholder 0 in V1, tunable);
+	-- writes ClanData via UpdateAsync; sets player.clanId.
+	CreateClan = getOrCreate("CreateClan", "RemoteFunction") :: RemoteFunction,
+	-- Client → Server (Function). Args: (clanId: string).
+	-- Returns ClanService.Result. Server checks clan exists, has room,
+	-- player isn't already in a clan; appends the player as a member via
+	-- UpdateAsync; sets player.clanId.
+	JoinClan = getOrCreate("JoinClan", "RemoteFunction") :: RemoteFunction,
+	-- Client → Server (Function). Args: ().
+	-- Returns ClanService.Result. Removes the player from their clan via
+	-- UpdateAsync. If the player is the leader and other members exist,
+	-- leadership transfers to the longest-tenured officer or oldest
+	-- member. If they were the last member, the clan is deleted.
+	LeaveClan = getOrCreate("LeaveClan", "RemoteFunction") :: RemoteFunction,
+	-- Client → Server (Function). Args: (targetUserId: number).
+	-- Returns ClanService.Result. Leader / officer can kick members
+	-- (officer can't kick officer/leader). Removes target from clan via
+	-- UpdateAsync; clears their profile.clanId on next push.
+	KickFromClan = getOrCreate("KickFromClan", "RemoteFunction") :: RemoteFunction,
+	-- Client → Server (Function). Args: (amount: number).
+	-- Returns ClanStashLedger.Result. Atomically deducts player credits
+	-- via CurrencyService.TrySpend, then UpdateAsync adds to clan
+	-- stashCredits.
+	ClanStashDeposit = getOrCreate("ClanStashDeposit", "RemoteFunction") :: RemoteFunction,
+	-- Client → Server (Function). Args: (amount: number).
+	-- Returns ClanStashLedger.Result. If amount <= AutoApproveWithdrawalThreshold,
+	-- atomically deducts clan stash + grants player credits. Above the
+	-- threshold, queues a PendingWithdrawal entry awaiting leader
+	-- approval.
+	ClanStashWithdraw = getOrCreate("ClanStashWithdraw", "RemoteFunction") :: RemoteFunction,
+	-- Client → Server (Function). Args: (withdrawalId: string, approve: boolean).
+	-- Returns ClanStashLedger.Result. Leader-only. On approve: removes
+	-- pending entry, deducts stash, publishes WithdrawalGrantTopic so
+	-- the requester's home server applies the credits. On deny:
+	-- removes pending entry; no grant.
+	ClanStashApprove = getOrCreate("ClanStashApprove", "RemoteFunction") :: RemoteFunction,
+	-- Client → Server (Function). Args: (message: string).
+	-- Returns ClanChatService.Result. Server validates length + sanitizes,
+	-- publishes to MessagingService topic outpost.clan.chat.<clanId>
+	-- (at-least-once delivery to all servers with members of this clan).
+	ClanChatSend = getOrCreate("ClanChatSend", "RemoteFunction") :: RemoteFunction,
+	-- Server → Client. Args: (entry: ClanChatService.Entry).
+	-- Fired only to local clan members when a chat message lands on
+	-- this server (either originated here or arrived via MessagingService).
+	ClanChatReceived = getOrCreate("ClanChatReceived", "RemoteEvent") :: RemoteEvent,
+
 	-- Phase E1 — Raid / matchmaking + match flow:
 	-- Client → Server (RemoteFunction). Args: ("queue" | "cancel").
 	-- Returns RaidMatchmaker.QueueResult. Server enqueues / cancels via

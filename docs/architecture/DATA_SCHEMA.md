@@ -44,6 +44,8 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     turretsKilled   = 0, -- lifetime aliens killed by this player's turrets
     -- Phase E2.6 — Drone swarm kill stats:
     dronesKilled    = 0, -- lifetime aliens killed by this player's drone swarm
+    -- Phase E3 — Clan membership:
+    clanId          = nil :: string?, -- nil = unaffiliated; the clan's full state lives in ClanData_v1
 }
 ```
 
@@ -91,6 +93,75 @@ the shot that drops alien HP from > 0 to <= 0. Counted separately
 from turret kills so future "PvE hero" leaderboards can weight
 player-placed-defender (turret) vs autonomous-defender (drone) kills
 differently.
+
+### Clan membership pointer (E3)
+
+```luau
+clanId: string?  -- nil = unaffiliated; otherwise GUID matching a row in ClanData_v1
+```
+
+Mutated only by `ClanService` on successful create/join/leave/kick/disband. The
+player profile carries only the *pointer*; the clan's full state
+(name, tag, members, stash, pending withdrawals) lives in the separate
+`ClanData_v1` DataStore keyed by `clanId`. This keeps profile size
+small and lets multiple players share a clan row without per-player
+duplication.
+
+**Cross-keyspace consistency** is best-effort:
+- `profile.clanId` is set AFTER the ClanData `UpdateAsync` succeeds.
+  Worst case (server crash between the two writes): the player has
+  been added to the clan members table but their profile still says
+  unaffiliated. They re-join freely on next session and the duplicate-
+  member branch in `TryJoinClan` is idempotent.
+- A *kicked* player's `profile.clanId` is cleared inline if they're
+  on the kicker's server. Cross-server kick-while-they-are-elsewhere
+  leaves their profile pointer stale until their next join — the
+  rejoin path is `PushStateToPlayer` → `GetClanForPlayer` reads
+  ClanData → `IsMember(data, userId) == false` → clear `profile.clanId`
+  needs to be added (V1.5+ tech debt) OR the `outpost.clan.kicked.<userId>`
+  MessagingService topic for prompt cross-server clearing.
+
+### `ClanData_v1` keyspace (E3)
+
+Separate DataStore from `PlayerData_v1`. Keyed by `clanId` (a
+GUID generated via `HttpService:GenerateGUID(false)` on create).
+Value shape:
+
+```luau
+type ClanData = {
+    clanId: string,
+    name: string,         -- 3-24 alnum+space chars
+    tag: string,          -- 2-5 alnum chars, uppercase
+    createdAt: number,    -- os.time() of creation
+    leaderUserId: number, -- UserId of the current leader
+    members: { [string]: ClanMember },  -- key = tostring(userId)
+    stashCredits: number,
+    stashCores: number,
+    pendingWithdrawals: { [string]: PendingWithdrawal },  -- key = withdrawalId
+    schemaVersion: number,
+}
+
+type ClanMember = {
+    userId: number,
+    name: string,
+    role: "leader" | "officer" | "member",
+    joinedAt: number,
+}
+
+type PendingWithdrawal = {
+    withdrawalId: string,  -- GUID
+    requesterUserId: number,
+    requesterName: string,
+    amount: number,
+    requestedAt: number,
+}
+```
+
+**All mutations go through `ClanService.MutateClan` which wraps
+`UpdateAsync`** — atomic CAS preserves invariants (member count cap,
+stash never goes negative, max pending cap). Reads use a per-server
+in-memory cache invalidated via MessagingService topic
+`outpost.clan.invalidate` and bounded by `Constants.CLAN.CacheTtlSeconds`.
 
 ### `dailyQuests[id].vipOnly` (D3)
 

@@ -391,6 +391,48 @@ local Constants = {
 		-- per player + buffer for character respawn churn.
 		DronePoolSize = 80,
 	},
+
+	-- Clan / squad system (Phase E3). 4-person max per brainstorm §2.6
+	-- with a shared Credits + Cores stash; large withdrawals require
+	-- leader approval (anti-grief per §4.6). Cross-server clan chat via
+	-- MessagingService topic per clan.
+	--
+	-- Clan data lives in its own DataStore (`StoreName` below) keyed by
+	-- clanId, separate from `PlayerData_v1`. Mutations go through
+	-- `DataStoreService:UpdateAsync` for atomic CAS — multi-server
+	-- deposits/withdrawals can't lose updates. Cache invalidation across
+	-- servers is push-based via MessagingService.
+	CLAN = {
+		-- Membership cap (brainstorm §2.6 "4-person squads").
+		MaxMembers = 4,
+		-- Tag is the short visible prefix (e.g. "[OPS]") in chat /
+		-- leaderboards. Name is the full title.
+		TagMinLength = 2,
+		TagMaxLength = 5,
+		NameMinLength = 3,
+		NameMaxLength = 24,
+		-- Withdrawals at or below this amount are auto-approved
+		-- (instant grant). Above requires leader approval. Brainstorm
+		-- §4.6 anti-grief rule.
+		AutoApproveWithdrawalThreshold = 5000,
+		-- Maximum pending withdrawals per clan; bounds the
+		-- pendingWithdrawals dictionary so a malicious member can't
+		-- inflate a single clan's DataStore payload past the 4MB limit.
+		MaxPendingWithdrawals = 16,
+		-- Chat message length cap; F1 hardens with rate limits.
+		ChatMessageMaxLength = 240,
+		-- DataStore (separate keyspace from PlayerData_v1).
+		StoreName = "ClanData_v1",
+		-- MessagingService topics.
+		ChatTopicPrefix = "outpost.clan.chat", -- per-clan suffix appended
+		InvalidateTopic = "outpost.clan.invalidate",
+		WithdrawalGrantTopic = "outpost.clan.withdrawal.grant",
+		-- Cache TTL — cached clan data is considered stale after this
+		-- many seconds and re-fetched on next access. Belt-and-suspenders
+		-- next to MessagingService invalidation (handles missed
+		-- broadcasts).
+		CacheTtlSeconds = 60,
+	},
 }
 
 return Constants
