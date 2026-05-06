@@ -374,6 +374,22 @@ local Constants = {
 		-- rate doesn't starve targeting (e.g. tracking a moving alien
 		-- between shots).
 		TurretTickSeconds = 0.5,
+		-- Drone swarm stats (E2.6). 3 mobile drones per player; smaller
+		-- range than turrets, faster fire rate, lower per-shot damage.
+		-- Combat preset is the only V1-functional preset; Recon /
+		-- Engineering are catalog stubs, deferred to Phase G.
+		DroneSwarmCount = 3, -- drones per player
+		DroneOrbitRadius = 8, -- studs around player when no target
+		DroneOrbitHeight = 4, -- studs above player's HumanoidRootPart
+		DroneOrbitSpeedDeg = 90, -- degrees per second
+		DroneAttackRange = 25, -- studs; mobile drones fire at closer aliens
+		DroneDamage = 8, -- per shot (3 shots to kill a 24HP-remaining Stalker)
+		DroneFireSeconds = 0.5, -- 2 shots/sec (vs turret 1/sec)
+		DroneTickSeconds = 0.4, -- targeting cadence
+		DroneMoveSpeed = 32, -- studs/sec; how fast a drone closes on a target
+		-- Pool sized for the Roblox 20-default-server-cap × 3 drones
+		-- per player + buffer for character respawn churn.
+		DronePoolSize = 80,
 	},
 }
 

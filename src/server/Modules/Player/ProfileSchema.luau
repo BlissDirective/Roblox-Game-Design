@@ -46,6 +46,10 @@
 	frame the alien's HP transitions from > 0 to <= 0 from a turret
 	shot. Future quest objective ("turret_kill") and Phase G "PvE
 	hero" leaderboard candidate.
+	Phase E2.6: adds `dronesKilled` — same semantics as turretsKilled
+	but for the drone swarm (DroneSwarmService). Counted separately
+	so future "PvE hero" leaderboards can weight player-owned vs
+	autonomous-defender kills differently.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -112,6 +116,8 @@ export type PlayerData = {
 	wavesSurvived: number, -- lifetime count of waves survived
 	-- Phase E2.5 — turret kill stats.
 	turretsKilled: number, -- lifetime aliens killed by this player's turrets
+	-- Phase E2.6 — drone swarm kill stats.
+	dronesKilled: number, -- lifetime aliens killed by this player's drone swarm
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -139,6 +145,7 @@ ProfileSchema.DEFAULT_DATA = {
 	raidsRaided = 0,
 	wavesSurvived = 0,
 	turretsKilled = 0,
+	dronesKilled = 0,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

@@ -609,3 +609,155 @@ requires leader approval; logged.
 ### Commit
 
 `feat(phaseE2.5): turret service (auto-targeting + raycast damage)`
+
+---
+
+## E2.6 — Drone swarm (Combat preset) ✅
+
+**Date:** 2026-05-05
+**Branch:** `claude/audit-phases-a-d-2BAuW`
+
+### Why a 2.6
+
+Brainstorm §2.1 names the wave-defense triad: "turrets, walls, and
+**drone swarm** hold the line — or don't." E2.5 shipped turrets +
+walls; E2.6 closes the triad with the autonomous drone swarm half.
+V1 must-have per brainstorm §2.7 — V1.5 adds the customization editor.
+
+### What was built
+
+#### Server
+
+- **`Constants.COMBAT`** — added `DroneSwarmCount = 3`,
+  `DroneOrbitRadius = 8`, `DroneOrbitHeight = 4`,
+  `DroneOrbitSpeedDeg = 90` (deg/s rotation around player),
+  `DroneAttackRange = 25` (smaller than turret 40 — drones are
+  mobile and bring range to the alien), `DroneDamage = 8`
+  (3 hits to finish a Stalker after orbit-approach delay),
+  `DroneFireSeconds = 0.5` (2 shots/sec — faster than turrets),
+  `DroneTickSeconds = 0.4`, `DroneMoveSpeed = 32` (studs/sec
+  travel speed), `DronePoolSize = 80` (20-server-cap × 3 drones
+  + buffer for character-respawn churn).
+- **`Modules/Registry/DroneSwarmRegistry.luau`** (shared) — preset
+  catalog with 3 entries:
+  - `recon` (blue, behaviorTag = "spot", `v1Active = false`)
+  - `combat` (red, behaviorTag = "attack", `v1Active = true`) ← V1
+  - `engineering` (green, behaviorTag = "repair", `v1Active = false`)
+  Only Combat ships V1 functional — Recon needs HUD overlay,
+  Engineering needs turret HP. Both ride into the catalog now so
+  Phase G's customization UI doesn't churn the registry shape.
+  `DroneSwarmRegistry.DefaultV1Preset = "combat"`.
+- **`ProfileSchema.luau`** — added `dronesKilled: number` (default 0).
+  Additive; older saves get 0 via Reconcile. Single-writer:
+  `DroneSwarmService.tickTargetingFor` only.
+- **`Combat/DroneSwarmService.luau`** — drone swarm lifecycle. Two
+  pools managed:
+  - `ServerStorage.OutpostDronePool` — parked drone Parts
+  - `Workspace.DroneActors` — active drone Parts
+  Per-player swarm spawned on `CharacterAdded` (deferred 0.1s for
+  HRP availability), recalled on `Humanoid.Died` /
+  `Players.PlayerRemoving`. Drone Parts are `Anchored = true`;
+  server CFrame-snaps them each Heartbeat toward either an orbit
+  slot (no target) or just-shy-of-target position (target locked).
+  Targeting tick (0.4s) re-acquires nearest live alien within
+  range; fires every 0.5s via `DamageService.ApplyToHumanoid`
+  with brief 0.08s neon Part beam visual. Kill-credit semantics
+  match TurretService (only the killing-blow shot increments).
+- **`init.server.luau`** — wired `DroneSwarmService.Init()` last
+  in the main-place chain. Independent of wave/raid init order;
+  listens to PlayerAdded / CharacterAdded directly.
+
+#### Documentation
+
+- `DATA_SCHEMA.md` — `dronesKilled` documented under "Drone-kill
+  field (E2.6)".
+
+### Audit (E2.6-scope, sandbox-side)
+
+- 65 `.luau` files — `--!strict` on all
+- DroneSwarmService uses `task.spawn` / `task.wait` / Heartbeat (no
+  legacy patterns)
+- Damage chokepoint invariant maintained: drone damage routes through
+  `DamageService.ApplyToHumanoid("drone_raycast")`
+- Single-writer invariant on `data.dronesKilled`: only
+  `DroneSwarmService.tickTargetingFor` mutates (verified by grep)
+- Object-pool invariant: drones never `Instance.new` outside
+  `buildDronePart` (overflow warn aside); pre-allocates 80 parts on
+  Init
+- Lifecycle: Recall fires on Humanoid.Died AND PlayerRemoving — no
+  drone leaks across respawn or disconnect
+- Trust boundary: drones are 100% server-authoritative — clients see
+  the replicated Parts but no drone Remote exists (V1.5+ may add a
+  preset-swap Remote when the customization UI ships)
+
+### Audit (E2.6-scope, Studio-side — pending your local run)
+
+After F5:
+
+1. **Pool initialized.** Output:
+   `[DroneSwarmService] Pre-allocated 80 drone parts.`
+2. **Player spawn → swarm deployed.** On character spawn, ~0.1s
+   later:
+   - `[DroneSwarmService] Deployed combat swarm (3 drones) for <Name>`
+   - 3 small neon-red Parts appear orbiting the player at radius 8,
+     height 4 above HRP, rotating ~90 deg/s.
+3. **Wave fires; drones engage:**
+   ```luau
+   local WD = require(game.ServerScriptService.Server.Modules.Combat.WaveDirector)
+   WD.StartWave(game.Players:GetPlayers()[1])
+   ```
+   Aliens spawn at perimeter; drones break orbit when an alien is
+   within 25 studs and chase, fire neon-red beams at 2 shots/sec
+   until the alien dies, then return to orbit.
+4. **Kill credit:**
+   ```luau
+   local DM = require(game.ServerScriptService.Server.Modules.Player.DataManager)
+   print(DM.GetData(game.Players:GetPlayers()[1]).dronesKilled)
+   -- Should increment by N where N = aliens killed by drones (not turrets)
+   ```
+5. **Respawn lifecycle:** kill the player character (Humanoid:TakeDamage(999))
+   → drones recalled (returned to pool); player respawns → swarm
+   redeploys after 0.1s.
+6. **Combined defense:** place a turret near spawn, fire wave;
+   verify turret + drone beams co-fire on the same wave with no
+   conflict (both feed DamageService independently).
+
+### Tech debt / deferred
+
+- **Recon + Engineering presets are catalog stubs.** Phase G wires:
+  - Recon: minimap/HUD overlay showing aliens-spotted-by-recon at
+    extended range (50+ studs)
+  - Engineering: depends on Phase G turret HP — repairs damaged
+    turrets/walls. Useless until E2.5's "turrets invincible" tech
+    debt is closed.
+- **No customization UI per brainstorm §2.7.** V1.5 ships the editor
+  that lets players pick + save preset swaps. V1 hardcodes Combat.
+- **Drone visuals are placeholder.** Solid-color neon Parts; no
+  trails, no engine VFX, no audio. Phase G ships the "distinct trail
+  /color identities" per §4.8 G6.
+- **No pathfinding around walls.** Drones fly direct lines through
+  geometry (Anchored Parts, no collision). For V1 this is fine
+  because drones are above walls (`DroneOrbitHeight = 4`); Phase G
+  may add proper occlusion checks if drones ever go to ground level.
+- **Drones are invincible.** Aliens don't damage them. Phase G adds
+  drone HP + alien-targets-drone behavior alongside the turret HP
+  work.
+- **No `drone_kill` quest emission yet.** Phase G expands the quest
+  pool to include autonomous-defender stats.
+- **CFrame-snap movement may look chunky on low-FPS clients.** Server
+  steers at Heartbeat (60Hz on the server), but client-side
+  replication interpolates between server frames. V1 fine; Phase G
+  may switch to AlignPosition for smoother client visuals.
+
+### What's next
+
+E3 — Clan/squad system. New `Social/ClanService.luau` +
+`Social/ClanStashLedger.luau`; cross-server clan chat via
+MessagingService topic `outpost.clan.<clanId>`. New DataStore
+`ClanData_v1` (separate keyspace from PlayerData). New
+ProfileSchema field `clanId: string?`. Stash withdrawal > N
+requires leader approval; logged.
+
+### Commit
+
+`feat(phaseE2.6): drone swarm (Combat preset; 3 orbiting drones)`

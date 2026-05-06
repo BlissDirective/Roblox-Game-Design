@@ -47,6 +47,7 @@ else
 	local RaidRewardService = require(script.Modules.Raid.RaidRewardService)
 	local TurretService = require(script.Modules.Combat.TurretService)
 	local WaveDirector = require(script.Modules.Combat.WaveDirector)
+	local DroneSwarmService = require(script.Modules.Combat.DroneSwarmService)
 
 	PlotManager.Init()
 	ResourceNodeSpawner.Init()
@@ -74,6 +75,11 @@ else
 	-- WaveDirector must Init AFTER RaidMatchmaker so OnDeadlinePop
 	-- subscription registers against an existing BindableEvent.
 	WaveDirector.Init()
+	-- DroneSwarmService is independent of wave/raid init order — it
+	-- listens to PlayerAdded / CharacterAdded directly. Init last in
+	-- the combat group so the alien actors folder exists when the
+	-- targeting loop first runs.
+	DroneSwarmService.Init()
 
 	print(
 		string.format(

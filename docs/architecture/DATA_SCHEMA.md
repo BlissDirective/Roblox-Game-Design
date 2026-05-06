@@ -42,6 +42,8 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     wavesSurvived   = 0, -- lifetime count of PvE waves survived
     -- Phase E2.5 — Turret kill stats:
     turretsKilled   = 0, -- lifetime aliens killed by this player's turrets
+    -- Phase E2.6 — Drone swarm kill stats:
+    dronesKilled    = 0, -- lifetime aliens killed by this player's drone swarm
 }
 ```
 
@@ -76,6 +78,19 @@ an alien's HP from > 0 to <= 0. Multi-turret kill credit goes to
 whichever turret landed the killing blow (no split). Drives a future
 `turret_kill` quest objective and a Phase G "PvE hero" leaderboard
 candidate.
+
+### Drone-kill field (E2.6)
+
+```luau
+dronesKilled: number  -- lifetime aliens killed by this player's drone swarm
+```
+
+Same single-writer semantics as `turretsKilled` but for the autonomous
+drone swarm. Mutated only by `DroneSwarmService.tickTargetingFor` on
+the shot that drops alien HP from > 0 to <= 0. Counted separately
+from turret kills so future "PvE hero" leaderboards can weight
+player-placed-defender (turret) vs autonomous-defender (drone) kills
+differently.
 
 ### `dailyQuests[id].vipOnly` (D3)
 
