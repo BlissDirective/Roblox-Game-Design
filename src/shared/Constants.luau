@@ -465,6 +465,18 @@ local Constants = {
 		-- Pool sized for the Roblox 20-default-server-cap × 3 drones
 		-- per player + buffer for character respawn churn.
 		DronePoolSize = 80,
+		-- F3 BeamPool — shared between TurretService + DroneSwarmService
+		-- (any "shoot a brief visual line" use case). Replaces the
+		-- per-shot `Instance.new("Part") + Debris:AddItem` pattern that
+		-- E2.5 / E2.6 shipped — that pattern would create ~64 Parts/sec
+		-- at peak (40 turrets + 12 drones at full fire rate).
+		--
+		-- Pool size 60 covers the worst-case burst: 60 simultaneous
+		-- in-flight 0.1s-lifetime beams. Beyond that, BeamPool falls
+		-- back to ad-hoc Instance.new with a warn log (graceful
+		-- degradation per the AlienPool / DroneSwarm pattern).
+		BeamPoolSize = 60,
+		BeamLifetimeSeconds = 0.1, -- standard turret/drone beam visual duration
 	},
 
 	-- Clan / squad system (Phase E3). 4-person max per brainstorm §2.6

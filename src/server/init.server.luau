@@ -58,6 +58,7 @@ else
 	local MonetizationService = require(script.Modules.Monetization.MonetizationService)
 	local RaidMatchmaker = require(script.Modules.Raid.RaidMatchmaker)
 	local RaidRewardService = require(script.Modules.Raid.RaidRewardService)
+	local BeamPool = require(script.Modules.Combat.BeamPool)
 	local TurretService = require(script.Modules.Combat.TurretService)
 	local WaveDirector = require(script.Modules.Combat.WaveDirector)
 	local DroneSwarmService = require(script.Modules.Combat.DroneSwarmService)
@@ -71,6 +72,9 @@ else
 	PlotManager.Init()
 	ResourceNodeSpawner.Init()
 	CurrencyService.Init()
+	-- BeamPool (F3) must Init before TurretService + DroneSwarmService
+	-- so the pool is pre-allocated when the first shot fires.
+	BeamPool.Init()
 	-- TurretService must Init BEFORE PlacementService because turret
 	-- placements register with the service synchronously at place time.
 	-- (Init only sets up loops + cleanup; RegisterTurret is callable

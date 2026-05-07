@@ -33,7 +33,6 @@
 	                               active drones for the player
 --]]
 
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -47,6 +46,7 @@ local DroneSwarmRegistry =
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local DamageService = require(script.Parent.DamageService)
+local BeamPool = require(script.Parent.BeamPool)
 
 type SwarmPreset = DroneSwarmRegistry.SwarmPreset
 
@@ -178,24 +178,10 @@ local function findNearestAlien(origin: Vector3, range: number): (BasePart?, Hum
 	return nearestRoot, nearestHumanoid
 end
 
-local function spawnBeam(from: Vector3, to: Vector3, color: Color3)
-	local diff = to - from
-	local length = diff.Magnitude
-	if length <= 0 then
-		return
-	end
-	local part = Instance.new("Part")
-	part.Name = "DroneBeam"
-	part.Anchored = true
-	part.CanCollide = false
-	part.CastShadow = false
-	part.Material = Enum.Material.Neon
-	part.Color = color
-	part.Size = Vector3.new(0.15, 0.15, length)
-	part.CFrame = CFrame.lookAt(from + diff / 2, to)
-	part.Parent = Workspace
-	Debris:AddItem(part, 0.08)
-end
+-- F3: BeamPool replaces the per-shot Instance.new("Part") + Debris:AddItem
+-- pattern. Drone beams are slightly thinner + faster (0.08s lifetime)
+-- than turret beams (0.1s); BeamPool.Acquire takes lifetime override.
+local DRONE_BEAM_LIFETIME = 0.08
 
 -- Orbit slot: the resting position around the player when no target.
 local function orbitSlotPosition(playerPos: Vector3, slotIndex: number, totalSlots: number, clockSec: number): Vector3
@@ -353,7 +339,7 @@ local function tickTargetingFor(swarm: Swarm)
 					local hpBefore = humanoid.Health
 					DamageService.ApplyToHumanoid(humanoid, Constants.COMBAT.DroneDamage, "drone_raycast")
 					local hpAfter = humanoid.Health
-					spawnBeam(drone.part.Position, target.Position, drone.preset.color)
+					BeamPool.Acquire(drone.part.Position, target.Position, drone.preset.color, DRONE_BEAM_LIFETIME)
 					if hpBefore > 0 and hpAfter <= 0 then
 						local owner = Players:GetPlayerByUserId(drone.ownerUserId)
 						if owner then

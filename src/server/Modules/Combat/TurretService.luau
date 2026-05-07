@@ -16,9 +16,10 @@
 	gameplay loop becomes "place turrets in good positions, watch
 	them shoot aliens, hope you placed enough."
 
-	Visuals: brief red Part beam (0.1s `Debris:AddItem`) between
-	turret muzzle and alien position. Phase G replaces with proper
-	Beam + projectile VFX.
+	Visuals: brief red Part beam (0.1s lifetime) between turret muzzle
+	and alien position via `BeamPool.Acquire` (F3 — pooled to avoid
+	per-shot `Instance.new`). Phase G replaces with proper Beam +
+	projectile VFX.
 
 	Public API:
 	  Init                        — wires PlayerRemoving cleanup +
@@ -29,7 +30,6 @@
 	                                count of active turrets
 --]]
 
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -39,6 +39,7 @@ local Constants = require(Shared:WaitForChild("Constants"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local DamageService = require(script.Parent.DamageService)
+local BeamPool = require(script.Parent.BeamPool)
 
 local TurretService = {}
 
@@ -92,24 +93,9 @@ local function findNearestAlien(turretPos: Vector3, range: number): (BasePart?, 
 	return nearestRoot, nearestHumanoid
 end
 
-local function spawnBeam(from: Vector3, to: Vector3)
-	local diff = to - from
-	local length = diff.Magnitude
-	if length <= 0 then
-		return
-	end
-	local part = Instance.new("Part")
-	part.Name = "TurretBeam"
-	part.Anchored = true
-	part.CanCollide = false
-	part.CastShadow = false
-	part.Material = Enum.Material.Neon
-	part.Color = Color3.fromRGB(255, 80, 80)
-	part.Size = Vector3.new(0.2, 0.2, length)
-	part.CFrame = CFrame.lookAt(from + diff / 2, to)
-	part.Parent = Workspace
-	Debris:AddItem(part, 0.1)
-end
+-- F3: BeamPool replaces the per-shot Instance.new("Part") + Debris:AddItem
+-- pattern. Same visual; pooled lifecycle.
+local TURRET_BEAM_COLOR = Color3.fromRGB(255, 80, 80)
 
 local function fireTurret(turret: Turret, alienRoot: BasePart, alienHumanoid: Humanoid)
 	local now = os.clock()
@@ -124,7 +110,7 @@ local function fireTurret(turret: Turret, alienRoot: BasePart, alienHumanoid: Hu
 
 	-- Muzzle origin: turret top center; target: alien root.
 	local muzzle = turret.part.Position + Vector3.new(0, turret.part.Size.Y / 2, 0)
-	spawnBeam(muzzle, alienRoot.Position)
+	BeamPool.Acquire(muzzle, alienRoot.Position, TURRET_BEAM_COLOR)
 
 	-- Kill credit: only the shot that drops HP to 0 counts.
 	if hpBefore > 0 and hpAfter <= 0 then
