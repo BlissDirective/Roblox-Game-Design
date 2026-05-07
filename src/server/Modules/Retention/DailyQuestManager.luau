@@ -164,6 +164,44 @@ local QUEST_POOL: { [string]: Quest } = {
 	},
 }
 
+-- F5: Tutorial quest pool. New players (ftueCompleted = true,
+-- tutorialQuestsCompleted = false) see ONLY these 3 quests until all
+-- are claimed. Welcome bonus (~800cr + 10 cores total) gives a
+-- meaningful early-game leg-up without trivializing the V1 economy.
+-- After all 3 are claimed, `tutorialQuestsCompleted` flips and the
+-- player transitions to the regular daily-roll pool on the next
+-- ensureFreshDay tick.
+--
+-- Tutorial quests are NOT daily-rolled — they're a fixed 3-quest
+-- set per-player held in `profile.tutorialQuests`. UTC rollover
+-- has no effect on tutorial progress.
+local TUTORIAL_QUEST_POOL: { [string]: Quest } = {
+	tut_first_steps = {
+		id = "tut_first_steps",
+		displayName = "First Steps",
+		description = "Place 1 extractor on a resource node.",
+		objective = { event = "place_extractor", target = 1 },
+		rewardCredits = 200,
+		rewardCores = 3,
+	},
+	tut_hold_the_line = {
+		id = "tut_hold_the_line",
+		displayName = "Hold the Line",
+		description = "Survive 1 alien wave.",
+		objective = { event = "wave_survived", target = 1 },
+		rewardCredits = 500,
+		rewardCores = 5,
+	},
+	tut_daily_routine = {
+		id = "tut_daily_routine",
+		displayName = "Daily Routine",
+		description = "Claim today's daily login reward.",
+		objective = { event = "claim_daily", target = 1 },
+		rewardCredits = 100,
+		rewardCores = 2,
+	},
+}
+
 -- We roll 4 quests per day. The first 3 are visible to everyone;
 -- the 4th is gated by the VIP Operator pass (D3 effect: "+1 daily
 -- quest slot"). The set is rolled identically for everyone — VIP
@@ -172,6 +210,57 @@ local QUEST_POOL: { [string]: Quest } = {
 local QUESTS_PER_DAY_BASE = 3
 local QUESTS_PER_DAY_TOTAL = 4
 local VIP_PASS_KEY = "VipOperator"
+
+-- F5: predicate — is this player still in tutorial mode? Tutorial
+-- visibility requires:
+--   1. FTUE complete (so the player has been onboarded)
+--   2. Not yet claimed all 3 tutorial quests
+-- Returning players (tutorialQuestsCompleted = true) skip directly
+-- to the daily-roll pool. Players still in FTUE see no quest panel
+-- entries (the panel renders empty during FTUE — Phase G adds a
+-- "Quests unlock after onboarding" placeholder).
+local function isInTutorialMode(data: any): boolean
+	if not data.ftueCompleted then
+		return false
+	end
+	if data.tutorialQuestsCompleted then
+		return false
+	end
+	return true
+end
+
+-- F5: ensure the tutorial quest map is populated. Idempotent — safe
+-- to call repeatedly; only seeds entries that aren't already present.
+-- Uses Reconcile-style additive semantics so a player who claimed 1
+-- tutorial quest then disconnected resumes with the same map state.
+local function ensureTutorialQuests(data: any)
+	if not data.tutorialQuests then
+		data.tutorialQuests = {}
+	end
+	for id in TUTORIAL_QUEST_POOL do
+		if not data.tutorialQuests[id] then
+			data.tutorialQuests[id] = {
+				progress = 0,
+				claimed = false,
+			}
+		end
+	end
+end
+
+-- F5: count claimed tutorial quests; returns 3 when all done so the
+-- caller can flip `tutorialQuestsCompleted`.
+local function countClaimedTutorialQuests(data: any): number
+	if not data.tutorialQuests then
+		return 0
+	end
+	local count = 0
+	for _, entry in data.tutorialQuests do
+		if entry.claimed then
+			count += 1
+		end
+	end
+	return count
+end
 
 local function utcDateString(t: number): string
 	return os.date("!%Y-%m-%d", t) :: string
@@ -233,6 +322,41 @@ function DailyQuestManager.GetState(player: Player): State?
 	if not data then
 		return nil
 	end
+
+	-- F5: Tutorial-mode dispatch. Players with FTUE done but tutorial
+	-- quests pending see the fixed 3 tutorial quests instead of the
+	-- daily roll. Daily-roll bookkeeping is paused during tutorial
+	-- (no UTC rollover effect on tutorial progress).
+	if isInTutorialMode(data) then
+		ensureTutorialQuests(data)
+		local quests: { QuestView } = {}
+		for id, progress in data.tutorialQuests do
+			local quest = TUTORIAL_QUEST_POOL[id]
+			if not quest then
+				continue
+			end
+			table.insert(quests, {
+				id = quest.id,
+				displayName = quest.displayName,
+				description = quest.description,
+				progress = math.min(progress.progress, quest.objective.target),
+				target = quest.objective.target,
+				complete = progress.progress >= quest.objective.target,
+				claimed = progress.claimed,
+				rewardCredits = quest.rewardCredits,
+				rewardCores = quest.rewardCores,
+			})
+		end
+		table.sort(quests, function(a, b)
+			return a.id < b.id
+		end)
+		return {
+			dateUtc = utcDateString(os.time()),
+			secondsUntilReset = 0, -- tutorial doesn't reset; client renders "Tutorial" instead of countdown
+			quests = quests,
+		}
+	end
+
 	ensureFreshDay(data)
 
 	-- Hide the 4th-rolled quest from non-VIP players. VIP ownership
@@ -281,6 +405,62 @@ function DailyQuestManager.TryClaim(player: Player, questId: string): ClaimResul
 	if not data then
 		return { ok = false, error = "no profile" }
 	end
+
+	-- F5: Tutorial-mode dispatch. Tutorial quest claims operate on the
+	-- separate `tutorialQuests` map; success path checks if all 3 are
+	-- now claimed and flips `tutorialQuestsCompleted` to graduate the
+	-- player to the regular daily-roll pool.
+	if isInTutorialMode(data) then
+		ensureTutorialQuests(data)
+		local quest = TUTORIAL_QUEST_POOL[questId]
+		if not quest then
+			return { ok = false, error = "unknown tutorial quest: " .. tostring(questId) }
+		end
+		local entry = data.tutorialQuests[questId]
+		if not entry then
+			return { ok = false, error = "tutorial quest not active" }
+		end
+		if entry.claimed then
+			return { ok = false, error = "already claimed" }
+		end
+		if entry.progress < quest.objective.target then
+			return { ok = false, error = "objective incomplete" }
+		end
+
+		entry.claimed = true
+		if quest.rewardCredits > 0 then
+			CurrencyService.Add(player, quest.rewardCredits)
+		end
+		if quest.rewardCores > 0 then
+			CurrencyService.AddCores(player, quest.rewardCores)
+		end
+		QuestObjectives.Emit("quest_claimed", player, 1)
+
+		-- Graduation check: if all 3 tutorial quests are now claimed,
+		-- flip the completion flag. Next GetState will fall through to
+		-- the regular daily-roll path.
+		if countClaimedTutorialQuests(data) >= 3 then
+			data.tutorialQuestsCompleted = true
+			print(string.format("[DailyQuestManager] %s graduated from tutorial quests", player.Name))
+		end
+
+		print(
+			string.format(
+				"[DailyQuestManager] %s claimed tutorial %s (+%d credits, +%d cores)",
+				player.Name,
+				questId,
+				quest.rewardCredits,
+				quest.rewardCores
+			)
+		)
+		return {
+			ok = true,
+			questId = questId,
+			rewardCredits = quest.rewardCredits,
+			rewardCores = quest.rewardCores,
+		}
+	end
+
 	ensureFreshDay(data)
 
 	local quest = QUEST_POOL[questId]
@@ -352,6 +532,36 @@ function DailyQuestManager.RecordProgress(player: Player, event: string, amount:
 	if not data then
 		return
 	end
+
+	-- F5: Tutorial-mode dispatch. Tutorial quest progress advances
+	-- against the parallel tutorialQuests map; daily-roll bookkeeping
+	-- pauses while in tutorial mode (no ensureFreshDay).
+	if isInTutorialMode(data) then
+		ensureTutorialQuests(data)
+		local advanced = false
+		for questId, entry in data.tutorialQuests do
+			if entry.claimed then
+				continue
+			end
+			local quest = TUTORIAL_QUEST_POOL[questId]
+			if not quest or quest.objective.event ~= event then
+				continue
+			end
+			if entry.progress >= quest.objective.target then
+				continue
+			end
+			entry.progress += amount
+			if entry.progress > quest.objective.target then
+				entry.progress = quest.objective.target
+			end
+			advanced = true
+		end
+		if advanced then
+			pushStateToClient(player)
+		end
+		return
+	end
+
 	ensureFreshDay(data)
 
 	local advanced = false

@@ -69,6 +69,13 @@
 	disconnected mid-FTUE player resume from their last checkpoint
 	on rejoin. ftueCompleted is the gate that hides the FTUE flow
 	for returning players.
+	Phase F5 (tutorial gates): adds `tutorialQuestsCompleted` (sticky
+	boolean) + `tutorialQuests` (map parallel to `dailyQuests`,
+	holding the 3 fixed tutorial-quest progress entries until all
+	are claimed). The completion flag is the gate that hides the
+	tutorial track for returning players. Once all 3 tutorial quests
+	are claimed, DailyQuestManager flips the flag and the player
+	transitions to the regular daily-roll pool.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -145,6 +152,9 @@ export type PlayerData = {
 	-- Phase F4 — FTUE state.
 	ftueCompleted: boolean, -- true = onboarding done; FTUE flow skipped on rejoin
 	ftueStep: string?, -- current FTUE step; nil when completed; resumes mid-flow on rejoin
+	-- Phase F5 — Tutorial quest gates.
+	tutorialQuestsCompleted: boolean, -- true = all 3 tutorial quests claimed; daily-roll pool active
+	tutorialQuests: { [string]: QuestProgress }, -- 3 fixed entries until completed
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -178,6 +188,8 @@ ProfileSchema.DEFAULT_DATA = {
 	tier = 0,
 	ftueCompleted = false,
 	ftueStep = nil,
+	tutorialQuestsCompleted = false,
+	tutorialQuests = {},
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

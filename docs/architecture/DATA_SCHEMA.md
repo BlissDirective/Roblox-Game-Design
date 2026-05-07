@@ -52,6 +52,9 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     -- Phase F4 — FTUE state:
     ftueCompleted = false,
     ftueStep      = nil :: string?,
+    -- Phase F5 — Tutorial quest gates:
+    tutorialQuestsCompleted = false,
+    tutorialQuests          = {},
 }
 ```
 
@@ -104,6 +107,28 @@ Step values per `Constants.FTUE.Steps`: `"cinematic"`, `"scout"`,
 `"place_extractor"`, `"first_credits"`, `"completed"` (sentinel — when
 this transition fires, `ftueCompleted` flips to `true` and `ftueStep`
 is cleared to nil).
+
+### Tutorial quest fields (F5)
+
+```luau
+tutorialQuestsCompleted: boolean                 -- sticky; true after all 3 tutorial quests claimed
+tutorialQuests: { [string]: QuestProgress }      -- 3 fixed entries until completion
+```
+
+Players in **tutorial mode** (`ftueCompleted == true` AND
+`tutorialQuestsCompleted == false`) see ONLY the 3 tutorial quests
+in the quest panel. The fixed set is held in `tutorialQuests` (not
+`dailyQuests`) so UTC day rollover has no effect on tutorial progress
+— the player works through the tutorial at their own pace.
+
+The 3 V1 tutorial quests:
+- `tut_first_steps` — Place 1 extractor (200 cr / 3 cores)
+- `tut_hold_the_line` — Survive 1 alien wave (500 cr / 5 cores)
+- `tut_daily_routine` — Claim today's daily login reward (100 cr / 2 cores)
+
+On all 3 claims, `DailyQuestManager.TryClaim` flips
+`tutorialQuestsCompleted = true`. The next `GetState` falls through to
+the regular daily-roll path. Mutated only by `DailyQuestManager`.
 
 ### Drone-kill field (E2.6)
 
