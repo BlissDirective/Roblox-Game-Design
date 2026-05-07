@@ -68,6 +68,7 @@ else
 	local LeaderboardService = require(script.Modules.Social.LeaderboardService)
 	local FriendsService = require(script.Modules.Social.FriendsService)
 	local VoiceGate = require(script.Modules.Voice.VoiceGate)
+	local FTUEService = require(script.Modules.FTUE.FTUEService)
 
 	PlotManager.Init()
 	ResourceNodeSpawner.Init()
@@ -122,6 +123,11 @@ else
 	-- brainstorm §2.6 (build mode is silent; voice opens during raids
 	-- only).
 	VoiceGate.Init()
+	-- FTUE (F4) — first-time onboarding state machine. Subscribes to
+	-- QuestObjectives `place_extractor` + `earn_credits` for auto-
+	-- advance; pushes FTUEState on PlayerAdded for first-timers.
+	-- Init last so the QuestObjectives handlers it depends on are wired.
+	FTUEService.Init()
 
 	print(
 		string.format(

@@ -30,6 +30,7 @@ local ClanController = require(script.Modules.Social.ClanController)
 local LeaderboardController = require(script.Modules.Social.LeaderboardController)
 local FriendsPanel = require(script.Modules.Social.FriendsPanel)
 local VoiceController = require(script.Modules.Voice.VoiceController)
+local FTUEController = require(script.Modules.FTUE.FTUEController)
 
 HudController.Init()
 CameraController.Init()
@@ -46,6 +47,7 @@ ClanController.Init()
 LeaderboardController.Init()
 FriendsPanel.Init()
 VoiceController.Init()
+FTUEController.Init()
 
 print(
 	string.format(

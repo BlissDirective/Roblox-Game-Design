@@ -100,6 +100,47 @@ local Constants = {
 		MaxRecordsPerPlayer = 50,
 	},
 
+	-- Phase F4 — First-Time User Experience (the 30-second rule per
+	-- finalized-brainstorm.md §4.7 F4 / CLAUDE.md). New players see
+	-- something interesting in 30 seconds; first reward by ~25-30s.
+	--
+	-- F4 ships the *infrastructure* — server state machine + client
+	-- hint overlay scaffolding. Per build protocol §Phase F escalation
+	-- ("FTUE is taste-critical — needs human input"), the cinematic
+	-- visuals / audio / exact copy / camera framing are Phase G work.
+	-- This block ships the timing budgets + step IDs.
+	--
+	-- Step flow:
+	--   1. cinematic       (5s — intro camera; auto-advances on timer or skip)
+	--   2. scout           (~10s — first node highlighted; auto-advances on extractor place)
+	--   3. place_extractor (~5s — starter grant fires; auto-advances on place_extractor event)
+	--   4. first_credits   (~5s — wait for first credits earned; auto-advances on earn_credits event)
+	--   5. completed       (sticky; clears overlay; ftueCompleted flag set)
+	-- Total budget ≤ 30s with smooth play.
+	FTUE = {
+		-- Step identifiers. Order = state machine progression.
+		Steps = {
+			Cinematic = "cinematic",
+			Scout = "scout",
+			PlaceExtractor = "place_extractor",
+			FirstCredits = "first_credits",
+			Completed = "completed",
+		},
+		-- Timing budgets per step.
+		CinematicSeconds = 5,
+		StepTimeoutSeconds = 60, -- safety: if a step doesn't auto-advance in this window, force-skip
+		-- Starter grant — guarantees the player can afford their first
+		-- extractor placement (50 cr) immediately on the scout step.
+		-- Insurance: only granted if profile.credits < this threshold,
+		-- so re-entering the FTUE flow doesn't double-grant.
+		StarterCredits = 50,
+		-- Node-to-spawn proximity for the highlighted scout target.
+		-- The closest unclaimed node within this radius is highlighted;
+		-- if no node within range, fall back to the closest node anywhere
+		-- on the plot. Tuned for a ≤10s walk per the 30s budget.
+		ScoutNodeMaxDistance = 40, -- studs
+	},
+
 	-- Game cadence (seconds unless noted). Per-system tick rates.
 	TICK = {
 		Currency = 1, -- Phase B2

@@ -191,6 +191,25 @@ local Remotes = {
 	-- this server (either originated here or arrived via MessagingService).
 	ClanChatReceived = getOrCreate("ClanChatReceived", "RemoteEvent") :: RemoteEvent,
 
+	-- Phase F4 — FTUE:
+	-- Server → Client. Args: (state: FTUEService.State).
+	-- Pushed on join (after profile load) for first-time players, and
+	-- on every step transition. Carries `step`, `hint` (UI overlay
+	-- copy), and step-specific payload (e.g., `targetCellX`, `targetCellZ`
+	-- for the scout step's highlighted node). Server is authoritative —
+	-- client renders hints + cinematic but cannot forge step transitions.
+	-- For returning players (ftueCompleted == true), server fires nil
+	-- once on join so the client clears any stale overlay.
+	FTUEState = getOrCreate("FTUEState", "RemoteEvent") :: RemoteEvent,
+	-- Client → Server (RemoteFunction). Args: (step: string).
+	-- Client acks completion of a step it owns (e.g., the cinematic
+	-- finishing or being skipped). Server validates the ack matches
+	-- the player's current step and advances. Steps the server owns
+	-- (auto-advance from PlacementService / CurrencyService events)
+	-- ignore the ack — server is the sole authority. Returns
+	-- FTUEService.AckResult.
+	FTUEStepAck = getOrCreate("FTUEStepAck", "RemoteFunction") :: RemoteFunction,
+
 	-- Phase E5 — Leaderboards + friends:
 	-- Server → Client. Args: (boards: LeaderboardService.BoardsState).
 	-- Pushed on join (after first board fetch) + on every cache refresh

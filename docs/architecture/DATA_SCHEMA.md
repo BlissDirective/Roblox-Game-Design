@@ -46,6 +46,12 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     dronesKilled    = 0, -- lifetime aliens killed by this player's drone swarm
     -- Phase E3 — Clan membership:
     clanId          = nil :: string?, -- nil = unaffiliated; the clan's full state lives in ClanData_v1
+    -- Phase F0 — V1.5 expansion prep (not yet wired to V1 UI):
+    creditsInvestedLifetime = 0,
+    tier                    = 0,
+    -- Phase F4 — FTUE state:
+    ftueCompleted = false,
+    ftueStep      = nil :: string?,
 }
 ```
 
@@ -80,6 +86,24 @@ an alien's HP from > 0 to <= 0. Multi-turret kill credit goes to
 whichever turret landed the killing blow (no split). Drives a future
 `turret_kill` quest objective and a Phase G "PvE hero" leaderboard
 candidate.
+
+### FTUE state fields (F4)
+
+```luau
+ftueCompleted: boolean  -- sticky; true after first-time onboarding finishes
+ftueStep: string?       -- current step in the FTUE flow; nil when complete
+```
+
+`ftueCompleted` is the gate that hides the FTUE flow for returning
+players. `ftueStep` lets a player who disconnects mid-FTUE resume from
+their last checkpoint on rejoin (the step persists via ProfileStore's
+auto-save). Mutated only by `FTUEService` on step transitions; never
+mutated by client-issued Remotes.
+
+Step values per `Constants.FTUE.Steps`: `"cinematic"`, `"scout"`,
+`"place_extractor"`, `"first_credits"`, `"completed"` (sentinel — when
+this transition fires, `ftueCompleted` flips to `true` and `ftueStep`
+is cleared to nil).
 
 ### Drone-kill field (E2.6)
 

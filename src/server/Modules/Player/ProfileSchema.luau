@@ -64,6 +64,11 @@
 	`baseLayout`. Also adds `tier: number` (default 0) — gates the
 	tier UI hidden in V1, set by `TierService` in V1.5; V1→V1.5
 	migration sets to 4 (Outpost) for existing V1 profiles.
+	Phase F4 (FTUE): adds `ftueCompleted` (sticky boolean) +
+	`ftueStep` (string?, current step). The step field lets a
+	disconnected mid-FTUE player resume from their last checkpoint
+	on rejoin. ftueCompleted is the gate that hides the FTUE flow
+	for returning players.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -137,6 +142,9 @@ export type PlayerData = {
 	-- Phase F0 — V1.5 expansion prep (foundation tracking; no V1 UI).
 	creditsInvestedLifetime: number, -- sticky tycoon-spend signal for V1.5 Tier gate
 	tier: number, -- 0 = Drop Pod (V1 default); V1.5 TierService sets > 0
+	-- Phase F4 — FTUE state.
+	ftueCompleted: boolean, -- true = onboarding done; FTUE flow skipped on rejoin
+	ftueStep: string?, -- current FTUE step; nil when completed; resumes mid-flow on rejoin
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -168,6 +176,8 @@ ProfileSchema.DEFAULT_DATA = {
 	clanId = nil,
 	creditsInvestedLifetime = 0,
 	tier = 0,
+	ftueCompleted = false,
+	ftueStep = nil,
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.
