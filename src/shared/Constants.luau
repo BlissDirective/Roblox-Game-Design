@@ -102,9 +102,7 @@ local Constants = {
 
 	-- Phase F4 — First-Time User Experience (the 30-second rule per
 	-- finalized-brainstorm.md §4.7 F4 / CLAUDE.md). New players see
-	-- something interesting in 30 seconds; first reward by ~25-30s.
-	--
-	-- F4 ships the *infrastructure* — server state machine + client
+	-- something interesting in 30 seconds; first reward by ~25-30s. F4 ships the *infrastructure* — server state machine + client
 	-- hint overlay scaffolding. Per build protocol §Phase F escalation
 	-- ("FTUE is taste-critical — needs human input"), the cinematic
 	-- visuals / audio / exact copy / camera framing are Phase G work.
@@ -367,6 +365,100 @@ local Constants = {
 		-- Roblox DevForum for tycoon games using StreamingEnabled.
 		BulkDestroyBatchSize = 8,
 		BulkDestroyBatchDelay = 0.05, -- seconds
+	},
+
+	-- Phase G1 — Biome lighting profiles. V1 ships 3 biomes (jungle,
+	-- volcanic, ice). The main place defaults to jungle per
+	-- `DefaultBiome`; future multi-biome PvE rotation (V1.5+) selects
+	-- per server seed. Profiles tuned for mobile via ShadowMap (Soft)
+	-- lighting tech per the Phase G research findings: <50 active
+	-- lights per area, CastShadow off on decorative parts, atmosphere
+	-- haze for the bioluminescent vibe without per-pixel lighting cost.
+	--
+	-- Each profile carries enough state to fully apply via
+	-- `Lighting.<property>` writes + an Atmosphere child instance.
+	-- BiomeLightingService.luau owns the apply path; profiles are
+	-- pure data (no behavior) so taste tuning is single-file edits
+	-- here.
+	BIOME = {
+		DefaultBiome = "jungle", -- V1 main place; V1.5+ adds rotation
+		LightingTechnology = "ShadowMap", -- ShadowMap (now "Soft" per Jan 2025) for mobile-first
+		Profiles = {
+			jungle = {
+				displayName = "Bioluminescent Jungle",
+				-- Lighting.* properties
+				ambient = Color3.fromRGB(40, 20, 60), -- deep purple base — night-jungle feel
+				outdoorAmbient = Color3.fromRGB(30, 15, 50),
+				brightness = 1.5,
+				clockTime = 19.5, -- post-dusk; jungle is "alive" at night per brainstorm §2.5
+				geographicLatitude = 41.7,
+				exposureCompensation = 0.0,
+				-- Atmosphere.* properties (instance child of Lighting)
+				atmosphereDensity = 0.45, -- foggy bioluminescent haze
+				atmosphereOffset = 0.25,
+				atmosphereColor = Color3.fromRGB(80, 30, 100), -- magenta-tinted air
+				atmosphereDecay = Color3.fromRGB(120, 50, 180),
+				atmosphereGlare = 0.2,
+				atmosphereHaze = 1.5,
+				-- ColorCorrection.* (instance child of Lighting)
+				colorTint = Color3.fromRGB(220, 200, 255),
+				colorBrightness = 0.05,
+				colorContrast = 0.1,
+				colorSaturation = 0.15,
+				-- Skybox (per-biome optional override; nil = default skybox)
+				skyboxAssetId = nil, -- replaced in Phase G/H once authored
+				-- Fog (legacy support; modern Atmosphere does most of the work)
+				fogStart = 80,
+				fogEnd = 320,
+				fogColor = Color3.fromRGB(40, 20, 60),
+			},
+			volcanic = {
+				displayName = "Volcanic Wastes",
+				ambient = Color3.fromRGB(60, 25, 15),
+				outdoorAmbient = Color3.fromRGB(50, 20, 12),
+				brightness = 2.0,
+				clockTime = 18.0, -- sunset on the volcanic plain — orange-orange-orange
+				geographicLatitude = 25.0,
+				exposureCompensation = -0.15,
+				atmosphereDensity = 0.55, -- ash-laden air; thicker than jungle
+				atmosphereOffset = 0.30,
+				atmosphereColor = Color3.fromRGB(140, 60, 30),
+				atmosphereDecay = Color3.fromRGB(200, 90, 40),
+				atmosphereGlare = 0.5, -- harsh sun-through-ash glare
+				atmosphereHaze = 2.5,
+				colorTint = Color3.fromRGB(255, 220, 200),
+				colorBrightness = 0.0,
+				colorContrast = 0.15,
+				colorSaturation = 0.2,
+				skyboxAssetId = nil,
+				fogStart = 60,
+				fogEnd = 240,
+				fogColor = Color3.fromRGB(60, 30, 20),
+			},
+			ice = {
+				displayName = "Cryo Ice Caves",
+				ambient = Color3.fromRGB(20, 40, 60),
+				outdoorAmbient = Color3.fromRGB(15, 35, 55),
+				brightness = 1.2, -- dimmer; it's a cave biome
+				clockTime = 6.0, -- pre-dawn cold-blue
+				geographicLatitude = 78.0, -- arctic
+				exposureCompensation = 0.1,
+				atmosphereDensity = 0.40,
+				atmosphereOffset = 0.10,
+				atmosphereColor = Color3.fromRGB(150, 200, 230), -- pale ice-blue
+				atmosphereDecay = Color3.fromRGB(80, 130, 180),
+				atmosphereGlare = 0.0,
+				atmosphereHaze = 1.8,
+				colorTint = Color3.fromRGB(200, 230, 255),
+				colorBrightness = 0.1,
+				colorContrast = 0.05,
+				colorSaturation = -0.1, -- desaturated for the frigid feel
+				skyboxAssetId = nil,
+				fogStart = 70,
+				fogEnd = 280,
+				fogColor = Color3.fromRGB(30, 50, 80),
+			},
+		},
 	},
 
 	-- Raid pipeline (Phase E1). The raid system uses MemoryStoreService

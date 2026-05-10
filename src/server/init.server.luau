@@ -32,11 +32,16 @@ if IS_RAID_SERVER then
 	-- the round runs against a snapshot, not a persistent base.
 	local RaidSession = require(script.Modules.Raid.RaidSession)
 	local VoiceGate = require(script.Modules.Voice.VoiceGate)
+	local BiomeLightingService = require(script.Modules.World.BiomeLightingService)
 	RaidSession.Init()
 	-- Voice is enabled at the place level via raid.project.json's
 	-- VoiceChatService.EnableDefaultVoice = true. VoiceGate.Init is
 	-- the defensive verifier + state pusher.
 	VoiceGate.Init()
+	-- G1: biome lighting profile. Raid place inherits the snapshot
+	-- defender's biome via teleport data (V1.5+); V1 ships default
+	-- jungle.
+	BiomeLightingService.Init()
 	print(
 		string.format(
 			"[Outpost-7] Raid bootstrap complete. privateServerId=%s, roundSeconds=%d",
@@ -47,6 +52,7 @@ if IS_RAID_SERVER then
 else
 	-- Main place: full chain.
 	local PlotManager = require(script.Modules.World.PlotManager)
+	local BiomeLightingService = require(script.Modules.World.BiomeLightingService)
 	local ResourceNodeSpawner = require(script.Modules.World.ResourceNodeSpawner)
 	local CurrencyService = require(script.Modules.Economy.CurrencyService)
 	local PlacementService = require(script.Modules.Build.PlacementService)
@@ -70,6 +76,9 @@ else
 	local VoiceGate = require(script.Modules.Voice.VoiceGate)
 	local FTUEService = require(script.Modules.FTUE.FTUEService)
 
+	-- G1: biome lighting profile applied at boot before plot build so
+	-- the world Lighting state is set before players see anything.
+	BiomeLightingService.Init()
 	PlotManager.Init()
 	ResourceNodeSpawner.Init()
 	CurrencyService.Init()
