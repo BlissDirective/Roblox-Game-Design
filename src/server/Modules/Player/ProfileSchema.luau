@@ -76,6 +76,13 @@
 	tutorial track for returning players. Once all 3 tutorial quests
 	are claimed, DailyQuestManager flips the flag and the player
 	transitions to the regular daily-roll pool.
+	Phase G7 (cosmetic system): adds `cosmeticsOwned` (map of
+	cosmeticId → acquiredAt timestamp, used for "New!" badges) and
+	`equippedCosmetics` (map of slot → cosmeticId, one entry per V1
+	slot per Constants.COSMETIC.Slots). Closes the D4 BattlePass
+	launch-blocker — BP cosmetic-marked tiers grant items here
+	instead of placeholder Credits/Cores. Defaults granted on first
+	join (combatant skin, default decal/trail/flair).
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -155,6 +162,9 @@ export type PlayerData = {
 	-- Phase F5 — Tutorial quest gates.
 	tutorialQuestsCompleted: boolean, -- true = all 3 tutorial quests claimed; daily-roll pool active
 	tutorialQuests: { [string]: QuestProgress }, -- 3 fixed entries until completed
+	-- Phase G7 — Cosmetic system (closes D4 launch blocker).
+	cosmeticsOwned: { [string]: number }, -- cosmeticId -> acquiredAt timestamp (for "New!" badges)
+	equippedCosmetics: { [string]: string }, -- slot -> cosmeticId (one entry per equipped slot)
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -190,6 +200,8 @@ ProfileSchema.DEFAULT_DATA = {
 	ftueStep = nil,
 	tutorialQuestsCompleted = false,
 	tutorialQuests = {},
+	cosmeticsOwned = {},
+	equippedCosmetics = {},
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

@@ -55,6 +55,9 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     -- Phase F5 — Tutorial quest gates:
     tutorialQuestsCompleted = false,
     tutorialQuests          = {},
+    -- Phase G7 — Cosmetic system (closes D4 launch-blocker):
+    cosmeticsOwned     = {},
+    equippedCosmetics  = {},
 }
 ```
 
@@ -107,6 +110,31 @@ Step values per `Constants.FTUE.Steps`: `"cinematic"`, `"scout"`,
 `"place_extractor"`, `"first_credits"`, `"completed"` (sentinel — when
 this transition fires, `ftueCompleted` flips to `true` and `ftueStep`
 is cleared to nil).
+
+### Cosmetic system fields (G7)
+
+```luau
+cosmeticsOwned: { [string]: number }       -- cosmeticId -> acquiredAt timestamp
+equippedCosmetics: { [string]: string }    -- slot -> cosmeticId
+```
+
+8 cosmetic slots per `Constants.COSMETIC.Slots` (V1 catalog covers
+4: skin, helmet_decal, drone_trail, nameplate_flair; remaining 4
+are V1.5/V2 reservations). The `acquiredAt` timestamp drives the
+24-hour "NEW!" badge in the equip panel. The `equipped` map has at
+most one entry per slot — equipping replaces.
+
+Mutated only by `CosmeticService`. Trust boundary: client cannot
+forge grants; `EquipCosmetic` Remote validates ownership before
+mutating the equipped map. BattlePass milestone tiers and VIP pass
+purchase grant cosmetics via `CosmeticService.GrantCosmetic`;
+defaults seeded on first join.
+
+Closes the D4 BattlePass launch-blocker tech debt: cosmetic-marked
+BP tiers (5, 10, 15, 20, 25, 30) grant items here instead of
+placeholder Credits/Cores. Per the user-approved G7 design
+(2026-05-05), rewards are **additive** — existing per-tier
+cr/cores rewards stay; cosmetics grant alongside at milestones.
 
 ### Tutorial quest fields (F5)
 

@@ -100,6 +100,64 @@ local Constants = {
 		MaxRecordsPerPlayer = 50,
 	},
 
+	-- Phase G7 — Cosmetic system (closes D4 launch-blocker tech debt).
+	-- 8 slots per user-approved maximalist scope (2026-05-05): skin,
+	-- helmet_decal, drone_trail, nameplate_flair (V1 has catalog items);
+	-- emote, banner, vehicle_paint, mount_cosmetic (V1.5/V2 expansion
+	-- slots — schema reserved, no V1 items).
+	--
+	-- Defaults granted on first join: combatant skin, default decal
+	-- (clear), default drone trail (preset-driven), default flair
+	-- (none). Tier 5+ Settlement unlocks banner slot (V1.5+).
+	--
+	-- BP integration: additive per user-approved scope. Existing
+	-- per-tier cr/cores rewards stay; cosmetic granted ALONGSIDE at
+	-- 6 milestone tiers (5, 10, 15, 20, 25, 30). VIP Operator pass
+	-- unlocks heavy_defender skin (manual-equip + toast).
+	COSMETIC = {
+		-- 8 slot identifiers. V1 catalog items only exist for the first
+		-- 4; remaining 4 are V1.5+ reservations (schema additive).
+		Slots = {
+			Skin = "skin",
+			HelmetDecal = "helmet_decal",
+			DroneTrail = "drone_trail",
+			NameplateFlair = "nameplate_flair",
+			Emote = "emote",
+			Banner = "banner",
+			VehiclePaint = "vehicle_paint",
+			MountCosmetic = "mount_cosmetic",
+		},
+		-- Defaults applied on first join (insurance-checked so
+		-- re-grants don't double-fire). One cosmetic per V1 slot.
+		Defaults = {
+			skin = "skin_combatant",
+			helmet_decal = "decal_default",
+			drone_trail = "trail_default",
+			nameplate_flair = "flair_default",
+		},
+		-- BP milestone tiers (additive grants). Each tier rewards
+		-- cr/cores per existing BattlePass formulas PLUS the cosmetic
+		-- below. Multiple cosmetics per tier supported (tier 25, 30).
+		BattlePassMilestones = {
+			[5] = { "trail_neon_red" },
+			[10] = { "decal_chevron_red" },
+			[15] = { "skin_recon" },
+			[20] = { "trail_neon_blue" },
+			[25] = { "decal_skull_amber", "flair_op7_veteran" },
+			[30] = { "decal_op7_emblem", "trail_neon_gold" },
+		},
+		-- Pass-bound cosmetics. On GamePassService.OnOwnershipChanged
+		-- with owned=true, CosmeticService grants the listed cosmetics.
+		PassUnlocks = {
+			VipOperator = { "skin_heavy_defender" },
+		},
+		-- "New!" badge window — cosmetic acquiredAt within this many
+		-- seconds shows the badge in the equip UI.
+		NewBadgeWindowSeconds = 24 * 60 * 60, -- 24h
+		-- Inventory cap (defensive — V1 unlikely to approach).
+		MaxOwnedCosmetics = 200,
+	},
+
 	-- Phase F4 — First-Time User Experience (the 30-second rule per
 	-- finalized-brainstorm.md §4.7 F4 / CLAUDE.md). New players see
 	-- something interesting in 30 seconds; first reward by ~25-30s. F4 ships the *infrastructure* — server state machine + client

@@ -68,6 +68,25 @@ function MonetizationService.Init()
 		pushOwnershipState(player)
 	end)
 
+	-- G7: Pass-bound cosmetic grants. When ownership flips to true,
+	-- grant the cosmetics listed in Constants.COSMETIC.PassUnlocks for
+	-- that pass. Per user-approved G7 design (2026-05-05): unlock-only
+	-- + toast (CosmeticService fires the toast Remote internally).
+	-- Lazy-require to avoid load-time cycle with Cosmetics module.
+	GamePassService.OnOwnershipChanged:Connect(function(player: Player, passKey: string, owned: boolean)
+		if not owned then
+			return
+		end
+		local unlocks = Constants.COSMETIC.PassUnlocks[passKey]
+		if not unlocks then
+			return
+		end
+		local CosmeticService = require(script.Parent.Parent.Cosmetics.CosmeticService)
+		for _, cosmeticId in unlocks do
+			CosmeticService.GrantCosmetic(player, cosmeticId)
+		end
+	end)
+
 	-- Push an initial state on join in case the player connects before
 	-- any OnOwnershipChanged fires (e.g. all passes default to "not
 	-- owned" with placeholder IDs — no flip occurs and the client

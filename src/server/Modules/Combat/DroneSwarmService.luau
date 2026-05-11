@@ -47,6 +47,7 @@ local DroneSwarmRegistry =
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local DamageService = require(script.Parent.DamageService)
 local BeamPool = require(script.Parent.BeamPool)
+local CosmeticService = require(script.Parent.Parent.Cosmetics.CosmeticService)
 
 type SwarmPreset = DroneSwarmRegistry.SwarmPreset
 
@@ -339,7 +340,14 @@ local function tickTargetingFor(swarm: Swarm)
 					local hpBefore = humanoid.Health
 					DamageService.ApplyToHumanoid(humanoid, Constants.COMBAT.DroneDamage, "drone_raycast")
 					local hpAfter = humanoid.Health
-					BeamPool.Acquire(drone.part.Position, target.Position, drone.preset.color, DRONE_BEAM_LIFETIME)
+					-- G7: equipped drone-trail cosmetic overrides the preset
+					-- color. Falls back to preset (Recon=blue / Combat=red /
+					-- Engineering=green) if player has the default trail.
+					local owner = Players:GetPlayerByUserId(drone.ownerUserId)
+					local trailColor = if owner
+						then (CosmeticService.GetEquippedTrailColor(owner) or drone.preset.color)
+						else drone.preset.color
+					BeamPool.Acquire(drone.part.Position, target.Position, trailColor, DRONE_BEAM_LIFETIME)
 					if hpBefore > 0 and hpAfter <= 0 then
 						local owner = Players:GetPlayerByUserId(drone.ownerUserId)
 						if owner then

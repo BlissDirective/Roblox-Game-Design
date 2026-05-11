@@ -31,6 +31,7 @@ local LeaderboardController = require(script.Modules.Social.LeaderboardControlle
 local FriendsPanel = require(script.Modules.Social.FriendsPanel)
 local VoiceController = require(script.Modules.Voice.VoiceController)
 local FTUEController = require(script.Modules.FTUE.FTUEController)
+local CosmeticController = require(script.Modules.Cosmetics.CosmeticController)
 
 HudController.Init()
 CameraController.Init()
@@ -48,6 +49,7 @@ LeaderboardController.Init()
 FriendsPanel.Init()
 VoiceController.Init()
 FTUEController.Init()
+CosmeticController.Init()
 
 print(
 	string.format(

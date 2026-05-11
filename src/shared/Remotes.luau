@@ -191,6 +191,27 @@ local Remotes = {
 	-- this server (either originated here or arrived via MessagingService).
 	ClanChatReceived = getOrCreate("ClanChatReceived", "RemoteEvent") :: RemoteEvent,
 
+	-- Phase G7 — Cosmetic system:
+	-- Server → Client. Args: (state: CosmeticService.State).
+	-- Pushed on join (after profile load), on every grant (BP claim,
+	-- VIP pass purchase, first-join defaults), and on every equip
+	-- change. Carries `owned` (map of cosmeticId → acquiredAt) and
+	-- `equipped` (map of slot → cosmeticId). Notification-only;
+	-- server is the source of truth.
+	CosmeticState = getOrCreate("CosmeticState", "RemoteEvent") :: RemoteEvent,
+	-- Client → Server (Function). Args: (slot: string, cosmeticId: string).
+	-- Server validates: slot is in Constants.COSMETIC.Slots, cosmeticId
+	-- is in CosmeticRegistry, cosmetic.slot matches the slot arg, player
+	-- owns the cosmetic. On success, mutates profile.equippedCosmetics
+	-- and re-applies the cosmetic to the character. Returns
+	-- CosmeticService.Result.
+	EquipCosmetic = getOrCreate("EquipCosmetic", "RemoteFunction") :: RemoteFunction,
+	-- Server → Client. Args: (toast: CosmeticService.UnlockToast).
+	-- Fired when a cosmetic is granted (BP claim, VIP unlock, etc.)
+	-- so the client can show a "New cosmetic unlocked!" toast. Carries
+	-- cosmeticId + source for display.
+	CosmeticUnlocked = getOrCreate("CosmeticUnlocked", "RemoteEvent") :: RemoteEvent,
+
 	-- Phase F4 — FTUE:
 	-- Server → Client. Args: (state: FTUEService.State).
 	-- Pushed on join (after profile load) for first-time players, and

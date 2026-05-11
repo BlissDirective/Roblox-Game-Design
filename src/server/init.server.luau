@@ -75,6 +75,7 @@ else
 	local FriendsService = require(script.Modules.Social.FriendsService)
 	local VoiceGate = require(script.Modules.Voice.VoiceGate)
 	local FTUEService = require(script.Modules.FTUE.FTUEService)
+	local CosmeticService = require(script.Modules.Cosmetics.CosmeticService)
 
 	-- G1: biome lighting profile applied at boot before plot build so
 	-- the world Lighting state is set before players see anything.
@@ -137,6 +138,13 @@ else
 	-- advance; pushes FTUEState on PlayerAdded for first-timers.
 	-- Init last so the QuestObjectives handlers it depends on are wired.
 	FTUEService.Init()
+	-- G7: cosmetic system. Init AFTER MonetizationService so the
+	-- VipOperator OnOwnershipChanged → cosmetic grant subscription
+	-- is in place by the time CosmeticService.Init grants defaults.
+	-- DroneSwarmService.Init (above) reads CosmeticService at fire
+	-- time; lazy module reference means load order between the two
+	-- is flexible.
+	CosmeticService.Init()
 
 	print(
 		string.format(
