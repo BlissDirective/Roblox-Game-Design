@@ -718,3 +718,146 @@ clear audiovisual event.
 ### Commit
 
 `feat(phaseG4): audio scaffolding (AudioRegistry + AudioService + AudioController)`
+
+---
+
+## G6 — Drone swarm VFX polish (Beam upgrade + audio cue)
+
+**Goal.** Upgrade the F3 placeholder Part-as-line beam visual to a
+real Beam-with-attachments + muzzle/impact particle bursts, and wire
+the `drone_fire` audio cue at the actual fire site. Result: each
+drone shot is a clear audiovisual event instead of a stripe of
+emissive Part appearing for 0.1 seconds.
+
+### Approach
+
+- **BeamPool host upgrade.** Each pooled host part is now an
+  invisible Part carrying:
+  - Two `Attachment` instances (`Origin` + `Impact`) at the beam
+    endpoints.
+  - A `Beam` instance bridging the two attachments — GPU-rendered,
+    width tapers `BeamWidthStart` (0.6 studs) → `BeamWidthEnd`
+    (0.2 studs), Transparency NumberSequence fades in then out,
+    LightEmission 1, FaceCamera on, `BeamSegments` 4.
+  - Two `ParticleEmitter`s — one per attachment. Both have `Rate = 0`
+    and emit only when `:Emit(N)` is called at fire time (`Muzzle`:
+    4 particles, wide spread; `Impact`: 6 particles, narrower spread,
+    faster speed).
+- **Acquire path** (signature unchanged: `Acquire(from, to, color, lifetime?)`):
+  - Pull a host from the pool (or lazy-build on exhaustion).
+  - Position the host CFrame at `from`; write `WorldPosition` on
+    both attachments so the beam renders between the two endpoints.
+  - Apply the per-shot color via `Beam.Color = ColorSequence.new(color)`.
+  - Trigger one-shot emits on both particle emitters.
+  - Parent host to Workspace; schedule `task.delay(lifetime, releaseHost)`.
+- **Same pool, same lifecycle.** No change to BeamPoolSize or
+  BeamLifetimeSeconds — the pool keeps its 60-slot pre-allocation
+  and 0.1s default lifetime. Particles are tuned to vanish well
+  within that window (max lifetime 0.25s for impact sparks, but
+  they're parented to the host so they get pooled back too —
+  ParticleEmitter:Emit particles persist as long as their `Lifetime`
+  property even after the emitter stops emitting, but the host
+  Part re-entering ServerStorage means they continue rendering in
+  storage; benign because nobody's looking at ServerStorage).
+- **Audio cue on fire.** `DroneSwarmService` now imports
+  `AudioService` and calls
+  `AudioService.PlayAtPosition("drone_fire", drone.part.Position)`
+  immediately after `BeamPool.Acquire`. Spatial audio attenuation
+  handles audibility — distant raids don't blast nearby players'
+  speakers. AudioController's per-cue throttle (40ms via
+  `AudioRegistry.drone_fire.throttleMs`) coalesces multi-drone
+  fires in the same frame, preventing mix clipping at 12-drone
+  swarm peak fire rate (24 shots/sec).
+- **Non-breaking for turrets.** TurretService still calls
+  `BeamPool.Acquire(muzzle, alienRoot.Position, TURRET_BEAM_COLOR)`
+  with the same signature — turret shots immediately benefit from
+  the Beam visual upgrade for free. (Audio cue wiring for turret
+  shots is intentionally deferred; turret rate-of-fire would need
+  per-tier throttle tuning + 3 separate cues from AudioRegistry,
+  which is a separate sub-phase if we want it in V1.)
+
+### Files touched
+
+- `src/shared/Constants.luau` — `COMBAT` block: added `BeamWidthStart`,
+  `BeamWidthEnd`, `BeamSegments`, `MuzzleParticleCount`,
+  `ImpactParticleCount`.
+- `src/server/Modules/Combat/BeamPool.luau` — full rewrite of pool
+  members + Acquire (still ~230 lines, same public API).
+- `src/server/Modules/Combat/DroneSwarmService.luau` — AudioService
+  require + `PlayAtPosition("drone_fire", ...)` at fire site.
+
+### Audit (G6-scope, sandbox-side)
+
+- `--!strict` preserved; FindFirstChild casts use `::` annotation
+  on every member access (Origin / Impact / Beam attachments +
+  emitters).
+- Defensive rebuild path inside Acquire: if a pooled host somehow
+  lost its children, the code rebuilds the host rather than
+  crashing. Logs a warn so the issue surfaces in dev.
+- Particle emitter parents are Attachment instances on the host
+  Part. When the host returns to ServerStorage at lifetime expiry,
+  the emitters go with it — no orphans in Workspace.
+- Audio cue throttle: `drone_fire.throttleMs = 40` set in
+  AudioRegistry. With `DroneFireSeconds` per-drone cooldown plus the
+  throttle, max effective audible-shot rate is ~25 Hz even when
+  all 12 drones fire simultaneously.
+- Beam.LightEmission = 1 + LightInfluence = 0 means the beam visually
+  glows on mobile without contributing to the 50-light cap (it's a
+  GPU billboard, not a PointLight).
+- Pool capacity check: at peak, 64 fires/sec × 0.1s lifetime = ~6.4
+  active beams average. BeamPoolSize 60 has ~10× margin. No bump
+  needed.
+
+### Audit (G6-scope, Studio-side — pending Rojo sync)
+
+After sync:
+
+1. **Visual smoke test.** Join the main place. Drones spawn around
+   your character (E2.6 default Combat swarm). Walk near a wave
+   spawn (or use `WaveDirector.ForceStart()` if exposed). Expect:
+   per drone shot, a brief tapered glowing line + small particle
+   burst at the muzzle and at impact. Visual punch should read
+   on mobile (Galaxy A12-class).
+2. **Audio smoke test.** Same scenario. Until Phase H uploads
+   the `drone_fire` asset, you'll see no audible playback (assetId
+   = 0 is a no-op). After upload, expect a short high-pitched zap
+   per shot, positionally attenuated.
+3. **Pool-pressure check.** Stand near a busy raid spot with all 12
+   drones engaging. Watch the `BeamPool` print on boot (60 beam
+   hosts pre-allocated). With pool size 60 and ~6 average concurrent
+   beams, no "Exhausted" warns should fire.
+4. **Turret regression check.** Wave-defense your base. Turret
+   shots should now also render via the new Beam + sparks (free
+   upgrade — TurretService change is zero-LOC but the visual is
+   different). Confirm no errors in output.
+
+### Tech debt deferred
+
+- **Turret audio cues** (turret_fire_tier1/2/3 in AudioRegistry but
+  no fire-site wire-up yet). When a future polish pass adds them,
+  the cue id will need to come from `TurretRegistry.GetTier(...)`
+  + per-tier rate tuning (Coil Mast at 1 shot/3s is a different
+  audio personality from Pulse Turret at 1 shot/0.5s). Out of
+  G6 scope — separate sub-phase.
+- **Beam texture.** Currently uses the default (white) Beam
+  material. Phase H can upload a custom beam texture
+  (`rbxasset://textures/particles/sparkles_main.dds` placeholder
+  on emitters today). One-line swap on `beam.Texture`.
+- **Cosmetic-driven beam Light.** G7 cosmetic drone trails set the
+  beam Color already (via the trailColor branch in
+  DroneSwarmService.tickTargetingFor). Future polish: per-cosmetic
+  beam Width / Segments / particle texture for the legendary
+  trails.
+- **Impact decal / scorch mark.** Out of V1 scope; lands in V1.5
+  Living Jungle work where surfaces persist hit feedback.
+
+### What's next
+
+G6 closes the drone-swarm polish loop. G5 (UI polish) and G8
+(FTUE polish) remain deferred pending a design conversation with
+the user — both are taste-driven and benefit from your direct
+review of the current build before we layer more on top.
+
+### Commit
+
+`feat(phaseG6): drone-swarm VFX polish (Beam pool upgrade + audio cue)`

@@ -748,6 +748,16 @@ local Constants = {
 		-- degradation per the AlienPool / DroneSwarm pattern).
 		BeamPoolSize = 60,
 		BeamLifetimeSeconds = 0.1, -- standard turret/drone beam visual duration
+		-- G6: Beam visual polish. Real Beam-with-attachments replaces
+		-- the F3 Part-line-segment. Width tapers from start (wide muzzle
+		-- flare) to end (narrow impact). Muzzle + impact particle counts
+		-- are one-shot Emits at acquire time (no continuous spawn cost
+		-- because the host part is short-lived).
+		BeamWidthStart = 0.6, -- studs at attachment0 (origin / muzzle)
+		BeamWidthEnd = 0.2, -- studs at attachment1 (impact)
+		BeamSegments = 4, -- GPU-side beam subdivision; higher = smoother but more draw cost
+		MuzzleParticleCount = 4, -- one-shot Emit at fire origin per shot
+		ImpactParticleCount = 6, -- one-shot Emit at impact point per shot
 	},
 
 	-- Clan / squad system (Phase E3). 4-person max per brainstorm §2.6

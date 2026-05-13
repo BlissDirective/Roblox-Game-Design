@@ -48,6 +48,7 @@ local DataManager = require(script.Parent.Parent.Player.DataManager)
 local DamageService = require(script.Parent.DamageService)
 local BeamPool = require(script.Parent.BeamPool)
 local CosmeticService = require(script.Parent.Parent.Cosmetics.CosmeticService)
+local AudioService = require(script.Parent.Parent.Audio.AudioService)
 
 type SwarmPreset = DroneSwarmRegistry.SwarmPreset
 
@@ -348,6 +349,11 @@ local function tickTargetingFor(swarm: Swarm)
 						then (CosmeticService.GetEquippedTrailColor(owner) or drone.preset.color)
 						else drone.preset.color
 					BeamPool.Acquire(drone.part.Position, target.Position, trailColor, DRONE_BEAM_LIFETIME)
+					-- G6: spatial audio cue at the drone's position. Rate
+					-- of fire is bounded by DroneFireSeconds + AudioController
+					-- per-cue throttle, so this can't drown the mix even at
+					-- 12 drones × 2 shots/sec peak.
+					AudioService.PlayAtPosition("drone_fire", drone.part.Position)
 					if hpBefore > 0 and hpAfter <= 0 then
 						local owner = Players:GetPlayerByUserId(drone.ownerUserId)
 						if owner then

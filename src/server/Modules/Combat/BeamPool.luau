@@ -2,31 +2,38 @@
 --[[
 	Outpost-7 — beam visual pool (turret/drone "shoot a line" effect).
 
-	Phase F3. Replaces the per-shot `Instance.new("Part") +
-	Debris:AddItem` pattern that E2.5 (TurretService) and E2.6
-	(DroneSwarmService) shipped. CLAUDE.md: "Object pool anything
-	spawned in bulk... `Instance.new` in tight loops is the #1 cause
-	of frame drops on lower-end mobile devices."
+	Phase F3 (original pool). Phase G6 visual upgrade.
+
+	F3: replaces the per-shot `Instance.new("Part") + Debris:AddItem`
+	pattern that E2.5 (TurretService) and E2.6 (DroneSwarmService)
+	shipped. CLAUDE.md: "Object pool anything spawned in bulk...
+	`Instance.new` in tight loops is the #1 cause of frame drops on
+	lower-end mobile devices."
+
+	G6: each pooled "beam" is now an invisible host Part carrying:
+	  - two Attachments (`Origin`, `Impact`)
+	  - a `Beam` instance bridging the two attachments (GPU-rendered,
+	    width tapers from start → end, light-emitting Neon look)
+	  - a `ParticleEmitter` on Origin (one-shot muzzle flare)
+	  - a `ParticleEmitter` on Impact (one-shot impact spark)
+	The pool API stays the same: `Acquire(from, to, color, lifetime?)`.
+	Acquire repositions the two attachments in world space, sets the
+	beam color, and triggers `:Emit(N)` on both particle emitters.
 
 	Why this matters at peak load:
-	  - 40 turrets × 1 shot/sec = 40 Instance.new/sec from turrets
-	  - 12 drones × 2 shots/sec = 24 Instance.new/sec from drones
-	  - ≈ 64 Parts created + destroyed per second at peak
-	  - Each is a full Studio replication round-trip per Part (create
-	    + property writes + parent + destroy)
+	  - 40 turrets × 1 shot/sec = 40 fires/sec from turrets
+	  - 12 drones × 2 shots/sec = 24 fires/sec from drones
+	  - ≈ 64 effects per second at peak
+	  - Pool means ZERO Instance.new at fire time
 
 	Pool semantics:
-	  - Pre-allocate `BeamPoolSize` (60) Parts in ServerStorage on Init
-	  - Acquire(from, to, color, lifetime?): grab a Part, configure,
-	    parent to Workspace, schedule return-to-pool via task.delay
+	  - Pre-allocate `BeamPoolSize` (60) host Parts in ServerStorage on Init
+	  - Acquire: grab a host, reposition attachments, fire particles,
+	    parent host to Workspace, schedule return via task.delay
 	  - On lifetime expire: parent back to ServerStorage, available
 	    for next Acquire
-	  - Pool exhausted: spawn fresh Part with warn log (graceful
+	  - Pool exhausted: build fresh host with warn log (graceful
 	    degradation matches AlienPool / DroneSwarmService pattern)
-
-	Phase G replaces the Part-line-segment visual with a proper Beam
-	+ ParticleEmitter pair; the pool API stays the same (Acquire /
-	auto-release after lifetime).
 
 	Public API:
 	  Init                                         — pre-allocate the pool
@@ -62,32 +69,116 @@ local function ensurePool()
 	poolFolder = f
 end
 
-local function buildBeamPart(): BasePart
+local function buildMuzzleEmitter(parent: Attachment): ParticleEmitter
+	-- G6: short-lived muzzle flare. Emit-on-fire (no continuous Rate).
+	local p = Instance.new("ParticleEmitter")
+	p.Name = "Muzzle"
+	p.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	p.Rate = 0 -- only emits via :Emit()
+	p.Lifetime = NumberRange.new(0.08, 0.18)
+	p.Speed = NumberRange.new(2, 6)
+	p.SpreadAngle = Vector2.new(35, 35)
+	p.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.6),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	p.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	p.LightEmission = 1
+	p.LightInfluence = 0
+	p.Rotation = NumberRange.new(0, 360)
+	p.RotSpeed = NumberRange.new(-180, 180)
+	p.Acceleration = Vector3.new(0, -4, 0)
+	p.Enabled = true -- emit when Emit() is called; not continuous
+	p.Parent = parent
+	return p
+end
+
+local function buildImpactEmitter(parent: Attachment): ParticleEmitter
+	-- G6: impact spark — narrower spread, faster particles outward.
+	local p = Instance.new("ParticleEmitter")
+	p.Name = "Impact"
+	p.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	p.Rate = 0
+	p.Lifetime = NumberRange.new(0.10, 0.25)
+	p.Speed = NumberRange.new(4, 10)
+	p.SpreadAngle = Vector2.new(20, 20)
+	p.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.5),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	p.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.5, 0.4),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	p.LightEmission = 1
+	p.LightInfluence = 0
+	p.Rotation = NumberRange.new(0, 360)
+	p.RotSpeed = NumberRange.new(-360, 360)
+	p.Acceleration = Vector3.new(0, -2, 0)
+	p.Enabled = true
+	p.Parent = parent
+	return p
+end
+
+local function buildBeamHost(): BasePart
+	-- Invisible host Part. The Beam child is the actual visual; the
+	-- two Attachments are the beam endpoints.
 	local part = Instance.new("Part")
-	part.Name = "Beam"
+	part.Name = "BeamHost"
 	part.Anchored = true
 	part.CanCollide = false
 	part.CastShadow = false
-	part.Material = Enum.Material.Neon
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	-- Default size; Acquire overrides per-shot.
-	part.Size = Vector3.new(0.2, 0.2, 1)
+	part.Transparency = 1
+	part.Size = Vector3.new(0.1, 0.1, 0.1)
+
+	local origin = Instance.new("Attachment")
+	origin.Name = "Origin"
+	origin.Parent = part
+
+	local impact = Instance.new("Attachment")
+	impact.Name = "Impact"
+	impact.Parent = part
+
+	local beam = Instance.new("Beam")
+	beam.Name = "Beam"
+	beam.Attachment0 = origin
+	beam.Attachment1 = impact
+	beam.Width0 = Constants.COMBAT.BeamWidthStart
+	beam.Width1 = Constants.COMBAT.BeamWidthEnd
+	beam.Segments = Constants.COMBAT.BeamSegments
+	beam.LightEmission = 1
+	beam.LightInfluence = 0
+	beam.FaceCamera = true
+	-- Fade in at start, fade out at end — quick visual punch.
+	beam.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(0.5, 0.0),
+		NumberSequenceKeypoint.new(1, 0.6),
+	})
+	beam.Parent = part
+
+	buildMuzzleEmitter(origin)
+	buildImpactEmitter(impact)
+
 	return part
 end
 
-local function acquirePart(): BasePart
+local function acquireHost(): BasePart
 	local part: BasePart? = table.remove(available)
 	if part then
 		return part
 	end
 	-- Pool exhausted — graceful degradation. Phase H prep may bump
 	-- BeamPoolSize if this warn fires regularly in production.
-	warn("[BeamPool] Exhausted — spawning fresh Beam (tune BeamPoolSize)")
-	return buildBeamPart()
+	warn("[BeamPool] Exhausted — spawning fresh BeamHost (tune BeamPoolSize)")
+	return buildBeamHost()
 end
 
-local function releasePart(part: BasePart)
+local function releaseHost(part: BasePart)
 	if not part.Parent then
 		return
 	end
@@ -97,35 +188,63 @@ end
 
 function BeamPool.Acquire(from: Vector3, to: Vector3, color: Color3, lifetime: number?)
 	ensurePool()
-	local diff = to - from
-	local length = diff.Magnitude
-	if length <= 0 then
+	if (to - from).Magnitude <= 0 then
 		return
 	end
-	local part = acquirePart()
-	-- Configure + place. Beam thickness is a per-shot constant; size
-	-- only changes in length to match from→to distance.
-	part.Size = Vector3.new(0.2, 0.2, length)
-	part.Color = color
-	part.CFrame = CFrame.lookAt(from + diff / 2, to)
+	local part = acquireHost()
+	-- Find the persistent children built at pool-Init time.
+	local origin = part:FindFirstChild("Origin") :: Attachment
+	local impact = part:FindFirstChild("Impact") :: Attachment
+	local beam = part:FindFirstChild("Beam") :: Beam
+	if not origin or not impact or not beam then
+		-- Defensive: a host that somehow lost its children. Rebuild it.
+		warn("[BeamPool] Host missing children; rebuilding")
+		part:Destroy()
+		part = buildBeamHost()
+		origin = part:FindFirstChild("Origin") :: Attachment
+		impact = part:FindFirstChild("Impact") :: Attachment
+		beam = part:FindFirstChild("Beam") :: Beam
+	end
+
+	-- Position. The host Part itself sits at `from`; attachment WorldPosition
+	-- writes the visual endpoints in world space.
+	part.CFrame = CFrame.new(from)
+	origin.WorldPosition = from
+	impact.WorldPosition = to
+
+	-- Color (uniform along the beam; particle sparks pick up from the
+	-- emitters' default white).
+	beam.Color = ColorSequence.new(color)
+
 	part.Parent = Workspace
 
+	-- One-shot particle bursts at both ends.
+	local muzzle = origin:FindFirstChild("Muzzle") :: ParticleEmitter?
+	local spark = impact:FindFirstChild("Impact") :: ParticleEmitter?
+	if muzzle then
+		muzzle:Emit(Constants.COMBAT.MuzzleParticleCount)
+	end
+	if spark then
+		spark:Emit(Constants.COMBAT.ImpactParticleCount)
+	end
+
 	-- Schedule release. Using task.delay (vs Debris:AddItem with destroy)
-	-- because we need to recycle, not destroy.
+	-- because we need to recycle, not destroy. Pool stays warm for the
+	-- next shot.
 	local effectiveLifetime = lifetime or Constants.COMBAT.BeamLifetimeSeconds
 	task.delay(effectiveLifetime, function()
-		releasePart(part)
+		releaseHost(part)
 	end)
 end
 
 function BeamPool.Init()
 	ensurePool()
 	for _ = 1, Constants.COMBAT.BeamPoolSize do
-		local part = buildBeamPart()
+		local part = buildBeamHost()
 		part.Parent = poolFolder
 		table.insert(available, part)
 	end
-	print(string.format("[BeamPool] Pre-allocated %d beam parts.", #available))
+	print(string.format("[BeamPool] Pre-allocated %d beam hosts (Beam + 2 emitters each).", #available))
 end
 
 return BeamPool
