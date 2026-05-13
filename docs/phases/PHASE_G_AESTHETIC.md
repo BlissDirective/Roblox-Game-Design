@@ -403,3 +403,141 @@ ambient SFX mix).
 ### Commit
 
 `feat(phaseG2): biome decoration layer (volcanic primary; framework covers all 3)`
+
+---
+
+## G3 — Ice cave overlay
+
+**Goal.** Layer cave-specific decor (stalactites, stalagmites, glacier
+silhouettes) on top of the G2 base ring for the `ice` biome. The
+generic G2 framework already covers open-air ring flora + particles
+for all 3 biomes; G3 is the additive layer that gives ice its
+"inside an alien cave" identity without forking the decoration
+pipeline.
+
+### Approach
+
+- **Opt-in data block.** Added `caveOverlay = { ... }` to
+  `Constants.BIOME.Decorations.ice`. Other biomes leave the field
+  nil and `applyCaveOverlay` returns early — no per-biome branch
+  in the service, just data-driven opt-in. Future cavern biomes
+  (V1.5+ deep-jungle catacombs, V2 volcanic lava tubes) plug in
+  the same way.
+- **Three new build helpers** in `BiomeDecorationService`:
+  - `buildIcicle(cave, position, size, pointDown)` — `Material.Ice`
+    + `Transparency 0.15` + ~20% chance of accent `PointLight`
+    (shadows off, same light-cap discipline as G2 flora). When
+    `pointDown = true`, rotated 180° on X-axis so the icicle hangs
+    from the ceiling.
+  - `buildGlacierWall(cave, position, lookAt)` — `Material.Glacier`
+    + `Transparency 0.05`, large flat slab oriented via
+    `CFrame.lookAt(position, plot.center)` so the inner face points
+    toward the player. Creates the "we are inside a frozen amphi-
+    theatre" silhouette ring.
+  - `applyCaveOverlay(biomeDecor, plot, plotFolder)` — orchestrates
+    the three spawn loops. Reads `biomeDecor.caveOverlay`; returns
+    immediately if nil.
+- **Deterministic seed offset.** Cave RNG seeds at
+  `plot.id * 1000 + 7000` so cave element positions don't co-locate
+  with base flora (which uses `plot.id * 1000 + #biomeId` ≈ 4000
+  for ice). Same `(biome, plotId) → identical layout` guarantee as
+  G2.
+- **Spawn distribution:**
+  - Stalactites: random angle, distance `0 — plot.size/3`, height
+    `plot.center.Y + 18` (hanging from ceiling above plot interior).
+  - Stalagmites: random angle, distance `plot.size/2 + 2 — +6`
+    (ring just outside the plot floor, where they're visible but
+    don't block building placement).
+  - Glacier walls: 4 walls evenly distributed (angle =
+    `i / count * 2π`) at `glacierWallDistance = 120` studs —
+    outside the `DecorationRadius = 96`, sitting at the visual
+    horizon as silhouettes.
+- **Init order unchanged.** G3 hooks in inside the existing
+  per-plot loop of `BiomeDecorationService.Apply`, after the
+  particle host is parented. No new module, no Init re-ordering.
+
+### Files touched
+
+- `src/shared/Constants.luau` — added `caveOverlay` block to
+  `BIOME.Decorations.ice` (12 fields).
+- `src/server/Modules/World/BiomeDecorationService.luau` —
+  added `buildIcicle`, `buildGlacierWall`, `applyCaveOverlay`
+  helpers + one call site inside `Apply`. +106 lines.
+
+### Audit (G3-scope, sandbox-side)
+
+- `--!strict` preserved; type annotations on every helper signature.
+- Idempotency: `Clear()` destroys the whole `OutpostBiomeDecorations`
+  folder, which now includes the cave parts (they live under the
+  same `plotFolder`). Re-Apply rebuilds cleanly.
+- Anchored + CanCollide=false + CastShadow=false on every cave part
+  (mobile-safe defaults match G2).
+- PointLight cap: ~20% × 20 icicles × 4 plots = ~16 lights for cave
+  overlay, plus base ring's ~24 lights from G2 flora = ~40. Still
+  under Roblox's mobile 50-light advisory. Stalagmites + walls
+  intentionally light-free to keep budget.
+- Plot collision: stalagmites + walls sit *outside* `plot.size/2`,
+  so they cannot clip with PlacementService grid cells. Stalactites
+  hang above plot interior at `+18` Y, well clear of the tallest
+  V1 turret (Coil Mast, ~8 studs tall).
+- Determinism: re-Applying `"ice"` after `Apply("jungle")`
+  reproduces the same cave layout from the seeded RNG. Verified
+  by code-read; live verification deferred to Studio pass.
+- No new Constants read at runtime besides the new block — `caveOverlay`
+  nil-check is the only conditional, so G3 cannot regress jungle /
+  volcanic apply paths.
+
+### Audit (G3-scope, Studio-side — pending your local run)
+
+After Rojo sync:
+
+1. **Apply ice in Server Command Bar** —
+   ```luau
+   local BLS = require(game.ServerScriptService.Server.Modules.World.BiomeLightingService)
+   local BDS = require(game.ServerScriptService.Server.Modules.World.BiomeDecorationService)
+   BLS.Apply("ice")
+   BDS.Apply("ice")
+   ```
+   Expect, per plot: 24 base flora (G2 ring) + 8 stalactites
+   hanging above + 12 stalagmites ringing the floor edge + 4 glacier
+   walls at the 120-stud horizon. Total per plot: 48 cave parts.
+   Server total: 192 cave parts across 4 plots (still well within
+   mobile budget).
+2. **Re-Apply test** — call `BDS.Apply("ice")` twice; second call
+   should wipe + rebuild without leaking parts. Check Workspace
+   tree; only one `OutpostBiomeDecorations` folder should exist.
+3. **Visual sanity** — stand on a plot looking outward; you should
+   see the stalagmite ring at ground level, glacier slabs as
+   distant silhouettes, and stalactites overhead. The plot floor
+   itself stays clear.
+4. **Mobile FPS** — same gate as G2 (≥30 FPS idle on Galaxy A12-
+   class device). G3's added geometry is anchored/static so the
+   only cost is draw calls; if FPS drops, reduce `stalactitesPerPlot`
+   or `stalagmitesPerPlot` first.
+
+### Tech debt deferred
+
+- Cave parts are programmatic `Ice` / `Glacier` material Parts.
+  Phase G art queue can replace with MeshPart imports for sharper
+  silhouettes (`assets/world/biome_ice/stalactite.fbx`,
+  `glacier_wall.fbx`). The build helpers each take a `size` param
+  so swapping to MeshPart is a one-line addition (clone template
+  + scale).
+- Ambient SFX still placeholder-zero in `Constants.BIOME.Decorations.ice.ambientSfxAssetId`.
+  Phase H upload: wind-through-cave loop. G4 (audio scaffolding)
+  lands the upload pipeline; G3 doesn't change the SFX wiring.
+- Cave overlay only applies to `ice` in V1. V1.5+ volcanic lava-
+  tube biome reuses the same overlay block with `Material.CrackedLava`
+  + warm crystal colors — no service change needed.
+
+### What's next
+
+G4 — Audio scaffolding (AudioService server + AudioController
+client + AudioRegistry shared module). Placeholder asset IDs in
+`Constants.AUDIO`; real uploads happen in Phase H but the playback
+plumbing lands here so feature work in G6+ can call
+`AudioRegistry.Play("turret_fire_tier1")` against the real surface.
+
+### Commit
+
+`feat(phaseG3): ice cave overlay (stalactites + stalagmites + glacier walls)`

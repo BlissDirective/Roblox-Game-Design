@@ -575,6 +575,26 @@ local Constants = {
 				particleLifetimeMax = 10,
 				particleUpwardSpeed = 0.5, -- frost drifts slowly
 				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — glacial wind howl
+				-- G3: Cave-specific overlay (only set on biomes that
+				-- have one — jungle/volcanic leave nil and the
+				-- BiomeDecorationService skips this branch). Stalactites
+				-- hang from above the plot bounds; stalagmites rise from
+				-- around the plot ring. Glacier walls give the player
+				-- a sense of cave enclosure in the mid-distance.
+				caveOverlay = {
+					stalactitesPerPlot = 8, -- hanging icicles above each plot
+					stalactiteHeight = 18, -- studs above plot floor
+					stalactiteSize = Vector3.new(1.2, 8, 1.2),
+					stalagmitesPerPlot = 12, -- ground-rising icicle clusters
+					stalagmiteHeight = 4,
+					stalagmiteSize = Vector3.new(1, 5, 1),
+					glacierWallsPerPlot = 4, -- large flat walls at the horizon ring
+					glacierWallSize = Vector3.new(24, 16, 4),
+					glacierWallDistance = 120, -- studs from plot center (outside DecorationRadius)
+					emissive = 0.7,
+					crystalColor = Color3.fromRGB(170, 220, 255),
+					crystalAccent = Color3.fromRGB(120, 180, 220),
+				},
 			},
 		},
 	},

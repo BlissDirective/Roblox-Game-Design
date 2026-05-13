@@ -166,6 +166,108 @@ function BiomeDecorationService.Clear()
 	end
 end
 
+-- G3: Cave overlay — stalactites + stalagmites + glacier walls.
+-- Only fires for biomes with a `caveOverlay` config block (ice in V1;
+-- future cavern biomes can opt in). Stalactites + stalagmites use the
+-- same flora-pattern ring distribution as base flora; glacier walls
+-- sit further out at the horizon distance.
+local function buildIcicle(
+	cave: any,
+	position: Vector3,
+	size: Vector3,
+	pointDown: boolean
+): BasePart
+	local part = Instance.new("Part")
+	part.Name = if pointDown then "Stalactite" else "Stalagmite"
+	part.Anchored = true
+	part.CanCollide = false
+	part.CastShadow = false
+	part.Material = Enum.Material.Ice
+	part.Color = cave.crystalColor
+	part.Size = size
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.Transparency = 0.15 -- slight translucency for the ice look
+	-- Stalactites point down (rotated 180 on Z); stalagmites point up.
+	if pointDown then
+		part.CFrame = CFrame.new(position) * CFrame.Angles(math.rad(180), 0, 0)
+	else
+		part.CFrame = CFrame.new(position)
+	end
+	-- Sparse accent PointLight on ~20% of icicles (light-cap-friendly).
+	local rng = Random.new()
+	if rng:NextNumber() < 0.20 then
+		local light = Instance.new("PointLight")
+		light.Color = cave.crystalAccent
+		light.Brightness = cave.emissive
+		light.Range = 14
+		light.Shadows = false
+		light.Parent = part
+	end
+	return part
+end
+
+local function buildGlacierWall(cave: any, position: Vector3, lookAt: Vector3): BasePart
+	local part = Instance.new("Part")
+	part.Name = "GlacierWall"
+	part.Anchored = true
+	part.CanCollide = false
+	part.CastShadow = false
+	part.Material = Enum.Material.Glacier
+	part.Color = cave.crystalColor
+	part.Size = cave.glacierWallSize
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.Transparency = 0.05
+	-- Face the wall toward the plot center for a "we are inside the cave"
+	-- feel.
+	part.CFrame = CFrame.lookAt(position, lookAt)
+	return part
+end
+
+local function applyCaveOverlay(biomeDecor: any, plot: PlotManager.PlotInfo, plotFolder: Folder)
+	local cave = biomeDecor.caveOverlay
+	if not cave then
+		return
+	end
+	-- Deterministic seed: shift from the base flora seed so cave
+	-- elements don't overlap base flora positions visibly.
+	local rng = Random.new(plot.id * 1000 + 7000)
+	local centerY = plot.center.Y
+
+	-- Stalactites: hang above plot, random XZ within a smaller radius.
+	for _ = 1, cave.stalactitesPerPlot do
+		local angle = rng:NextNumber(0, math.pi * 2)
+		local dist = rng:NextNumber(0, plot.size / 3)
+		local x = plot.center.X + math.cos(angle) * dist
+		local z = plot.center.Z + math.sin(angle) * dist
+		local pos = Vector3.new(x, centerY + cave.stalactiteHeight, z)
+		local part = buildIcicle(cave, pos, cave.stalactiteSize, true)
+		part.Parent = plotFolder
+	end
+
+	-- Stalagmites: ground-rise at the ring edge (just outside plot).
+	for _ = 1, cave.stalagmitesPerPlot do
+		local angle = rng:NextNumber(0, math.pi * 2)
+		local dist = rng:NextNumber(plot.size / 2 + 2, plot.size / 2 + 6)
+		local x = plot.center.X + math.cos(angle) * dist
+		local z = plot.center.Z + math.sin(angle) * dist
+		local pos = Vector3.new(x, centerY + cave.stalagmiteHeight / 2, z)
+		local part = buildIcicle(cave, pos, cave.stalagmiteSize, false)
+		part.Parent = plotFolder
+	end
+
+	-- Glacier walls: large mid-distance silhouettes ringing the plot.
+	for i = 1, cave.glacierWallsPerPlot do
+		local angle = (i / cave.glacierWallsPerPlot) * (math.pi * 2)
+		local x = plot.center.X + math.cos(angle) * cave.glacierWallDistance
+		local z = plot.center.Z + math.sin(angle) * cave.glacierWallDistance
+		local pos = Vector3.new(x, centerY + cave.glacierWallSize.Y / 2, z)
+		local wall = buildGlacierWall(cave, pos, plot.center)
+		wall.Parent = plotFolder
+	end
+end
+
 function BiomeDecorationService.Apply(biomeId: string)
 	local biomeDecor = Constants.BIOME.Decorations[biomeId]
 	if not biomeDecor then
@@ -207,6 +309,10 @@ function BiomeDecorationService.Apply(biomeId: string)
 		-- One ambient particle host per plot.
 		local host = buildAmbientHostPart(biomeDecor, plot)
 		host.Parent = plotFolder
+
+		-- G3: Cave overlay (ice biome only in V1; opt-in via caveOverlay
+		-- data block in Constants.BIOME.Decorations.<biome>).
+		applyCaveOverlay(biomeDecor, plot, plotFolder)
 	end
 
 	startAmbientSound(biomeDecor)
