@@ -279,6 +279,19 @@ local Remotes = {
 	-- defender on their home server when the outcome MessagingService
 	-- payload arrives (so they see a "Your colony was raided" toast).
 	RaidEnded = getOrCreate("RaidEnded", "RemoteEvent") :: RemoteEvent,
+
+	-- Phase G4 — audio cue broadcast (one-shot SFX / music transitions).
+	-- Server → Client. Args: (cueId: string, opts: AudioCueOptions?).
+	-- AudioCueOptions: { position?: Vector3, volume?: number, pitch?: number,
+	--                    targetPart?: BasePart, attachTo?: Instance, loopId?: string }.
+	-- One-shot cues (turret fire, drone fire, claim chime) leave `loopId`
+	-- nil. Looping music tracks set `loopId` so the client can crossfade
+	-- to a new track keyed by the same id. AudioController throttles
+	-- identical cueIds within Constants.AUDIO.ThrottleMs to coalesce
+	-- sub-frame bursts.
+	-- Pure-client UI sounds (button click, panel open) bypass this Remote
+	-- entirely — AudioController.PlayLocal handles them directly.
+	AudioCue = getOrCreate("AudioCue", "RemoteEvent") :: RemoteEvent,
 }
 
 return Remotes

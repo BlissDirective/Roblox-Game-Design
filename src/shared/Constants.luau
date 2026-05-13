@@ -848,6 +848,53 @@ local Constants = {
 		-- continue.
 		UseChatGroupDiagnostic = true,
 	},
+
+	-- Phase G4 — central audio mixer + cue policy.
+	--
+	-- Cue assets live in AudioRegistry (`src/shared/Modules/Registry/AudioRegistry.luau`);
+	-- the registry's `assetId` field is `0` until Phase H upload. The
+	-- AudioController treats `0` as a no-op so the entire system runs
+	-- silently in V1 dev builds — wiring stays exercised, no broken
+	-- Sound instances spam the output.
+	--
+	-- Per-category volume sliders feed the SoundService.SoundGroup
+	-- pre-mix; players can override at runtime via the settings panel
+	-- (V1.5+ — V1 ships fixed mix). Music vs. SFX are kept distinct so
+	-- adaptive music (Phase H) can duck during combat without nuking
+	-- gunfire.
+	AUDIO = {
+		-- Master gain (post-mix). 1.0 = unity. Players hit master via
+		-- settings; never written by gameplay code.
+		MasterVolume = 1.0,
+		-- Per-category gains. Pre-mix; multiplied by master at playback.
+		CategoryVolume = {
+			sfx = 0.85, -- combat + UI feedback foreground
+			music = 0.55, -- background, intentionally lower than sfx
+			ui = 0.7, -- click / claim / toast
+			ambient = 0.4, -- per-biome loops; quieter than sfx so combat punches
+			voice_emote = 0.8, -- V1.5+ voice clips (cosmetic taunts)
+		},
+		-- Pool tuning. Combat cues (turret_fire_*, drone_fire_*) fire at
+		-- bursty rates; pooling Sound instances avoids Instance.new spam.
+		-- Pool is per-cue id, lazy-allocated up to PoolSizePerCue.
+		PoolSizePerCue = 8, -- max concurrent Sound copies per cue id
+		-- Spatial audio defaults for PlayAtPosition. Roblox's Sound
+		-- attenuation properties are stud-based; mobile playtest tunes.
+		Spatial = {
+			RollOffMinDistance = 10,
+			RollOffMaxDistance = 200,
+			RollOffMode = "InverseTapered", -- Enum.RollOffMode name; AudioController converts
+		},
+		-- Throttle: identical cueId triggered by the server more than
+		-- once per <ThrottleMs> ms on the same client gets coalesced
+		-- (prevents minigun-style sub-frame Remote spam from drowning
+		-- the player's mix when 6 drones fire in the same frame).
+		-- Per-cue overrides land in AudioRegistry.throttleMs.
+		ThrottleMs = 40,
+		-- Music crossfade duration when AudioService.SwitchMusic fires.
+		-- Implemented client-side via tween on Sound.Volume.
+		MusicCrossfadeSeconds = 1.5,
+	},
 }
 
 return Constants

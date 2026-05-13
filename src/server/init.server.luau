@@ -33,6 +33,10 @@ if IS_RAID_SERVER then
 	local RaidSession = require(script.Modules.Raid.RaidSession)
 	local VoiceGate = require(script.Modules.Voice.VoiceGate)
 	local BiomeLightingService = require(script.Modules.World.BiomeLightingService)
+	local AudioService = require(script.Modules.Audio.AudioService)
+	-- G4: Audio dispatch service initialised early so RaidSession can
+	-- broadcast round-start music as soon as the round timer arms.
+	AudioService.Init()
 	RaidSession.Init()
 	-- Voice is enabled at the place level via raid.project.json's
 	-- VoiceChatService.EnableDefaultVoice = true. VoiceGate.Init is
@@ -77,6 +81,14 @@ else
 	local VoiceGate = require(script.Modules.Voice.VoiceGate)
 	local FTUEService = require(script.Modules.FTUE.FTUEService)
 	local CosmeticService = require(script.Modules.Cosmetics.CosmeticService)
+	local AudioService = require(script.Modules.Audio.AudioService)
+
+	-- G4: AudioService init runs first in the main-place chain so any
+	-- gameplay service that wants to fire cues during its own Init
+	-- (e.g., RaidMatchmaker queue confirmation chime) has a live
+	-- broadcast surface. The service is stateless; Init is a no-op
+	-- in V1 but ordering keeps the dependency explicit.
+	AudioService.Init()
 
 	-- G1: biome lighting profile applied at boot before plot build so
 	-- the world Lighting state is set before players see anything.

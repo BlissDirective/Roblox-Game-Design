@@ -541,3 +541,180 @@ plumbing lands here so feature work in G6+ can call
 ### Commit
 
 `feat(phaseG3): ice cave overlay (stalactites + stalagmites + glacier walls)`
+
+---
+
+## G4 — Audio scaffolding (registry + server dispatcher + client controller)
+
+**Goal.** Land the audio system's plumbing so feature work (G6 drone
+fire SFX, raid-start music, UI claim chimes) has a real `AudioService.Play(cueId, ...)`
+surface to call into. Asset uploads themselves are Phase H; G4 ships
+placeholders that wire without producing broken Sound errors.
+
+### Approach
+
+- **Three new files, one Remote, one Constants block:**
+  - `src/shared/Modules/Registry/AudioRegistry.luau` — catalog of
+    every named cue with metadata (category, assetId, volume, pitch,
+    rolloff, looped, per-cue throttle). 21 V1 cues across categories
+    sfx / ui / music / ambient. AssetId = 0 everywhere (placeholder);
+    AudioController treats 0 as a silent no-op.
+  - `src/server/Modules/Audio/AudioService.luau` — thin facade over
+    the AudioCue Remote. `PlayAll`, `PlayToPlayer`, `PlayToPlayers`,
+    `PlayAtPosition`, `SwitchMusic` (loopId-keyed crossfade). No
+    server-side mix state; broadcast-only.
+  - `src/client/Modules/Audio/AudioController.luau` — listens to
+    AudioCue, resolves cueId, allocates from a per-cue Sound pool,
+    applies category × master gain, handles spatial parenting
+    (targetPart / attachTo / position-anchor / SoundService default).
+    Music path crossfades via TweenService on Sound.Volume between
+    loopIds.
+  - `src/shared/Remotes.luau` — `AudioCue` (S→C RemoteEvent).
+    Args: (cueId: string, opts: dict). One Remote serves all cue
+    fires; cueId disambiguates.
+  - `src/shared/Constants.luau` — new `AUDIO` block: master volume,
+    per-category volumes (sfx 0.85, music 0.55, ui 0.7, ambient 0.4,
+    voice_emote 0.8), `PoolSizePerCue` = 8, spatial defaults
+    (RollOffMin 10, RollOffMax 200, InverseTapered), default
+    `ThrottleMs` = 40, `MusicCrossfadeSeconds` = 1.5.
+- **Pooling.** Per-cueId rolling pool keyed by `id`. `Acquire`
+  returns a Sound (lazy-allocated; no hard cap on simultaneous
+  polyphony — the cap is on *reuse* count to bound idle memory).
+  `Sound.Ended:Once` releases back into the pool, or destroys if
+  the pool is already at `PoolSizePerCue`.
+- **Throttle.** Per-cueId `lastFire` ledger; cues fired within
+  `cue.throttleMs` (or `Constants.AUDIO.ThrottleMs` default) coalesce
+  silently. Stops 6-drone-in-one-frame stacking from clipping the
+  mix on mobile.
+- **Music crossfade.** SwitchMusic broadcasts a cue with `opts.loopId`.
+  Client maintains `activeMusic[loopId] → Sound`; new loopId triggers
+  the existing track to tween its Volume → 0 over
+  `MusicCrossfadeSeconds`, while the new track tweens 0 → target.
+  Idempotent: same-loopId Switch is a no-op (calling SwitchMusic
+  twice with the same id won't restart the track).
+- **PlayLocal.** Pure-client UI cues (button clicks, panel open)
+  bypass the Remote entirely — `AudioController.PlayLocal(cueId)`
+  goes straight to the same handler.
+
+### Wiring
+
+- `src/server/init.server.luau` — `AudioService.Init()` runs:
+  - **Main place:** first in the main chain, before
+    `BiomeLightingService` (no ordering dependency in V1; positioned
+    early so any future service can fire cues during its own Init).
+  - **Raid place:** before `RaidSession.Init()` so raid round-start
+    music can fire as soon as the round timer arms.
+- `src/client/init.client.luau` — `AudioController.Init()` runs
+  FIRST, before `HudController.Init()`, so the AudioCue listener +
+  throttle ledger are live before any other controller fires a
+  local UI cue.
+
+### Categories + per-cue table (V1)
+
+| Category | Cues |
+|---|---|
+| sfx | turret_fire_tier1/2/3, drone_fire, alien_growl, alien_death, building_placed, building_destroyed, resource_node_depleted |
+| ui | ui_button_click, ui_panel_open, ui_panel_close, ui_toast, ui_claim_reward, ui_purchase_success, ui_error |
+| music | music_main_loop, music_raid_attacker, music_raid_defender, music_wave_victory |
+| ambient | ambient_jungle, ambient_volcanic, ambient_ice (forward-looking — G2 BiomeDecorationService still plays ambient loops directly via SoundService; V1.5+ migration routes them through AudioService) |
+| voice_emote | (none in V1; category reserved for V1.5+ cosmetic taunts) |
+
+### Files touched
+
+- `src/shared/Constants.luau` — `AUDIO` block (40 lines).
+- `src/shared/Remotes.luau` — `AudioCue` entry.
+- `src/shared/Modules/Registry/AudioRegistry.luau` — new (260 lines,
+  21 cue entries).
+- `src/server/Modules/Audio/AudioService.luau` — new (135 lines).
+- `src/client/Modules/Audio/AudioController.luau` — new (260 lines).
+- `src/server/init.server.luau` — AudioService require + Init in
+  both raid and main paths.
+- `src/client/init.client.luau` — AudioController require + Init.
+
+### Audit (G4-scope, sandbox-side)
+
+- `--!strict` on all 3 new modules. Type-annotated public API
+  (`Options`, `CueOpts`, `AudioCue`, `Category`).
+- AssetId = 0 placeholder discipline: AudioController.acquireSound
+  returns nil immediately; no Sound is parented and Play() never
+  runs. Dev builds stay silent for unmapped cues.
+- AudioService.ensureCue + AudioController.handleCue both warn on
+  unknown cueIds — typos surface at runtime, not silent failures.
+- Throttle: per-cue + global default. Tested mentally with 6 drones
+  firing in same frame: first call passes, 5 are dropped (throttle
+  window 40ms ≫ frame time at 60 FPS).
+- Cleanup: position-anchored Sound destroys the host Part on Ended.
+  No Workspace leak across re-Apply / re-Plays.
+- No DataStore touches, no Remote validation needed (server-only
+  fire path; clients can't trigger).
+- Bootstrap order: AudioController.Init runs first in client,
+  AudioService.Init runs early in server. Both paths exercised
+  in raid + main place builds.
+
+### Audit (G4-scope, Studio-side — pending Rojo sync)
+
+After sync:
+
+1. **Smoke test in Server Command Bar:**
+   ```luau
+   local AS = require(game.ServerScriptService.Server.Modules.Audio.AudioService)
+   AS.PlayAll("ui_claim_reward")
+   AS.PlayToPlayer(game.Players:GetPlayers()[1], "building_placed")
+   AS.PlayAtPosition("drone_fire", Vector3.new(0, 5, 0))
+   AS.SwitchMusic("main", "music_main_loop")
+   ```
+   Expected output for each: a `[AudioController]`-prefixed log
+   (in dev with `print` injected) and NO warnings. No audible
+   playback (assetId = 0 placeholders skip).
+2. **Bad cueId test:** `AS.PlayAll("nonexistent_cue")` →
+   `[AudioService] Unknown cueId 'nonexistent_cue'` warning,
+   no client traffic.
+3. **Client PlayLocal:** in StarterPlayerScripts command bar:
+   ```luau
+   local AC = require(game.Players.LocalPlayer.PlayerScripts.Client.Modules.Audio.AudioController)
+   AC.PlayLocal("ui_button_click")
+   ```
+   Same silent-no-op behavior.
+4. **Pool inspection:** after firing the same cue 10 times in
+   quick succession (with a real assetId injected for the test),
+   only `PoolSizePerCue` (8) Sound instances should remain parented
+   to SoundService.OutpostAudioHost. Verified by code-read; live
+   verification deferred until Phase H asset uploads land real
+   playback.
+
+### Tech debt deferred (Phase H upload window)
+
+- **21 cue uploads.** Per `ASSETS.md` audio queue. Each
+  AudioRegistry entry's `assetId = 0` flips to a real
+  rbxassetid integer. No code change required.
+- **G2 ambient loops stay on the old SoundService path.** When real
+  ambient assets land in Phase H, decide whether to migrate
+  BiomeDecorationService's ambient loop into AudioService
+  (so the master + ambient category sliders apply). V1.5+
+  migration is one-file: replace `startAmbientSound` body
+  with `AudioService.SwitchMusic("ambient", "ambient_<biome>")`.
+- **Player-facing settings.** V1 ships fixed mix. V1.5 settings
+  panel adds master / category sliders that mutate
+  `Constants.AUDIO.MasterVolume` (or a per-player override). The
+  effectiveVolume function is the single mutation point.
+- **Ducking + adaptive music.** Combat duck (lower music when
+  alien wave starts) and stinger overlays (raid round-end) are
+  Phase H polish. AudioController exposes the Sound instances
+  needed to tween volumes; the duck driver is a future module
+  (`AudioMixer` — V1.5+).
+- **Voice emotes.** voice_emote category is reserved; V1.5
+  cosmetic emote unlocks add entries here and a tiny client UI
+  to trigger them.
+
+### What's next
+
+G6 — Drone swarm VFX polish. Wire `drone_fire` cue through the
+service at the actual fire site in `DroneSwarmService`, and
+upgrade the beam visual (current beam is a thin emissive Part;
+V1 polish bump adds a Beam instance with a real attachment-driven
+trail). Pair with the audio cue so each drone shot lands as a
+clear audiovisual event.
+
+### Commit
+
+`feat(phaseG4): audio scaffolding (AudioRegistry + AudioService + AudioController)`

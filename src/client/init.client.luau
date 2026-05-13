@@ -32,6 +32,12 @@ local FriendsPanel = require(script.Modules.Social.FriendsPanel)
 local VoiceController = require(script.Modules.Voice.VoiceController)
 local FTUEController = require(script.Modules.FTUE.FTUEController)
 local CosmeticController = require(script.Modules.Cosmetics.CosmeticController)
+local AudioController = require(script.Modules.Audio.AudioController)
+
+-- G4: AudioController.Init wires the AudioCue Remote listener BEFORE
+-- any other controller fires a local UI cue, so the throttle ledger
+-- is live from frame 0.
+AudioController.Init()
 
 HudController.Init()
 CameraController.Init()
