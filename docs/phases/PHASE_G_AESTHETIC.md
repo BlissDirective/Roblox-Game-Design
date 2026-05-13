@@ -244,3 +244,162 @@ elements).
 ### Commit
 
 `feat(phaseG7): cosmetic system (closes D4 BattlePass launch blocker)`
+
+---
+
+## G2 — Biome decoration layer (volcanic primary; framework covers all 3) ✅
+
+**Date:** 2026-05-05
+**Branch:** `claude/audit-phases-a-d-2BAuW`
+
+### Scope clarification
+
+G1 shipped the lighting profile for all 3 biomes (Lighting state
+only). G2 adds the **decoration layer** — emissive flora + ambient
+particles + ambient SFX stub — that brings biomes to life beyond
+the base Lighting tone. The framework is generic across all 3
+biomes; volcanic data is the G2 specific deliverable per brainstorm
+§4.8 G2. Jungle + ice decoration data is populated too (V1 default
+main place is jungle, so decoration coverage day-1).
+
+### What was built
+
+#### Server
+
+- **`Constants.BIOME.Decorations`** — per-biome decoration data
+  block. Each biome carries:
+  - `floraColor` + `floraAccent` + `floraEmissive` — programmatic
+    cube placeholder properties (Phase G art queue replaces with
+    `floraTemplate` MeshPart references)
+  - `floraSize` — base dimensions (Vector3)
+  - `floraTemplate` — nil for V1 (procedural); Phase G+ field for
+    imported MeshPart clones from `assets/world/biome_*/`
+  - Particle config: color, transparency, lifetime range, upward speed
+  - `ambientSfxAssetId` — placeholder 0 until Phase H asset pipeline
+    uploads per-biome ambient loops
+- **`Constants.BIOME.DecorationRadius = 96`** + `DecorationsPerPlot
+  = 24` + `ParticleSpawnRate = 6` + `AmbientSfxVolume = 0.3` — V1
+  tuning placeholders.
+- **`World/BiomeDecorationService.luau`** (NEW) — spawns flora +
+  particles + ambient sound per active biome. Public API:
+  - `Apply(biomeId)` — clears prior decorations, spawns per the
+    biome's data, kicks off ambient SFX loop
+  - `Clear()` — destroys the `Workspace.OutpostBiomeDecorations`
+    folder + the `SoundService.OutpostBiomeAmbient` Sound
+  - `Init()` — calls `Apply(Constants.BIOME.DefaultBiome)` at boot
+  Decoration distribution: per-plot ring sampling (random angle ×
+  random distance within `[plotSize/2 + 4, DecorationRadius]`) so
+  flora sits *around* plots, not on top of buildings. Seeded
+  `Random.new(plot.id * 1000 + #biomeId)` for stability across
+  server restarts (same plot + biome combo always renders same
+  layout — useful for screenshots / TikTok consistency).
+  Each plot gets one ambient `ParticleEmitter` (4 total per server)
+  with footprint matching plot size; emitter rate capped to avoid
+  GPU dominance on mobile.
+
+#### Performance defaults
+
+- All decoration Parts: `CastShadow = false` (mobile 50-light cap
+  per Phase G research)
+- `Anchored = true` (no physics simulation cost)
+- `CanCollide = false` (no collision broad-phase cost)
+- `Material = Neon` only on emissive Parts; non-emissive accents
+  use default Plastic
+- ~1 in 4 flora gets a `PointLight` with `Shadows = false` (sparingly
+  per the light-cap research)
+- Worst-case peak: 4 plots × 24 flora = 96 emissive Parts + 4
+  ParticleEmitters. Well below mobile budget per ASSETS.md §5.2.
+
+#### Per-biome aesthetic (V1 placeholder values)
+
+| Biome | Flora | Particles |
+|---|---|---|
+| Jungle | Magenta `#FF3EC8` w/ teal `#00E8D8` accents, 1×4×1 stud cubes, glow 0.9 | Magenta spore mist, 4–8s lifetime, slow upward drift |
+| **Volcanic (G2 primary)** | Molten orange `#FF6A1A` w/ lava red `#FF2818` accents, 1.5×3×1.5 stud, glow 1.0 | Ash grey-orange, 6–12s lifetime, fast upward drift |
+| Ice | Pale ice-blue `#C8E8FF` w/ glacial `#96C8E6` accents, 0.8×3.5×0.8 stud, glow 0.6 | Frost mist `#E6F4FF`, 5–10s lifetime, slow drift |
+
+#### Wiring
+
+`BiomeDecorationService.Init` runs in the main bootstrap **after**
+`PlotManager.Init` (decorations read plot positions). Not wired into
+the raid place bootstrap — V1 raid runs in an empty world; raid
+decorations are V1.5+ work alongside snapshot rendering.
+
+### Audit (G2-scope, sandbox-side)
+
+- 86 `.luau` files — `--!strict` on all (86 = previous 85 +
+  BiomeDecorationService)
+- Decoration Apply path verified by code reading:
+  - Plot ring sample stays outside `plot.size/2 + 4` (no clipping
+    with buildings)
+  - Anchored + CanCollide=false + CastShadow=false on every spawned
+    Part (mobile-safe defaults)
+  - PointLight only on 25% of flora (light-cap-friendly)
+  - Per-plot ParticleEmitter rate matches Constants
+- Clear path verified: destroys the folder + ambient Sound; idempotent
+- Init ordering: BiomeLightingService → PlotManager → BiomeDecorationService
+  (lighting state ready before decorations; plots built before
+  positions read)
+- Raid place NOT wired (intentional — V1 raid runs empty)
+
+### Audit (G2-scope, Studio-side — pending your local run)
+
+After F5 sync:
+
+1. **Visual check** — join the main place. Expect ~96 emissive Parts
+   distributed in a ring around the 4 plots, biome-themed colors
+   (magenta jungle by default per `Constants.BIOME.DefaultBiome`).
+2. **Biome swap test** in Server Command Bar:
+   ```luau
+   local BLS = require(game.ServerScriptService.Server.Modules.World.BiomeLightingService)
+   local BDS = require(game.ServerScriptService.Server.Modules.World.BiomeDecorationService)
+   BLS.Apply("volcanic")
+   BDS.Apply("volcanic")
+   ```
+   Expect: Lighting flips to volcanic sunset palette; decorations
+   wipe + respawn as molten-orange fissure stubs with ash particle
+   emitters drifting upward.
+3. **Same for ice:**
+   ```luau
+   BLS.Apply("ice")
+   BDS.Apply("ice")
+   ```
+4. **Mobile FPS gate** (per ASSETS.md §5.2): on a Galaxy A12-class
+   device, idle on plot with all 96 decoration Parts + 4 emitters
+   active should stay ≥ 30 FPS. If not, reduce `DecorationsPerPlot`
+   or ParticleSpawnRate.
+
+### Tech debt deferred (Phase G iteration / art queue)
+
+- `floraTemplate` is nil for all 3 biomes — programmatic cubes only.
+  Phase G art queue ships real MeshPart imports per ASSETS.md
+  `assets/world/biome_*/` per-biome flora.
+- ParticleEmitter texture is the default Roblox sparkles asset
+  (`rbxasset://textures/particles/sparkles_main.dds`). Phase G
+  uploads biome-specific particle textures (bioluminescent spore
+  for jungle, ash dust for volcanic, frost flake for ice).
+- `ambientSfxAssetId = 0` placeholder across all 3 biomes —
+  Phase H asset pipeline uploads ambient SFX per the brainstorm
+  §4.8 audio budget. BiomeDecorationService gracefully skips
+  ambient sound start when id <= 0.
+- V1 ships with `Constants.BIOME.DefaultBiome = "jungle"`. V1.5+
+  multi-biome rotation is a future TierService-adjacent feature
+  per the V1.5 roadmap; framework supports it (Apply takes any
+  registered biome id).
+- Skybox per biome (`skyboxAssetId` field in G1 profile) — Phase H
+  asset pipeline.
+- Raid place gets no biome decorations in V1 (empty round arena).
+  V1.5+ snapshot rendering layers the defender's biome decorations
+  into the raid place via the same Apply API.
+
+### What's next
+
+G3 — Ice cave biome (decoration data already populated in G2 by
+the generic framework; G3 sub-phase focuses on cave-specific
+elements that don't fit the open-air ring pattern: stalactite/
+stalagmite cluster spawning, glacier edge silhouettes, the colder
+ambient SFX mix).
+
+### Commit
+
+`feat(phaseG2): biome decoration layer (volcanic primary; framework covers all 3)`

@@ -53,6 +53,7 @@ else
 	-- Main place: full chain.
 	local PlotManager = require(script.Modules.World.PlotManager)
 	local BiomeLightingService = require(script.Modules.World.BiomeLightingService)
+	local BiomeDecorationService = require(script.Modules.World.BiomeDecorationService)
 	local ResourceNodeSpawner = require(script.Modules.World.ResourceNodeSpawner)
 	local CurrencyService = require(script.Modules.Economy.CurrencyService)
 	local PlacementService = require(script.Modules.Build.PlacementService)
@@ -81,6 +82,9 @@ else
 	-- the world Lighting state is set before players see anything.
 	BiomeLightingService.Init()
 	PlotManager.Init()
+	-- G2: biome decoration layer (flora + particles + ambient SFX).
+	-- Must Init AFTER PlotManager since it reads plot positions.
+	BiomeDecorationService.Init()
 	ResourceNodeSpawner.Init()
 	CurrencyService.Init()
 	-- BeamPool (F3) must Init before TurretService + DroneSwarmService

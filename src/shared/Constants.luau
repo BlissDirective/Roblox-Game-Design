@@ -517,6 +517,66 @@ local Constants = {
 				fogColor = Color3.fromRGB(30, 50, 80),
 			},
 		},
+
+		-- G2 Decoration layer. Per-biome ambient flora / particles /
+		-- sound stubs that BiomeDecorationService spawns when a biome
+		-- activates. Decorations are *server-spawned, world-anchored*
+		-- (around plot centers within DecorationRadius) and stay for
+		-- the server lifetime — same model as PlotManager floors.
+		--
+		-- V1 visuals are placeholder programmatic emissive Parts +
+		-- procedural ParticleEmitters. Phase G art queue replaces the
+		-- floraTemplate field (currently nil → procedural cube)
+		-- with imported MeshPart references from `assets/world/biome_*/`.
+		--
+		-- ambientSfxAssetId is a `rbxassetid://` integer placeholder
+		-- until Phase H asset pipeline uploads the per-biome ambient
+		-- loops.
+		DecorationRadius = 96, -- decorations spawn within this stud radius of plot center
+		DecorationsPerPlot = 24, -- placeholder; tuned in Phase G playtest
+		ParticleSpawnRate = 6, -- particles per second per emitter
+		AmbientSfxVolume = 0.3, -- 0..1 — V1 floor; mixer tuning in G4
+		Decorations = {
+			jungle = {
+				floraColor = Color3.fromRGB(255, 62, 200), -- magenta bioluminescent
+				floraAccent = Color3.fromRGB(0, 232, 216), -- teal accent
+				floraEmissive = 0.9,
+				floraSize = Vector3.new(1, 4, 1),
+				floraTemplate = nil, -- procedural cube placeholder; Phase G replaces
+				particleColor = Color3.fromRGB(200, 100, 255),
+				particleTransparency = 0.4,
+				particleLifetimeMin = 4,
+				particleLifetimeMax = 8,
+				particleUpwardSpeed = 1.5,
+				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — jungle creature ambient loop
+			},
+			volcanic = {
+				floraColor = Color3.fromRGB(255, 106, 26), -- molten orange
+				floraAccent = Color3.fromRGB(255, 40, 24), -- lava red
+				floraEmissive = 1.0,
+				floraSize = Vector3.new(1.5, 3, 1.5),
+				floraTemplate = nil, -- procedural; Phase G replaces with obsidian fissure mesh
+				particleColor = Color3.fromRGB(60, 50, 45), -- ash grey-orange
+				particleTransparency = 0.2,
+				particleLifetimeMin = 6,
+				particleLifetimeMax = 12,
+				particleUpwardSpeed = 3.0, -- ash drifts up faster than jungle spores
+				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — volcanic rumble + ash hiss
+			},
+			ice = {
+				floraColor = Color3.fromRGB(200, 232, 255), -- pale ice-blue crystal
+				floraAccent = Color3.fromRGB(150, 200, 230),
+				floraEmissive = 0.6,
+				floraSize = Vector3.new(0.8, 3.5, 0.8),
+				floraTemplate = nil, -- procedural; Phase G replaces with crystal cluster mesh
+				particleColor = Color3.fromRGB(230, 244, 255), -- frost mist
+				particleTransparency = 0.5,
+				particleLifetimeMin = 5,
+				particleLifetimeMax = 10,
+				particleUpwardSpeed = 0.5, -- frost drifts slowly
+				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — glacial wind howl
+			},
+		},
 	},
 
 	-- Raid pipeline (Phase E1). The raid system uses MemoryStoreService
