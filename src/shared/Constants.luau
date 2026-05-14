@@ -905,6 +905,84 @@ local Constants = {
 		-- Implemented client-side via tween on Sound.Volume.
 		MusicCrossfadeSeconds = 1.5,
 	},
+
+	-- Phase G5 — UI theming, motion, and toast policy. Components +
+	-- Theme module live in `src/shared/Modules/UI/`. Per-biome palette
+	-- swap is driven by BiomeLightingService.Apply → Theme.SetActive.
+	--
+	-- Raid place (PrivateServerId set) always uses the `industrial`
+	-- palette; main place uses the active biome palette (defaults to
+	-- jungle per BIOME.DefaultBiome).
+	UI = {
+		-- Canonical slot keys. Theme module exposes a palette table
+		-- with one Color3 per slot — every panel/button references
+		-- these instead of literal RGB triples.
+		Slots = {
+			"background",
+			"panel",
+			"textPrimary",
+			"textMuted",
+			"accent",
+			"secondary",
+			"danger",
+			"highlight",
+		},
+		-- Default theme used in the raid place + as the base of the
+		-- main place industrial branch (e.g., generic raid arena UI).
+		BaseTheme = "industrial",
+		-- Frame style constants (sharp angular sci-fi per user spec).
+		Frame = {
+			CornerRadius = 2, -- pixels — near-square corners
+			StrokeThickness = 2,
+			StrokeTransparency = 0.0, -- fully opaque accent stroke
+			BackgroundTransparency = 0.10, -- slight transparency for layered feel
+			CornerAccentSize = 14, -- pixels — top-right diagonal accent
+			CornerAccentThickness = 2,
+		},
+		-- Motion presets. Component primitives reference these by name
+		-- so tuning is single-file.
+		Motion = {
+			HudSnap = { duration = 0.05, easing = "Linear" },
+			ButtonPress = { duration = 0.08, easing = "QuadIn", scale = 0.95 },
+			ButtonRelease = { duration = 0.10, easing = "BackOut" },
+			ToastSlideIn = { duration = 0.20, easing = "QuadOut" },
+			ToastSlideOut = { duration = 0.18, easing = "QuadIn" },
+			PanelOpen = { duration = 0.25, easing = "CubicOut" },
+			PanelClose = { duration = 0.22, easing = "CubicIn" },
+		},
+		-- Toast layout (G5 split-by-severity).
+		Toast = {
+			-- Auto-dismiss in seconds. Critical errors get a longer
+			-- read; rewards short-and-punchy; info middle ground.
+			AutoDismissSeconds = {
+				error = 5.0,
+				reward = 3.0,
+				info = 4.0,
+			},
+			-- Stack caps per slot — overflow drops oldest.
+			MaxVisible = {
+				error = 3, -- top-center cascade
+				reward = 1, -- bottom-center single-replaces
+				info = 4, -- right-side column
+			},
+			-- Position presets (UDim2 anchors handled inside ToastService;
+			-- these are the visual offsets from screen edges).
+			OffsetTopPx = 64,
+			OffsetBottomPx = 96,
+			OffsetRightPx = 16,
+			InterToastGapPx = 8,
+			ToastWidthPx = 360,
+			ToastHeightPx = 64,
+		},
+		-- HUD layout — mode-contextual surfaces.
+		Hud = {
+			CurrencyTopOffsetPx = 16,
+			ActionBarBottomOffsetPx = 24,
+			ActionBarButtonSize = 56,
+			ActionBarGapPx = 8,
+			ModeTogglePaddingPx = 32,
+		},
+	},
 }
 
 return Constants

@@ -37,6 +37,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
+local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
 
 local BiomeLightingService = {}
 
@@ -132,6 +133,10 @@ function BiomeLightingService.Apply(biomeId: string)
 	applyTechnology()
 	applyProfile(profile)
 	currentBiome = biomeId
+	-- G5: push UI theme swap in lockstep with the Lighting change.
+	-- Theme.SetActiveFromBiome handles the raid-place override
+	-- (always `industrial`) internally.
+	Theme.SetActiveFromBiome(biomeId)
 	print(string.format("[BiomeLightingService] Applied biome '%s' (%s)", biomeId, profile.displayName))
 end
 

@@ -15,7 +15,10 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
 local Enums = require(Shared:WaitForChild("Enums"))
 
+local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
+
 local HudController = require(script.Modules.HUD.HudController)
+local ToastService = require(script.Modules.HUD.ToastService)
 local CameraController = require(script.Modules.Core.CameraController)
 local InputRouter = require(script.Modules.Core.InputRouter)
 local BuildController = require(script.Modules.Build.BuildController)
@@ -38,6 +41,19 @@ local AudioController = require(script.Modules.Audio.AudioController)
 -- any other controller fires a local UI cue, so the throttle ledger
 -- is live from frame 0.
 AudioController.Init()
+
+-- G5: Theme.BindClientReplication subscribes to the ReplicatedStorage
+-- `OutpostActiveTheme` StringValue so server-side biome theme swaps
+-- propagate to the client palette + every Components-built widget.
+-- Must run BEFORE HUD pieces build so they read the active palette
+-- on first frame.
+Theme.BindClientReplication()
+
+-- G5: ToastService builds the 3 split-by-severity containers (top-
+-- center / bottom-center / right-column) and subscribes to
+-- CosmeticUnlocked for the built-in info toast. Init early so any
+-- controller can fire toasts during their own Init.
+ToastService.Init()
 
 HudController.Init()
 CameraController.Init()

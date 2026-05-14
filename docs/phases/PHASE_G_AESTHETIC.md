@@ -861,3 +861,131 @@ review of the current build before we layer more on top.
 ### Commit
 
 `feat(phaseG6): drone-swarm VFX polish (Beam pool upgrade + audio cue)`
+
+---
+
+## G5 — UI polish
+
+**Goal.** Replace the per-controller hardcoded color/font/corner constants
+with a central `Theme` module, build re-usable component primitives so
+new panels stop re-implementing strokes/buttons from scratch, and ship
+the supporting Toast + mode-contextual HUD layout.
+
+### Design decisions (locked with user, 2026-05-14)
+
+**Round 1 — Visual identity:**
+
+| Decision | Answer |
+|---|---|
+| Color palette | Industrial military *base*; per-biome variants (jungle = bioluminescent, ice = icy blue, volcanic = ember balance). Theme module hot-swaps when `BiomeLightingService.Apply(...)` fires. |
+| Frame style | Sharp angular sci-fi. UICorner radius 2px, UIStroke 2px solid accent, accent diagonal-cut on top-right corner per panel. |
+| Motion feel | Hybrid: snappy HUD/buttons (≤80ms linear) + smooth full-screen panels (250ms ease-out cubic). |
+
+**Round 2 — Layout & behavior:**
+
+| Decision | Answer |
+|---|---|
+| HUD density | Mode-contextual. Build mode shows Credits + Cores + action bar (Shop/Quest/Clan/Build toggle). Wave/Combat mode swaps to Credits + Drones + Wave timer + Combat toggle. ModeController.OnModeChanged drives the layout swap. |
+| Toast positions | Split by severity. Errors → top-center cascade. Rewards (claims) → bottom-center single banner. Info (cosmetic unlocks, daily streak) → right-side column. |
+| UI sounds | `ui_button_click` on every Components button press; `ui_panel_open` / `ui_panel_close` on every Components panel open/close; `ui_claim_reward` on every Components reward-claim flow. Error sounds intentionally NOT wired (user choice — error toast is the feedback). |
+
+### Per-biome palette table
+
+| Slot | Industrial (base / raid) | Jungle | Ice | Volcanic |
+|---|---|---|---|---|
+| background | 28,30,34 | 20,24,32 | 18,24,36 | 22,22,28 |
+| panel | 38,40,44 | 28,32,40 | 28,36,48 | 32,32,38 |
+| textPrimary | 230,230,220 | 220,240,200 | 220,235,250 | 230,224,210 |
+| textMuted | 140,140,130 | 150,160,170 | 140,160,180 | 150,150,160 |
+| accent | 255,150,50 (warning orange) | 120,220,180 (bioluminescent teal) | 120,200,240 (ice blue) | 255,120,60 (ember orange) |
+| secondary | 180,200,120 (olive) | 220,130,240 (magenta) | 180,220,255 (pale cyan) | 100,200,220 (cool teal) |
+| danger | 220,60,60 | 255,88,88 | 255,100,120 | 255,70,70 |
+| highlight | 255,200,80 (amber) | 255,100,200 | 200,240,255 | 255,200,100 |
+
+Raid place (PrivateServerId set) always uses `industrial`. Main place
+uses the active biome's palette (defaults to `jungle` per
+`Constants.BIOME.DefaultBiome`).
+
+### Motion presets
+
+| Preset | Duration | Easing | Used for |
+|---|---|---|---|
+| HudSnap | 0.05s | Linear | HUD value flashes, mode toggle button color flip |
+| ButtonPress | 0.08s | Quad In | scale 1.0 → 0.95 on tap-down |
+| ButtonRelease | 0.10s | Back Out | scale 0.95 → 1.0 with slight overshoot on tap-up |
+| ToastSlideIn | 0.20s | Quad Out | toast slide + fade-in |
+| ToastSlideOut | 0.18s | Quad In | toast slide + fade-out |
+| PanelOpen | 0.25s | Cubic Out | full-screen panel scale 0.95 → 1.0 + fade |
+| PanelClose | 0.22s | Cubic In | full-screen panel scale 1.0 → 0.96 + fade |
+
+### Approach
+
+- **`src/shared/Modules/UI/Theme.luau`** — new module. Holds the 4
+  palettes + 7 motion presets + the angular frame constants. Exposes
+  `Theme.GetActive()`, `Theme.SetActive(themeId)`, and `Theme.OnChanged`
+  (BindableEvent shim). `BiomeLightingService.Apply(biomeId)` calls
+  `Theme.SetActive(biomeId)` after it pushes the Lighting profile.
+- **`src/shared/Modules/UI/Components.luau`** — primitive builders:
+  - `Panel(parent, opts)` — full-screen modal with angular frame +
+    title + close button + content frame. Auto-plays `ui_panel_open`
+    / `ui_panel_close`.
+  - `Button(parent, opts)` — accent-stroked button. ButtonPress +
+    ButtonRelease tweens on Mouse/Touch input. Plays `ui_button_click`
+    on activated.
+  - `StrokedFrame(parent, opts)` — base sci-fi frame (UICorner 2px +
+    UIStroke 2px accent + diagonal corner accent).
+  - `CornerAccent(parent, opts)` — the small triangular accent cut
+    that sits in the top-right of every panel (the "in-fiction HUD"
+    detail).
+  - `Toast(opts)` — single toast instance; the ToastService owns
+    placement/cascade logic and calls this for each entry.
+- **`src/client/Modules/HUD/ToastService.luau`** — new. Three layout
+  containers (top-center, right-side column, bottom-center). Public
+  API: `Show(severity, text, opts?)` where severity ∈ `"error"` /
+  `"reward"` / `"info"`. Auto-dismiss 4s; error stack max 3; reward
+  banner replaces; info stack max 4.
+- **`src/client/Modules/HUD/HudController.luau`** — extend with
+  `ModeController.OnModeChanged` subscription. Action bar (Shop / Quest /
+  Clan + Build toggle) shows in Build mode; Combat overlay (Wave timer
+  + drones + Combat toggle) shows in Combat/Raid mode. Use Theme
+  motion presets for the swap.
+- **`Constants.UI`** — top-level block. Slot key list (canonical palette
+  slot names), motion preset durations (so they're tunable without
+  module edits), toast timings (auto-dismiss seconds, stack maxes).
+- **HUD migration (G5.1 proof-of-concept):** Migrate `CreditsDisplay`
+  and `CoresDisplay` to use `Theme.GetActive().textPrimary` /
+  `accent` / `panel` colors. These are the always-visible HUD elements
+  so the biome swap is immediately observable.
+- **Defer:** Shop / BP / Daily Quests / Clan / Leaderboard / Friends /
+  Voice / Cosmetic panel migrations (G5.2). They're a mechanical
+  find-replace once Theme + Components ship; user check-in opportunity
+  before the bulk migration lands.
+
+### Files touched / added (G5.1 slice)
+
+- NEW `src/shared/Modules/UI/Theme.luau`
+- NEW `src/shared/Modules/UI/Components.luau`
+- NEW `src/client/Modules/HUD/ToastService.luau`
+- `src/shared/Constants.luau` — `UI` block
+- `src/client/Modules/HUD/CreditsDisplay.luau` — Theme migration
+- `src/client/Modules/HUD/CoresDisplay.luau` — Theme migration
+- `src/client/Modules/HUD/HudController.luau` — ModeController hook +
+  mode-contextual layout
+- `src/server/Modules/World/BiomeLightingService.luau` — fire
+  `Theme.SetActive` from `Apply` (via a ReplicatedStorage
+  ObjectValue ping so client-side Theme subscribes without a Remote)
+- `src/client/init.client.luau` — register ToastService.Init early
+
+### What's deferred to G5.2
+
+- **Bulk panel migrations.** All non-HUD controllers stay on their
+  hardcoded colors until G5.2 land. They'll work side-by-side with
+  the themed HUD without visual chaos because the industrial /
+  jungle palettes share the same charcoal-background family.
+- **Mobile thumb-zone tuning.** Current action-bar position works on
+  most aspects; per-device tuning lands in G5.3 if mobile playtest
+  flags issues.
+- **Animations on existing claim flows** (DailyLoginPopup, ClaimQuest,
+  ClaimBattlePassTier) — they currently use no transitions; G5.2
+  migration wraps them in Components.Panel which brings the motion
+  presets automatically.
