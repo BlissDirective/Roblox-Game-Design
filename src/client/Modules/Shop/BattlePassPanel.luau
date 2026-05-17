@@ -2,9 +2,11 @@
 --[[
 	Outpost-7 — Battle Pass panel (client UI).
 
-	Phase D5. XP header + scrollable 30-tier list. Each tier row shows
-	the free reward + premium reward; per-track Claim buttons gated
-	on tier-reached + ownership + not-already-claimed. Listens to
+	Phase D5 (original). Phase G5.2b theme migration.
+
+	XP header + scrollable 30-tier list. Each tier row shows the free
+	reward + premium reward; per-track Claim buttons gated on tier-
+	reached + ownership + not-already-claimed. Listens to
 	`Remotes.BattlePassState`; invokes `Remotes.ClaimBattlePassTier`
 	on tap.
 
@@ -13,16 +15,26 @@
 	mid-session, `BattlePassService` re-pushes state and the panel
 	re-renders with newly-claimable premium rewards.
 
-	Visual style is debug-grade. Phase G replaces with neon-tactical
-	theming + tier reward icons + animated XP bar fill.
+	G5.2b migration:
+	  - Root panel + tier rows + track buttons rebuilt on
+	    Components.StrokedFrame + Components.Button.
+	  - State-driven palette slots:
+	      claimed   → background bg + textMuted text  (greyed)
+	      claimable → highlight  bg + background text  (CTA)
+	      not-yet   → background bg + textMuted text  (waiting)
+	  - XP bar fill resolves from Theme.highlight (amber/magenta).
+	  - Live re-tint on biome swap.
 --]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Components = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Components"))
+local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
 local HudFormat = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("HudFormat"))
 
 type TierReward = { credits: number, cores: number }
@@ -46,6 +58,7 @@ type State = {
 local BattlePassPanel = {}
 
 local screenGui: ScreenGui? = nil
+local panelScale: UIScale? = nil
 local titleLabel: TextLabel? = nil
 local xpBarFill: Frame? = nil
 local xpText: TextLabel? = nil
@@ -53,9 +66,33 @@ local tiersList: ScrollingFrame? = nil
 local lastState: State? = nil
 local pendingClaims: { [string]: boolean } = {}
 
+local function easingInfoFor(presetName: string): TweenInfo
+	local preset: any = Constants.UI.Motion[presetName]
+	return TweenInfo.new(
+		preset.duration,
+		Theme.EasingStyleFor(preset.easing),
+		Theme.EasingDirectionFor(preset.easing),
+		0,
+		false,
+		0
+	)
+end
+
 local function setVisible(visible: boolean)
-	if screenGui then
-		screenGui.Enabled = visible
+	if not screenGui or not panelScale then
+		return
+	end
+	if visible then
+		screenGui.Enabled = true
+		panelScale.Scale = 0.95
+		TweenService:Create(panelScale, easingInfoFor("PanelOpen"), { Scale = 1.0 }):Play()
+	else
+		TweenService:Create(panelScale, easingInfoFor("PanelClose"), { Scale = 0.95 }):Play()
+		task.delay((Constants.UI.Motion.PanelClose :: any).duration, function()
+			if screenGui then
+				screenGui.Enabled = false
+			end
+		end)
 	end
 end
 
@@ -81,67 +118,83 @@ local function buildTrackButton(
 	claimable: boolean,
 	claimed: boolean,
 	onClaim: () -> ()
-): TextButton
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 200, 1, -8)
-	btn.BackgroundColor3 = if claimed
-		then Color3.fromRGB(60, 60, 70)
-		elseif claimable then Color3.fromRGB(120, 220, 180)
-		else Color3.fromRGB(40, 44, 54)
-	btn.TextColor3 = if claimed
-		then Color3.fromRGB(160, 160, 170)
-		elseif claimable then Color3.fromRGB(20, 24, 32)
-		else Color3.fromRGB(160, 170, 180)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextScaled = true
-	btn.AutoButtonColor = claimable and not claimed
-	btn.Active = claimable and not claimed
+)
+	local btnBgSlot: string
+	local btnTextSlot: string
+	local btnStrokeSlot: string
+	local btnText: string
 	if claimed then
-		btn.Text = string.format("%s\nClaimed", label)
+		btnBgSlot = "background"
+		btnTextSlot = "textMuted"
+		btnStrokeSlot = "textMuted"
+		btnText = string.format("%s\nClaimed", label)
 	elseif claimable then
-		btn.Text = string.format("Claim\n%s", formatReward(reward))
+		btnBgSlot = "highlight"
+		btnTextSlot = "background"
+		btnStrokeSlot = "highlight"
+		btnText = string.format("Claim\n%s", formatReward(reward))
 	else
-		btn.Text = string.format("%s\n%s", label, formatReward(reward))
+		btnBgSlot = "background"
+		btnTextSlot = "textMuted"
+		btnStrokeSlot = "textMuted"
+		btnText = string.format("%s\n%s", label, formatReward(reward))
 	end
-	btn.Parent = parent
-	local btnCorner = Instance.new("UICorner")
-	btnCorner.CornerRadius = UDim.new(0, 6)
-	btnCorner.Parent = btn
-	if claimable and not claimed then
-		btn.Activated:Connect(onClaim)
-	end
-	return btn
+
+	local handle = Components.Button({
+		parent = parent,
+		name = label .. "_Button",
+		text = btnText,
+		size = UDim2.new(0, 200, 1, -8),
+		bgSlot = btnBgSlot,
+		textSlot = btnTextSlot,
+		strokeSlot = btnStrokeSlot,
+		playSound = false, -- claim chime supersedes click
+		onActivated = if claimable and not claimed then onClaim else function() end,
+	})
+	handle:SetEnabled(claimable and not claimed)
 end
 
 local function buildTierRow(parent: Instance, tier: TierView, currentTier: number, premiumOwned: boolean)
-	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, -16, 0, 80)
-	row.BackgroundColor3 = if tier.tier <= currentTier then Color3.fromRGB(28, 32, 40) else Color3.fromRGB(22, 24, 28)
-	row.BorderSizePixel = 0
-	row.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = row
+	local reached = tier.tier <= currentTier
+	local row = Components.StrokedFrame({
+		parent = parent,
+		name = "Tier_" .. tier.tier,
+		size = UDim2.new(1, -16, 0, 80),
+		bgSlot = if reached then "panel" else "background",
+		strokeSlot = if reached then "highlight" else "textMuted",
+		cornerAccent = false,
+	})
 
-	-- Tier number badge
-	local tierBadge = Instance.new("TextLabel")
-	tierBadge.Size = UDim2.new(0, 60, 1, -16)
-	tierBadge.Position = UDim2.new(0, 12, 0, 8)
-	tierBadge.BackgroundColor3 = if tier.tier <= currentTier
-		then Color3.fromRGB(120, 220, 180)
-		else Color3.fromRGB(40, 44, 54)
-	tierBadge.TextColor3 = if tier.tier <= currentTier
-		then Color3.fromRGB(20, 24, 32)
-		else Color3.fromRGB(160, 170, 180)
-	tierBadge.Font = Enum.Font.GothamBold
-	tierBadge.TextScaled = true
-	tierBadge.Text = "T" .. tier.tier
-	tierBadge.Parent = row
-	local badgeCorner = Instance.new("UICorner")
-	badgeCorner.CornerRadius = UDim.new(0, 6)
-	badgeCorner.Parent = tierBadge
+	-- Tier number badge — small Components.StrokedFrame inset.
+	local badgeBgSlot = if reached then "highlight" else "background"
+	local badgeTextSlot = if reached then "background" else "textMuted"
+	local badge = Components.StrokedFrame({
+		parent = row,
+		name = "TierBadge",
+		size = UDim2.new(0, 60, 1, -16),
+		position = UDim2.new(0, 12, 0, 8),
+		bgSlot = badgeBgSlot,
+		strokeSlot = if reached then "highlight" else "textMuted",
+		cornerAccent = false,
+	})
+	local badgeText = Instance.new("TextLabel")
+	badgeText.Size = UDim2.fromScale(1, 1)
+	badgeText.BackgroundTransparency = 1
+	badgeText.Font = Enum.Font.GothamBold
+	badgeText.TextScaled = true
+	badgeText.TextColor3 = (Theme.GetActive() :: any)[badgeTextSlot]
+	badgeText.Text = "T" .. tier.tier
+	badgeText.Parent = badge
 
-	-- Buttons row (free + premium)
+	local themeConn = Theme.Changed:Connect(function()
+		if badgeText.Parent then
+			badgeText.TextColor3 = (Theme.GetActive() :: any)[badgeTextSlot]
+		end
+	end)
+	row.Destroying:Connect(function()
+		themeConn:Disconnect()
+	end)
+
 	local btnRow = Instance.new("Frame")
 	btnRow.Size = UDim2.new(1, -88, 1, 0)
 	btnRow.Position = UDim2.new(0, 80, 0, 0)
@@ -166,7 +219,6 @@ local function buildTierRow(parent: Instance, tier: TierView, currentTier: numbe
 			local ok, result = pcall(function()
 				return remote:InvokeServer(tier.tier, "free")
 			end)
-			-- G5.2c: claim chime fires on confirmed success.
 			if ok and typeof(result) == "table" and result.ok then
 				Components.PlayClaimChime()
 			end
@@ -186,7 +238,6 @@ local function buildTierRow(parent: Instance, tier: TierView, currentTier: numbe
 			local ok, result = pcall(function()
 				return remote:InvokeServer(tier.tier, "premium")
 			end)
-			-- G5.2c: claim chime fires on confirmed success.
 			if ok and typeof(result) == "table" and result.ok then
 				Components.PlayClaimChime()
 			end
@@ -235,28 +286,30 @@ local function build()
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.Enabled = false
+	gui.DisplayOrder = 30
 	gui.Parent = playerGui
 
-	local panel = Instance.new("Frame")
-	panel.Size = UDim2.new(0, 640, 0, 540)
-	panel.Position = UDim2.new(0.5, -320, 0.5, -270)
-	panel.BackgroundColor3 = Color3.fromRGB(20, 24, 32)
-	panel.BorderSizePixel = 0
-	panel.Parent = gui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 12)
-	corner.Parent = panel
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(220, 180, 100)
-	stroke.Thickness = 2
-	stroke.Transparency = 0.3
-	stroke.Parent = panel
+	local panel = Components.StrokedFrame({
+		parent = gui,
+		name = "Panel",
+		size = UDim2.fromOffset(640, 540),
+		position = UDim2.fromScale(0.5, 0.5),
+		anchorPoint = Vector2.new(0.5, 0.5),
+		bgSlot = "panel",
+		strokeSlot = "highlight",
+		cornerAccent = true,
+	})
+
+	local scale = Instance.new("UIScale")
+	scale.Scale = 1.0
+	scale.Parent = panel
+	panelScale = scale
 
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -60, 0, 32)
 	title.Position = UDim2.new(0, 16, 0, 10)
 	title.BackgroundTransparency = 1
-	title.TextColor3 = Color3.fromRGB(220, 240, 200)
+	title.TextColor3 = Theme.GetActive().textPrimary
 	title.Font = Enum.Font.GothamBold
 	title.TextScaled = true
 	title.TextXAlignment = Enum.TextXAlignment.Left
@@ -264,27 +317,33 @@ local function build()
 	title.Parent = panel
 	titleLabel = title
 
-	local closeBtn = Instance.new("TextButton")
-	closeBtn.Size = UDim2.new(0, 36, 0, 36)
-	closeBtn.Position = UDim2.new(1, -44, 0, 12)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(40, 44, 54)
-	closeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-	closeBtn.Font = Enum.Font.GothamBold
-	closeBtn.TextScaled = true
-	closeBtn.Text = "X"
-	closeBtn.Parent = panel
-	local closeCorner = Instance.new("UICorner")
-	closeCorner.CornerRadius = UDim.new(0, 6)
-	closeCorner.Parent = closeBtn
-	closeBtn.Activated:Connect(function()
-		setVisible(false)
+	local themeConn = Theme.Changed:Connect(function()
+		if title.Parent then
+			title.TextColor3 = Theme.GetActive().textPrimary
+		end
+	end)
+	panel.Destroying:Connect(function()
+		themeConn:Disconnect()
 	end)
 
-	-- XP header
+	Components.Button({
+		parent = panel,
+		name = "CloseButton",
+		text = "X",
+		size = UDim2.fromOffset(36, 36),
+		position = UDim2.new(1, -14, 0, 12),
+		anchorPoint = Vector2.new(1, 0),
+		strokeSlot = "danger",
+		onActivated = function()
+			setVisible(false)
+		end,
+	})
+
+	-- XP header bar.
 	local barBg = Instance.new("Frame")
 	barBg.Size = UDim2.new(1, -32, 0, 24)
 	barBg.Position = UDim2.new(0, 16, 0, 52)
-	barBg.BackgroundColor3 = Color3.fromRGB(40, 44, 54)
+	barBg.BackgroundColor3 = Theme.GetActive().background
 	barBg.BorderSizePixel = 0
 	barBg.Parent = panel
 	local barCorner = Instance.new("UICorner")
@@ -293,7 +352,7 @@ local function build()
 
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.new(0, 0, 1, 0)
-	fill.BackgroundColor3 = Color3.fromRGB(220, 180, 100)
+	fill.BackgroundColor3 = Theme.GetActive().highlight
 	fill.BorderSizePixel = 0
 	fill.Parent = barBg
 	local fillCorner = Instance.new("UICorner")
@@ -302,16 +361,29 @@ local function build()
 	xpBarFill = fill
 
 	local xpLbl = Instance.new("TextLabel")
-	xpLbl.Size = UDim2.new(1, 0, 1, 0)
+	xpLbl.Size = UDim2.fromScale(1, 1)
 	xpLbl.BackgroundTransparency = 1
-	xpLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+	xpLbl.TextColor3 = Theme.GetActive().textPrimary
 	xpLbl.Font = Enum.Font.GothamBold
 	xpLbl.TextScaled = true
 	xpLbl.Text = "Tier 0 / 30 — 0 / 1000 XP"
 	xpLbl.Parent = barBg
 	xpText = xpLbl
 
-	-- Scrolling tier list
+	local barConn = Theme.Changed:Connect(function()
+		if not barBg.Parent then
+			return
+		end
+		local p = Theme.GetActive()
+		barBg.BackgroundColor3 = p.background
+		fill.BackgroundColor3 = p.highlight
+		xpLbl.TextColor3 = p.textPrimary
+	end)
+	barBg.Destroying:Connect(function()
+		barConn:Disconnect()
+	end)
+
+	-- Scrolling tier list.
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Size = UDim2.new(1, -32, 1, -100)
 	scroll.Position = UDim2.new(0, 16, 0, 92)
