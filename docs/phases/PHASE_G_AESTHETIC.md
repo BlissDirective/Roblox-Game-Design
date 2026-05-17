@@ -989,3 +989,91 @@ uses the active biome's palette (defaults to `jungle` per
   ClaimBattlePassTier) — they currently use no transitions; G5.2
   migration wraps them in Components.Panel which brings the motion
   presets automatically.
+
+### G5.2 — panel + HUD consolidation
+
+User-locked design (2026-05-14, Round 3):
+
+| Decision | Answer |
+|---|---|
+| Scope | Migrate ALL panels in one pass (split across G5.2a/b/c sub-commits for review burden — same scope, multiple checkpoints). |
+| Action bar | Shop / Quests / Clan (3 buttons). Battle Pass and Daily Quests no longer get top-row toggles. |
+| Battle Pass access | Always-visible top-left progress widget (tier + XP bar); tap = open BattlePassPanel. |
+| Friends / Leaderboard access | Long-press on Clan action-bar button (G5.2b). |
+| Mobile thumb-zone | Auto-detect dominant thumb on first touch (X < screen.X/2 → "left"; else "right"). Persist via `Remotes.UiPrefsUpdate`; replicate to client on rejoin via `Remotes.UiPrefsState`. Right-handed default until detected. |
+
+#### G5.2a slice (this commit) — HUD action bar foundation
+
+Lands the new HUD surface + thumb detection + BP widget. Panels
+themselves still use their original hardcoded colors; G5.2b migrates
+their internals to Theme/Components.
+
+**Files added/modified:**
+
+- NEW `src/client/Modules/HUD/ActionBar.luau` — 3-button row +
+  mode toggle. Subscribes to ModeController.OnModeChanged for
+  visibility (Build: bar + toggle; Combat: toggle only; Raid: hidden).
+  Lazy-resolves each button's `*.Toggle()` at activation time so no
+  circular requires.
+- NEW `src/client/Modules/HUD/BattlePassWidget.luau` — top-left
+  always-visible widget showing tier + XP bar. Subscribes to
+  `Remotes.BattlePassState`; flashes highlight stroke briefly on
+  tier-up to drive tap-through.
+- NEW `src/server/Modules/Player/ProfilePrefsService.luau` — binds
+  `UiPrefsUpdate` (client → server, validates + writes
+  profile.uiPrefs.dominantThumb) and pushes `UiPrefsState` on
+  PlayerAdded so ActionBar applies the persisted thumb before the
+  player sees their first frame.
+- `src/shared/Remotes.luau` — adds `UiPrefsUpdate` +
+  `UiPrefsState`.
+- `src/server/Modules/Player/ProfileSchema.luau` — adds optional
+  `uiPrefs: { dominantThumb }` block. Additive — older saves get
+  `{ dominantThumb = nil }` via Reconcile. No schema version bump
+  (additive-via-Reconcile is the documented pattern).
+- `src/server/init.server.luau` — wires ProfilePrefsService.Init
+  after DataManager.Init + AntiExploit.Init.
+- `src/client/Modules/HUD/HudController.luau` — Init now wires
+  ActionBar + BattlePassWidget alongside the currency pills.
+- `src/client/Modules/Shop/ShopController.luau` — toggle button
+  removed; only `ShopPanel.Init()` remains.
+- `src/client/Modules/Retention/DailyQuestsPanel.luau` — toggle
+  button removed; `DailyQuestsPanel.Toggle()` exported for the
+  action bar to call.
+- `src/client/Modules/Social/ClanController.luau` — toggle button
+  removed; `ClanController.Toggle()` exported.
+- `src/client/Modules/Shop/MonetizationController.luau` — Battle
+  Pass toggle removed (replaced by BattlePassWidget). Store
+  (GamePass) toggle relocated to top-left under BP widget; full
+  Components migration deferred to G5.2c.
+
+**Carry-over risks flagged for G5.2b:**
+
+- Store toggle is now a tiny Components.Button at (16, 72) — works
+  but visually competes with BP widget at (16, 16). G5.2c either
+  consolidates Store into the GamePassPanel-as-tab pattern or
+  builds a proper "Wallet" cluster.
+- Action bar button labels are text-only ("Shop"/"Quests"/"Clan").
+  G5.2b is a candidate for swapping to icon glyphs via a uploaded
+  decal set (Phase H asset upload territory).
+- Long-press Clan menu (Friends/Leaderboard) is not wired in G5.2a;
+  Friends/Leaderboard panels keep their original toggle buttons
+  for now so they remain accessible. G5.2b deletes those and wires
+  the long-press menu.
+
+**G5.2b queue (next commit):**
+- Panel theme migrations: Shop, BattlePass, DailyQuests,
+  DailyLogin, WelcomeBack, GamePass, Cosmetic.
+- Long-press detection on Clan action-bar button → Friends /
+  Leaderboard sub-menu.
+- Delete Friends/Leaderboard standalone toggles.
+
+**G5.2c queue (final G5 commit):**
+- Voice indicator migration.
+- Store/Wallet cluster restructure (top-left under BP widget).
+- Claim chime (`Components.PlayClaimChime`) wiring at every
+  reward-claim button (daily login, quest claim, BP tier claim,
+  cosmetic unlock).
+
+### Commit
+
+`feat(phaseG5.2a): action bar + dominant thumb detection + BP widget`

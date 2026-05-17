@@ -273,59 +273,22 @@ local function build()
 	list = listFrame
 end
 
-local function buildToggleButton()
-	local player = Players.LocalPlayer
-	local playerGui = player:WaitForChild("PlayerGui")
-
-	local existing = playerGui:FindFirstChild("QuestsToggle")
-	if existing then
-		existing:Destroy()
-	end
-
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "QuestsToggle"
-	gui.ResetOnSpawn = false
-	gui.IgnoreGuiInset = true
-	gui.Parent = playerGui
-
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 88, 0, 40)
-	-- Sits to the right of the Shop toggle (Shop is at x=16, w=80).
-	btn.Position = UDim2.new(0, 104, 0, 16)
-	btn.BackgroundColor3 = Color3.fromRGB(20, 24, 32)
-	btn.BackgroundTransparency = 0.2
-	btn.TextColor3 = Color3.fromRGB(220, 240, 200)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextScaled = true
-	btn.Text = "Quests"
-	btn.AutoButtonColor = true
-	btn.Parent = gui
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = btn
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(120, 220, 180)
-	stroke.Thickness = 1
-	stroke.Transparency = 0.5
-	stroke.Parent = btn
-
-	btn.Activated:Connect(function()
-		if screenGui and screenGui.Enabled then
-			setVisible(false)
-		else
-			setVisible(true)
-			if lastState then
-				rebuildList(lastState)
-			end
+-- G5.2a: ActionBar owns the Quests button trigger. The toggle logic
+-- the original on-screen button used moves here as Toggle() so the
+-- action bar can fire it.
+function DailyQuestsPanel.Toggle()
+	if screenGui and screenGui.Enabled then
+		setVisible(false)
+	else
+		setVisible(true)
+		if lastState then
+			rebuildList(lastState)
 		end
-	end)
+	end
 end
 
 function DailyQuestsPanel.Init()
 	build()
-	buildToggleButton()
 	local remote = Remotes.DailyQuestState :: RemoteEvent
 	remote.OnClientEvent:Connect(function(state: State)
 		lastState = state

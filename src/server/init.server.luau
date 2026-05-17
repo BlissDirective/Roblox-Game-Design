@@ -13,6 +13,7 @@ local Constants = require(Shared:WaitForChild("Constants"))
 
 local ServerAuthorityBootstrap = require(script.Modules.Lifecycle.ServerAuthorityBootstrap)
 local DataManager = require(script.Modules.Player.DataManager)
+local ProfilePrefsService = require(script.Modules.Player.ProfilePrefsService)
 local AntiExploit = require(script.Modules.Security.AntiExploit)
 local AuditLog = require(script.Modules.Security.AuditLog)
 
@@ -26,6 +27,11 @@ AntiExploit.Init()
 -- F2: AuditLog connects PlayerRemoving cleanup; per-Remote handlers
 -- call AuditLog.Record on rate-limit denials and validation failures.
 AuditLog.Init()
+-- G5: ProfilePrefsService binds the UiPrefsUpdate Remote so client-
+-- detected dominant thumb is persisted to profile.uiPrefs. Cheap
+-- (one Remote handler), needed in both main + raid places (raid
+-- never reads but persisting from raid place is harmless).
+ProfilePrefsService.Init()
 
 if IS_RAID_SERVER then
 	-- Raid place: minimal stack. No plots, no currency tick, no shop —

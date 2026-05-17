@@ -292,6 +292,19 @@ local Remotes = {
 	-- Pure-client UI sounds (button click, panel open) bypass this Remote
 	-- entirely — AudioController.PlayLocal handles them directly.
 	AudioCue = getOrCreate("AudioCue", "RemoteEvent") :: RemoteEvent,
+
+	-- Phase G5 — UI preference push. Client → Server. Args: payload =
+	-- { dominantThumb = "left" | "right" }. Server validates the
+	-- enum, writes to profile.uiPrefs, no response (fire-and-forget).
+	-- Rate-limited at Constants.RATE_LIMITS.Default (the value only
+	-- changes once per session at most under the normal heuristic).
+	UiPrefsUpdate = getOrCreate("UiPrefsUpdate", "RemoteEvent") :: RemoteEvent,
+	-- Phase G5 — UI preference replication. Server → Client. Args:
+	-- payload = { dominantThumb = "left" | "right" | nil }. Fires once
+	-- per session right after DataManager loads the profile, so
+	-- ActionBar can apply the persisted thumb layout before the player
+	-- sees their first frame.
+	UiPrefsState = getOrCreate("UiPrefsState", "RemoteEvent") :: RemoteEvent,
 }
 
 return Remotes

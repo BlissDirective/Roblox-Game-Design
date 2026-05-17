@@ -83,6 +83,12 @@
 	launch-blocker — BP cosmetic-marked tiers grant items here
 	instead of placeholder Credits/Cores. Defaults granted on first
 	join (combatant skin, default decal/trail/flair).
+	Phase G5 (UI polish): adds `uiPrefs.dominantThumb` — `"left"` |
+	`"right"` | `nil`. Set client-side by the first-tap heuristic
+	(touch X < half-screen → "left"; else "right") and persisted via
+	UiPrefsUpdate Remote. The action bar layout flips based on this
+	value on the next session. Additive — older saves get an empty
+	uiPrefs table on next load via Reconcile.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -165,6 +171,11 @@ export type PlayerData = {
 	-- Phase G7 — Cosmetic system (closes D4 launch blocker).
 	cosmeticsOwned: { [string]: number }, -- cosmeticId -> acquiredAt timestamp (for "New!" badges)
 	equippedCosmetics: { [string]: string }, -- slot -> cosmeticId (one entry per equipped slot)
+	-- Phase G5 — UI preferences. dominantThumb flips the mobile action
+	-- bar layout (right thumb default, left thumb on detection).
+	uiPrefs: {
+		dominantThumb: string?, -- "left" | "right" | nil (unset)
+	},
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -202,6 +213,9 @@ ProfileSchema.DEFAULT_DATA = {
 	tutorialQuests = {},
 	cosmeticsOwned = {},
 	equippedCosmetics = {},
+	uiPrefs = {
+		dominantThumb = nil,
+	},
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

@@ -2,75 +2,73 @@
 --[[
 	Outpost-7 — monetization UI orchestrator (client).
 
-	Phase D5. Builds two HUD toggle buttons — "Store" (passes + dev
-	products) and "Battle Pass" — and wires them to the corresponding
-	panels. Both panels are created here at Init.
+	Phase D5 (original). Phase G5.2a refactor.
 
-	Position: top-row right of the existing Shop / Quests toggles.
-	V1 mobile UX has 4 toggles in a row (Shop, Quests, Store,
-	Battle Pass); Phase G repositions per device.
+	Previously owned two HUD toggle buttons (Store + Battle Pass).
+	Phase G5.2a removes both:
+
+	  - Battle Pass: replaced by the always-visible top-left
+	    `BattlePassWidget` (in `HUD/BattlePassWidget.luau`) which
+	    shows tier + XP bar and taps through to BattlePassPanel.
+	  - Store (GamePass): the on-screen toggle is replaced by a small
+	    top-left button sitting below the BP widget. Implementation
+	    deferred to G5.2c (where it gets the full Components.Button
+	    treatment alongside the BP widget). For G5.2a we keep the
+	    original Store toggle but reposition it just below the BP
+	    widget to free up the top-row real estate for the currency
+	    pills.
+
+	This controller's only remaining job is `GamePassPanel.Init()` +
+	`BattlePassPanel.Init()` for the panel surfaces themselves; the
+	HUD entry-points migrate to the new HUD modules.
 --]]
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Components = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Components"))
 
 local GamePassPanel = require(script.Parent.GamePassPanel)
 local BattlePassPanel = require(script.Parent.BattlePassPanel)
 
 local MonetizationController = {}
 
-local function buildToggle(name: string, label: string, x: number, strokeColor: Color3, onActivate: () -> ())
+local function buildStoreToggle()
 	local player = Players.LocalPlayer
 	local playerGui = player:WaitForChild("PlayerGui")
 
-	local existing = playerGui:FindFirstChild(name)
+	local existing = playerGui:FindFirstChild("StoreToggle")
 	if existing then
 		existing:Destroy()
 	end
 
 	local gui = Instance.new("ScreenGui")
-	gui.Name = name
+	gui.Name = "StoreToggle"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 18
 	gui.Parent = playerGui
 
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 96, 0, 40)
-	btn.Position = UDim2.new(0, x, 0, 16)
-	btn.BackgroundColor3 = Color3.fromRGB(20, 24, 32)
-	btn.BackgroundTransparency = 0.2
-	btn.TextColor3 = Color3.fromRGB(220, 240, 200)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextScaled = true
-	btn.Text = label
-	btn.AutoButtonColor = true
-	btn.Parent = gui
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = btn
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = strokeColor
-	stroke.Thickness = 1
-	stroke.Transparency = 0.5
-	stroke.Parent = btn
-
-	btn.Activated:Connect(onActivate)
+	-- Sits just below the BattlePass widget (BP widget = y=16, h=48 →
+	-- store toggle at y=72 in the same top-left column).
+	Components.Button({
+		parent = gui,
+		name = "Store",
+		text = "Store",
+		size = UDim2.fromOffset(96, 36),
+		position = UDim2.new(0, 16, 0, 72),
+		strokeSlot = "secondary",
+		onActivated = function()
+			GamePassPanel.Toggle()
+		end,
+	})
 end
 
 function MonetizationController.Init()
 	GamePassPanel.Init()
 	BattlePassPanel.Init()
-
-	-- Layout: ShopController places "Shop" at x=16 (w=80).
-	-- DailyQuestsPanel places "Quests" at x=104 (w=88).
-	-- Continue right: Store at x=208, Battle Pass at x=320.
-	buildToggle("StoreToggle", "Store", 208, Color3.fromRGB(120, 220, 180), function()
-		GamePassPanel.Toggle()
-	end)
-	buildToggle("BattlePassToggle", "Battle Pass", 320, Color3.fromRGB(220, 180, 100), function()
-		BattlePassPanel.Toggle()
-	end)
+	buildStoreToggle()
 end
 
 return MonetizationController

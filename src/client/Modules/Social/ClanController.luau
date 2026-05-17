@@ -505,42 +505,18 @@ local function ensurePanel(): Frame
 	return panel
 end
 
-local function buildToggleButton()
-	local gui = ensureScreenGui()
-	if gui:FindFirstChild("ClanToggle") then
-		return
+-- G5.2a: ActionBar owns the Clan button trigger. The toggle logic
+-- the original on-screen button used moves here as Toggle().
+function ClanController.Toggle()
+	panelOpen = not panelOpen
+	local panel = ensurePanel()
+	panel.Visible = panelOpen
+	if panelOpen then
+		refreshPanel()
 	end
-	local btn = Instance.new("TextButton")
-	btn.Name = "ClanToggle"
-	btn.Size = UDim2.fromOffset(120, 40)
-	btn.Position = UDim2.new(0, 608, 0, 8)
-	btn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
-	btn.BorderSizePixel = 0
-	btn.TextColor3 = Color3.fromRGB(220, 220, 235)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 14
-	btn.Text = "Clan"
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.Color = Color3.fromRGB(80, 130, 180)
-	stroke.Parent = btn
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = btn
-	btn.Parent = gui
-
-	btn.MouseButton1Click:Connect(function()
-		panelOpen = not panelOpen
-		local panel = ensurePanel()
-		panel.Visible = panelOpen
-		if panelOpen then
-			refreshPanel()
-		end
-	end)
 end
 
 function ClanController.Init()
-	buildToggleButton()
 	ensurePanel()
 
 	local stateRemote = Remotes.ClanState :: RemoteEvent
