@@ -16,9 +16,13 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local Components = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Components"))
+local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
 
 local ClanController = {}
 
@@ -481,36 +485,80 @@ refreshPanel = function()
 	end
 end
 
+local panelScale: UIScale? = nil
+
+local function easingInfoFor(presetName: string): TweenInfo
+	local preset: any = Constants.UI.Motion[presetName]
+	return TweenInfo.new(
+		preset.duration,
+		Theme.EasingStyleFor(preset.easing),
+		Theme.EasingDirectionFor(preset.easing),
+		0,
+		false,
+		0
+	)
+end
+
 local function ensurePanel(): Frame
 	local gui = ensureScreenGui()
 	local existing = gui:FindFirstChild("ClanPanel")
 	if existing and existing:IsA("Frame") then
 		return existing
 	end
-	local panel = Instance.new("Frame")
-	panel.Name = "ClanPanel"
-	panel.Size = UDim2.fromOffset(280, 540)
-	panel.Position = UDim2.new(1, -296, 0, 60)
-	panel.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
-	panel.BorderSizePixel = 0
+	-- G5.2b: root frame migrated to Components.StrokedFrame + Theme.
+	-- Internal members/deposit/withdraw/chat rows keep their legacy
+	-- styling for V1 — a full internal migration is its own LOC chunk.
+	-- The visible "container" matches the rest of the UI; the inputs
+	-- inside remain functional with their original (debug-grade)
+	-- visuals.
+	local panel = Components.StrokedFrame({
+		parent = gui,
+		name = "ClanPanel",
+		size = UDim2.fromOffset(280, 540),
+		position = UDim2.new(1, -296, 0, 60),
+		bgSlot = "panel",
+		strokeSlot = "accent",
+		-- cornerAccent disabled: ClanController's internal refresh
+		-- loops destroy all GuiObject children, which would clobber
+		-- the corner accent. Skip the accent until internal rows are
+		-- also migrated and the destroy filter narrows.
+		cornerAccent = false,
+	})
 	panel.Visible = false
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.Color = Color3.fromRGB(80, 130, 180)
-	stroke.Parent = panel
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = panel
-	panel.Parent = gui
+
+	local scale = Instance.new("UIScale")
+	scale.Scale = 1.0
+	scale.Parent = panel
+	panelScale = scale
 	return panel
+end
+
+local function setPanelVisible(visible: boolean)
+	local gui = ensureScreenGui()
+	local panel = gui:FindFirstChild("ClanPanel")
+	if not panel or not panelScale then
+		return
+	end
+	if visible then
+		panel.Visible = true
+		panelScale.Scale = 0.95
+		TweenService:Create(panelScale, easingInfoFor("PanelOpen"), { Scale = 1.0 }):Play()
+	else
+		TweenService:Create(panelScale, easingInfoFor("PanelClose"), { Scale = 0.95 }):Play()
+		task.delay((Constants.UI.Motion.PanelClose :: any).duration, function()
+			if panel then
+				panel.Visible = false
+			end
+		end)
+	end
 end
 
 -- G5.2a: ActionBar owns the Clan button trigger. The toggle logic
 -- the original on-screen button used moves here as Toggle().
 function ClanController.Toggle()
 	panelOpen = not panelOpen
-	local panel = ensurePanel()
-	panel.Visible = panelOpen
+	ensurePanel()
+	setPanelVisible(panelOpen)
 	if panelOpen then
 		refreshPanel()
 	end

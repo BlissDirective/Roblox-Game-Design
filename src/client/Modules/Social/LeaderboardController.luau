@@ -2,23 +2,28 @@
 --[[
 	Outpost-7 — leaderboard panel (client).
 
-	Phase E5. Toggle button + right-side panel showing top 10 of the
-	two boards (Global Credits, Weekly Raid Wins). Server-pushed via
-	`LeaderboardState` Remote ~5 minutes; the client renders off
-	whatever the latest state is.
+	Phase E5 (original). Phase G5.2b theme migration + standalone-
+	toggle teardown.
 
-	Placeholder visuals — Phase G replaces with neon-tactical theme +
-	medal icons for the top 3.
-
-	Public API:
-	  Init  — wires Remote listener + builds UI
+	G5.2b changes:
+	  - Standalone LeaderboardToggle button removed. Panel is now
+	    opened via the long-press Clan sub-menu — see ClanController.
+	    `Toggle()` exported for that sub-menu.
+	  - Panel + tab buttons + entries rebuilt on Components primitives
+	    + Theme palette slots.
+	  - Rank colors (gold/silver/bronze) come from Theme.highlight /
+	    textPrimary / accent so they stay biome-aware.
 --]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local Components = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Components"))
+local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
 
 local LeaderboardController = {}
 
@@ -46,27 +51,61 @@ local current: BoardsState? = nil
 local panelOpen = false
 local activeBoard: "globalCredits" | "weeklyRaidWins" = "globalCredits"
 
+local screenGui: ScreenGui? = nil
+local panelFrame: Frame? = nil
+local panelScale: UIScale? = nil
+
+local function easingInfoFor(presetName: string): TweenInfo
+	local preset: any = Constants.UI.Motion[presetName]
+	return TweenInfo.new(
+		preset.duration,
+		Theme.EasingStyleFor(preset.easing),
+		Theme.EasingDirectionFor(preset.easing),
+		0,
+		false,
+		0
+	)
+end
+
 local function ensureScreenGui(): ScreenGui
+	if screenGui and screenGui.Parent then
+		return screenGui
+	end
 	local pg = Players.LocalPlayer:WaitForChild("PlayerGui") :: PlayerGui
 	local existing = pg:FindFirstChild("OutpostLeaderboard")
 	if existing and existing:IsA("ScreenGui") then
+		screenGui = existing
 		return existing
 	end
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "OutpostLeaderboard"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 30
 	gui.Parent = pg
+	screenGui = gui
 	return gui
 end
 
+local function rankColor(index: number): Color3
+	local p = Theme.GetActive()
+	if index == 1 then
+		return p.highlight
+	elseif index == 2 then
+		return p.textPrimary
+	elseif index == 3 then
+		return p.accent
+	end
+	return p.textMuted
+end
+
 local function refreshPanel()
-	local gui = ensureScreenGui()
-	local panel = gui:FindFirstChild("LeaderboardPanel")
-	if not panel or not panel:IsA("Frame") then
+	if not panelFrame then
 		return
 	end
-	for _, child in panel:GetChildren() do
+	-- Wipe everything except the persistent UIScale + UICorner +
+	-- UIStroke that StrokedFrame attached to the panel root.
+	for _, child in panelFrame:GetChildren() do
 		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
@@ -76,57 +115,52 @@ local function refreshPanel()
 	end
 	local board = current[activeBoard]
 
-	-- Title
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -16, 0, 24)
 	title.Position = UDim2.fromOffset(8, 8)
 	title.BackgroundTransparency = 1
-	title.TextColor3 = Color3.fromRGB(220, 220, 235)
+	title.TextColor3 = Theme.GetActive().textPrimary
 	title.Font = Enum.Font.GothamBold
 	title.TextSize = 16
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Text = if board.bucket then string.format("%s — %s", board.displayName, board.bucket) else board.displayName
-	title.Parent = panel
+	title.Parent = panelFrame
 
-	-- Tab toggle (Global / Weekly)
+	-- Tab toggle (Global / Weekly).
 	local tabRow = Instance.new("Frame")
 	tabRow.Size = UDim2.new(1, -16, 0, 28)
 	tabRow.Position = UDim2.fromOffset(8, 36)
 	tabRow.BackgroundTransparency = 1
-	tabRow.Parent = panel
+	tabRow.Parent = panelFrame
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
 	layout.Padding = UDim.new(0, 6)
 	layout.Parent = tabRow
 
 	local function makeTab(boardId: "globalCredits" | "weeklyRaidWins", label: string)
-		local btn = Instance.new("TextButton")
-		btn.Size = UDim2.new(0.5, -3, 1, 0)
-		btn.BackgroundColor3 = if activeBoard == boardId
-			then Color3.fromRGB(80, 130, 180)
-			else Color3.fromRGB(30, 30, 42)
-		btn.BorderSizePixel = 0
-		btn.TextColor3 = Color3.fromRGB(220, 220, 235)
-		btn.Font = Enum.Font.GothamBold
-		btn.TextSize = 13
-		btn.Text = label
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 4)
-		corner.Parent = btn
-		btn.Parent = tabRow
-		btn.MouseButton1Click:Connect(function()
-			activeBoard = boardId
-			refreshPanel()
-		end)
+		local isActive = activeBoard == boardId
+		Components.Button({
+			parent = tabRow,
+			name = "Tab_" .. boardId,
+			text = label,
+			size = UDim2.new(0.5, -3, 1, 0),
+			bgSlot = if isActive then "accent" else "background",
+			textSlot = if isActive then "background" else "textPrimary",
+			strokeSlot = if isActive then "accent" else "textMuted",
+			onActivated = function()
+				activeBoard = boardId
+				refreshPanel()
+			end,
+		})
 	end
 	makeTab("globalCredits", "Global ¢")
 	makeTab("weeklyRaidWins", "Weekly Raids")
 
-	-- Entries list
+	-- Entries list.
 	local list = Instance.new("ScrollingFrame")
 	list.Size = UDim2.new(1, -16, 1, -76)
 	list.Position = UDim2.fromOffset(8, 72)
-	list.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.ScrollBarThickness = 4
 	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -139,16 +173,13 @@ local function refreshPanel()
 	pad.PaddingLeft = UDim.new(0, 6)
 	pad.PaddingRight = UDim.new(0, 6)
 	pad.Parent = list
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 4)
-	corner.Parent = list
-	list.Parent = panel
+	list.Parent = panelFrame
 
 	if #board.entries == 0 then
 		local empty = Instance.new("TextLabel")
 		empty.Size = UDim2.new(1, -12, 0, 20)
 		empty.BackgroundTransparency = 1
-		empty.TextColor3 = Color3.fromRGB(140, 140, 150)
+		empty.TextColor3 = Theme.GetActive().textMuted
 		empty.Font = Enum.Font.Gotham
 		empty.TextSize = 12
 		empty.Text = "No entries yet — be the first."
@@ -166,78 +197,78 @@ local function refreshPanel()
 		row.Font = Enum.Font.Gotham
 		row.TextSize = 13
 		row.TextXAlignment = Enum.TextXAlignment.Left
-		local rankColor = if index == 1
-			then Color3.fromRGB(255, 215, 100)
-			elseif index == 2
-				then Color3.fromRGB(220, 220, 230)
-				elseif index == 3 then Color3.fromRGB(220, 160, 90) else Color3.fromRGB(180, 180, 190)
-		row.TextColor3 = rankColor
+		row.TextColor3 = rankColor(index)
 		local displayName = entry.name or string.format("user_%d", entry.userId)
 		row.Text = string.format("%2d. %-20s  %s", index, displayName, tostring(entry.score))
 		row.Parent = list
 	end
 end
 
-local function ensurePanel(): Frame
-	local gui = ensureScreenGui()
-	local existing = gui:FindFirstChild("LeaderboardPanel")
-	if existing and existing:IsA("Frame") then
-		return existing
+local function setPanelVisible(visible: boolean)
+	if not panelFrame or not panelScale then
+		return
 	end
-	local panel = Instance.new("Frame")
-	panel.Name = "LeaderboardPanel"
-	panel.Size = UDim2.fromOffset(280, 380)
-	panel.Position = UDim2.new(1, -296, 0, 460)
-	panel.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
-	panel.BorderSizePixel = 0
+	if visible then
+		panelFrame.Visible = true
+		panelScale.Scale = 0.95
+		TweenService:Create(panelScale, easingInfoFor("PanelOpen"), { Scale = 1.0 }):Play()
+	else
+		TweenService:Create(panelScale, easingInfoFor("PanelClose"), { Scale = 0.95 }):Play()
+		task.delay((Constants.UI.Motion.PanelClose :: any).duration, function()
+			if panelFrame then
+				panelFrame.Visible = false
+			end
+		end)
+	end
+end
+
+local function ensurePanel(): Frame
+	if panelFrame and panelFrame.Parent then
+		return panelFrame
+	end
+	local gui = ensureScreenGui()
+	local panel = Components.StrokedFrame({
+		parent = gui,
+		name = "LeaderboardPanel",
+		size = UDim2.fromOffset(280, 380),
+		position = UDim2.new(1, -296, 0, 460),
+		bgSlot = "panel",
+		strokeSlot = "highlight",
+		cornerAccent = true,
+	})
 	panel.Visible = false
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.Color = Color3.fromRGB(255, 215, 100)
-	stroke.Parent = panel
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = panel
-	panel.Parent = gui
+
+	local scale = Instance.new("UIScale")
+	scale.Scale = 1.0
+	scale.Parent = panel
+	panelScale = scale
+
+	panelFrame = panel
 	return panel
 end
 
-local function buildToggleButton()
-	local gui = ensureScreenGui()
-	if gui:FindFirstChild("LeaderboardToggle") then
-		return
-	end
-	local btn = Instance.new("TextButton")
-	btn.Name = "LeaderboardToggle"
-	btn.Size = UDim2.fromOffset(120, 40)
-	btn.Position = UDim2.new(0, 736, 0, 8)
-	btn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
-	btn.BorderSizePixel = 0
-	btn.TextColor3 = Color3.fromRGB(220, 220, 235)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 14
-	btn.Text = "Leaderboard"
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.Color = Color3.fromRGB(255, 215, 100)
-	stroke.Parent = btn
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = btn
-	btn.Parent = gui
+function LeaderboardController.Show()
+	panelOpen = true
+	ensurePanel()
+	setPanelVisible(true)
+	refreshPanel()
+end
 
-	btn.MouseButton1Click:Connect(function()
-		panelOpen = not panelOpen
-		local panel = ensurePanel()
-		panel.Visible = panelOpen
-		if panelOpen then
-			refreshPanel()
-		end
-	end)
+function LeaderboardController.Hide()
+	panelOpen = false
+	setPanelVisible(false)
+end
+
+function LeaderboardController.Toggle()
+	if panelOpen then
+		LeaderboardController.Hide()
+	else
+		LeaderboardController.Show()
+	end
 end
 
 function LeaderboardController.Init()
-	buildToggleButton()
+	ensureScreenGui()
 	ensurePanel()
 
 	local stateRemote = Remotes.LeaderboardState :: RemoteEvent

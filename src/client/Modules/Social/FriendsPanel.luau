@@ -2,23 +2,30 @@
 --[[
 	Outpost-7 — friends panel (client).
 
-	Phase E5. Toggle button + right-side panel showing the player's
-	Roblox friends list with per-friend `inThisServer` flag (green
-	dot = online here). Refresh button triggers a yielding server-
-	side `RefreshFriends` invoke.
+	Phase E5 (original). Phase G5.2b theme migration + standalone-
+	toggle teardown.
 
-	V1 limitation per the FriendsService doc: only "online in this
-	server" presence is shown. Cross-server friend presence is V1.5+.
-
-	Public API:
-	  Init  — wires Remote listener + builds UI
+	G5.2b changes:
+	  - Standalone FriendsToggle button removed. Friends panel is now
+	    opened via the long-press Clan sub-menu (G5.2b) — see
+	    ClanController for the trigger. The panel itself exports
+	    `Toggle()` for the sub-menu to call.
+	  - Panel + refresh button rebuilt on Components.StrokedFrame /
+	    Components.Button.
+	  - Status dot color resolves from Theme (online = secondary,
+	    offline = textMuted).
+	  - Open/close UIScale tween via G5 motion presets.
 --]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local Components = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Components"))
+local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
 
 local FriendsPanel = {}
 
@@ -36,74 +43,193 @@ type State = {
 
 local current: State? = nil
 local panelOpen = false
+local screenGui: ScreenGui? = nil
+local panelFrame: Frame? = nil
+local panelScale: UIScale? = nil
+local listFrame: ScrollingFrame? = nil
+local titleLabel: TextLabel? = nil
+
+local function easingInfoFor(presetName: string): TweenInfo
+	local preset: any = Constants.UI.Motion[presetName]
+	return TweenInfo.new(
+		preset.duration,
+		Theme.EasingStyleFor(preset.easing),
+		Theme.EasingDirectionFor(preset.easing),
+		0,
+		false,
+		0
+	)
+end
 
 local function ensureScreenGui(): ScreenGui
+	if screenGui and screenGui.Parent then
+		return screenGui
+	end
 	local pg = Players.LocalPlayer:WaitForChild("PlayerGui") :: PlayerGui
 	local existing = pg:FindFirstChild("OutpostFriends")
 	if existing and existing:IsA("ScreenGui") then
+		screenGui = existing
 		return existing
 	end
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "OutpostFriends"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 30
 	gui.Parent = pg
+	screenGui = gui
 	return gui
 end
 
-local function refreshPanel()
-	local gui = ensureScreenGui()
-	local panel = gui:FindFirstChild("FriendsPanel")
-	if not panel or not panel:IsA("Frame") then
+local function rebuildList()
+	if not listFrame or not titleLabel then
 		return
 	end
-	for _, child in panel:GetChildren() do
-		if child:IsA("GuiObject") then
+	for _, child in listFrame:GetChildren() do
+		if child:IsA("GuiObject") and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
 			child:Destroy()
 		end
 	end
 
-	-- Header (title + refresh button)
+	if current then
+		titleLabel.Text = string.format("Friends (%d)", #current.friends)
+	else
+		titleLabel.Text = "Friends"
+	end
+
+	if not current then
+		local empty = Instance.new("TextLabel")
+		empty.Size = UDim2.new(1, -12, 0, 20)
+		empty.BackgroundTransparency = 1
+		empty.TextColor3 = Theme.GetActive().textMuted
+		empty.Font = Enum.Font.Gotham
+		empty.TextSize = 12
+		empty.Text = "Loading…"
+		empty.Parent = listFrame
+		return
+	end
+	if #current.friends == 0 then
+		local empty = Instance.new("TextLabel")
+		empty.Size = UDim2.new(1, -12, 0, 20)
+		empty.BackgroundTransparency = 1
+		empty.TextColor3 = Theme.GetActive().textMuted
+		empty.Font = Enum.Font.Gotham
+		empty.TextSize = 12
+		empty.Text = "No friends yet."
+		empty.Parent = listFrame
+		return
+	end
+
+	table.sort(current.friends, function(a, b)
+		if a.inThisServer ~= b.inThisServer then
+			return a.inThisServer
+		end
+		return string.lower(a.displayName) < string.lower(b.displayName)
+	end)
+
+	for _, friend in current.friends do
+		local row = Instance.new("Frame")
+		row.Size = UDim2.new(1, -12, 0, 22)
+		row.BackgroundTransparency = 1
+		row.Parent = listFrame
+
+		local dot = Instance.new("Frame")
+		dot.Size = UDim2.fromOffset(8, 8)
+		dot.Position = UDim2.fromOffset(2, 7)
+		dot.BackgroundColor3 = if friend.inThisServer
+			then Theme.GetActive().secondary
+			else Theme.GetActive().textMuted
+		dot.BorderSizePixel = 0
+		local dotCorner = Instance.new("UICorner")
+		dotCorner.CornerRadius = UDim.new(1, 0)
+		dotCorner.Parent = dot
+		dot.Parent = row
+
+		local lbl = Instance.new("TextLabel")
+		lbl.Size = UDim2.new(1, -16, 1, 0)
+		lbl.Position = UDim2.fromOffset(16, 0)
+		lbl.BackgroundTransparency = 1
+		lbl.TextColor3 = if friend.inThisServer
+			then Theme.GetActive().textPrimary
+			else Theme.GetActive().textMuted
+		lbl.Font = Enum.Font.Gotham
+		lbl.TextSize = 13
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
+		lbl.Text = friend.displayName
+		lbl.Parent = row
+	end
+end
+
+local function setPanelVisible(visible: boolean)
+	if not panelFrame or not panelScale then
+		return
+	end
+	if visible then
+		panelFrame.Visible = true
+		panelScale.Scale = 0.95
+		TweenService:Create(panelScale, easingInfoFor("PanelOpen"), { Scale = 1.0 }):Play()
+	else
+		TweenService:Create(panelScale, easingInfoFor("PanelClose"), { Scale = 0.95 }):Play()
+		task.delay((Constants.UI.Motion.PanelClose :: any).duration, function()
+			if panelFrame then
+				panelFrame.Visible = false
+			end
+		end)
+	end
+end
+
+local function ensurePanel(): Frame
+	if panelFrame and panelFrame.Parent then
+		return panelFrame
+	end
+	local gui = ensureScreenGui()
+	local panel = Components.StrokedFrame({
+		parent = gui,
+		name = "FriendsPanel",
+		size = UDim2.fromOffset(240, 320),
+		position = UDim2.new(1, -256, 0, 460),
+		bgSlot = "panel",
+		strokeSlot = "secondary",
+		cornerAccent = true,
+	})
+	panel.Visible = false
+
+	local scale = Instance.new("UIScale")
+	scale.Scale = 1.0
+	scale.Parent = panel
+	panelScale = scale
+
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -88, 0, 24)
 	title.Position = UDim2.fromOffset(8, 8)
 	title.BackgroundTransparency = 1
-	title.TextColor3 = Color3.fromRGB(220, 220, 235)
+	title.TextColor3 = Theme.GetActive().textPrimary
 	title.Font = Enum.Font.GothamBold
 	title.TextSize = 16
 	title.TextXAlignment = Enum.TextXAlignment.Left
-	if current then
-		title.Text = string.format("Friends (%d)", #current.friends)
-	else
-		title.Text = "Friends"
-	end
+	title.Text = "Friends"
 	title.Parent = panel
+	titleLabel = title
 
-	local refreshBtn = Instance.new("TextButton")
-	refreshBtn.Size = UDim2.fromOffset(72, 24)
-	refreshBtn.Position = UDim2.new(1, -80, 0, 8)
-	refreshBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-	refreshBtn.BorderSizePixel = 0
-	refreshBtn.TextColor3 = Color3.fromRGB(220, 220, 235)
-	refreshBtn.Font = Enum.Font.GothamBold
-	refreshBtn.TextSize = 12
-	refreshBtn.Text = "Refresh"
-	local refreshCorner = Instance.new("UICorner")
-	refreshCorner.CornerRadius = UDim.new(0, 4)
-	refreshCorner.Parent = refreshBtn
-	refreshBtn.Parent = panel
-	refreshBtn.MouseButton1Click:Connect(function()
-		local remote = Remotes.RefreshFriends :: RemoteFunction
-		pcall(function()
-			remote:InvokeServer()
-		end)
-	end)
+	Components.Button({
+		parent = panel,
+		name = "RefreshButton",
+		text = "Refresh",
+		size = UDim2.fromOffset(72, 24),
+		position = UDim2.new(1, -80, 0, 8),
+		strokeSlot = "accent",
+		onActivated = function()
+			local remote = Remotes.RefreshFriends :: RemoteFunction
+			pcall(function()
+				remote:InvokeServer()
+			end)
+		end,
+	})
 
-	-- List
 	local list = Instance.new("ScrollingFrame")
 	list.Size = UDim2.new(1, -16, 1, -44)
 	list.Position = UDim2.fromOffset(8, 40)
-	list.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.ScrollBarThickness = 4
 	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -116,135 +242,48 @@ local function refreshPanel()
 	pad.PaddingLeft = UDim.new(0, 6)
 	pad.PaddingRight = UDim.new(0, 6)
 	pad.Parent = list
-	local listCorner = Instance.new("UICorner")
-	listCorner.CornerRadius = UDim.new(0, 4)
-	listCorner.Parent = list
 	list.Parent = panel
+	listFrame = list
 
-	if not current then
-		local empty = Instance.new("TextLabel")
-		empty.Size = UDim2.new(1, -12, 0, 20)
-		empty.BackgroundTransparency = 1
-		empty.TextColor3 = Color3.fromRGB(140, 140, 150)
-		empty.Font = Enum.Font.Gotham
-		empty.TextSize = 12
-		empty.Text = "Loading…"
-		empty.Parent = list
-		return
-	end
-	if #current.friends == 0 then
-		local empty = Instance.new("TextLabel")
-		empty.Size = UDim2.new(1, -12, 0, 20)
-		empty.BackgroundTransparency = 1
-		empty.TextColor3 = Color3.fromRGB(140, 140, 150)
-		empty.Font = Enum.Font.Gotham
-		empty.TextSize = 12
-		empty.Text = "No friends yet."
-		empty.Parent = list
-		return
-	end
-
-	-- Sort: online-here first, then alpha by display name.
-	table.sort(current.friends, function(a, b)
-		if a.inThisServer ~= b.inThisServer then
-			return a.inThisServer
+	local themeConn = Theme.Changed:Connect(function()
+		if title.Parent then
+			title.TextColor3 = Theme.GetActive().textPrimary
 		end
-		return string.lower(a.displayName) < string.lower(b.displayName)
+		-- Re-render list rows on biome swap to re-apply dot/label colors.
+		if panelOpen then
+			rebuildList()
+		end
+	end)
+	panel.Destroying:Connect(function()
+		themeConn:Disconnect()
 	end)
 
-	for _, friend in current.friends do
-		local row = Instance.new("Frame")
-		row.Size = UDim2.new(1, -12, 0, 22)
-		row.BackgroundTransparency = 1
-		row.Parent = list
-
-		local dot = Instance.new("Frame")
-		dot.Size = UDim2.fromOffset(8, 8)
-		dot.Position = UDim2.fromOffset(2, 7)
-		dot.BackgroundColor3 = if friend.inThisServer
-			then Color3.fromRGB(80, 220, 120)
-			else Color3.fromRGB(80, 80, 90)
-		dot.BorderSizePixel = 0
-		local dotCorner = Instance.new("UICorner")
-		dotCorner.CornerRadius = UDim.new(1, 0)
-		dotCorner.Parent = dot
-		dot.Parent = row
-
-		local lbl = Instance.new("TextLabel")
-		lbl.Size = UDim2.new(1, -16, 1, 0)
-		lbl.Position = UDim2.fromOffset(16, 0)
-		lbl.BackgroundTransparency = 1
-		lbl.TextColor3 = if friend.inThisServer
-			then Color3.fromRGB(220, 240, 220)
-			else Color3.fromRGB(180, 180, 190)
-		lbl.Font = Enum.Font.Gotham
-		lbl.TextSize = 13
-		lbl.TextXAlignment = Enum.TextXAlignment.Left
-		lbl.Text = friend.displayName
-		lbl.Parent = row
-	end
-end
-
-local function ensurePanel(): Frame
-	local gui = ensureScreenGui()
-	local existing = gui:FindFirstChild("FriendsPanel")
-	if existing and existing:IsA("Frame") then
-		return existing
-	end
-	local panel = Instance.new("Frame")
-	panel.Name = "FriendsPanel"
-	panel.Size = UDim2.fromOffset(240, 320)
-	panel.Position = UDim2.new(1, -256, 0, 460)
-	panel.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
-	panel.BorderSizePixel = 0
-	panel.Visible = false
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.Color = Color3.fromRGB(80, 220, 120)
-	stroke.Parent = panel
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = panel
-	panel.Parent = gui
+	panelFrame = panel
 	return panel
 end
 
-local function buildToggleButton()
-	local gui = ensureScreenGui()
-	if gui:FindFirstChild("FriendsToggle") then
-		return
-	end
-	local btn = Instance.new("TextButton")
-	btn.Name = "FriendsToggle"
-	btn.Size = UDim2.fromOffset(96, 40)
-	btn.Position = UDim2.new(0, 864, 0, 8)
-	btn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
-	btn.BorderSizePixel = 0
-	btn.TextColor3 = Color3.fromRGB(220, 220, 235)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 14
-	btn.Text = "Friends"
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.Color = Color3.fromRGB(80, 220, 120)
-	stroke.Parent = btn
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = btn
-	btn.Parent = gui
+function FriendsPanel.Show()
+	panelOpen = true
+	ensurePanel()
+	setPanelVisible(true)
+	rebuildList()
+end
 
-	btn.MouseButton1Click:Connect(function()
-		panelOpen = not panelOpen
-		local panel = ensurePanel()
-		panel.Visible = panelOpen
-		if panelOpen then
-			refreshPanel()
-		end
-	end)
+function FriendsPanel.Hide()
+	panelOpen = false
+	setPanelVisible(false)
+end
+
+function FriendsPanel.Toggle()
+	if panelOpen then
+		FriendsPanel.Hide()
+	else
+		FriendsPanel.Show()
+	end
 end
 
 function FriendsPanel.Init()
-	buildToggleButton()
+	ensureScreenGui()
 	ensurePanel()
 
 	local listRemote = Remotes.FriendsList :: RemoteEvent
@@ -254,7 +293,7 @@ function FriendsPanel.Init()
 		end
 		current = state :: State
 		if panelOpen then
-			refreshPanel()
+			rebuildList()
 		end
 	end)
 end

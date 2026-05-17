@@ -1142,3 +1142,67 @@ honest — the chime is the reward, not the button press.
 ### Commit
 
 `feat(phaseG5.2c): voice migration + wallet cluster + claim chimes`
+
+#### G5.2b slice — panel migrations + Clan long-press
+
+After G5.2c landed, user requested G5.2b backfill. Split into 3
+sub-commits for review burden:
+
+**G5.2b.1 — Popups (commit `5eb2724`):** DailyLoginPopup and
+WelcomeBackPopup rebuilt on Components.StrokedFrame + Components.Button.
+UIScale-based open/close tween. Claim buttons use `playSound = false`
+so the claim chime is the sole audio cue.
+
+**G5.2b.2 — Mid-size panels (commit `28c1ae4`):**
+
+- `ShopPanel.luau` — root + cards on Components. Rarity → palette
+  slot (Common = textMuted, Uncommon = accent, Rare = highlight).
+- `BattlePassPanel.luau` — root + tier rows + free/premium track
+  buttons on Components. State-driven slots; tier badge as nested
+  Components.StrokedFrame. XP fill = Theme.highlight.
+- `DailyQuestsPanel.luau` — root + quest rows + claim button on
+  Components. State-driven row stroke (claimed/complete/in-progress).
+  Progress bar fill resolves from Theme.
+- `GamePassPanel.luau` — root + cards on Components. State slots
+  (owned/buy). Section headers tinted per slot.
+- `CosmeticController.luau` — full migration. Toggle + panel + rows
+  on Components. Rarity slots map to Theme palette. Mode-contextual
+  toggle (Build only). Duplicate CosmeticUnlocked banner REMOVED
+  (ToastService.ShowInfo handles it from G5.1).
+
+**G5.2b.3 — Social layer:**
+
+- `FriendsPanel.luau` — standalone toggle button REMOVED (G5.2a
+  scope finally lands). Panel root + refresh button on Components.
+  Status dot color via Theme.secondary (online) / Theme.textMuted
+  (offline). `Toggle()` exported for the social sub-menu.
+- `LeaderboardController.luau` — standalone toggle REMOVED. Panel
+  root + tab buttons on Components. Rank colors (gold/silver/bronze)
+  from Theme.highlight / textPrimary / accent so they stay biome-
+  aware. `Toggle()` exported.
+- `ClanController.luau` — partial migration. Root panel on
+  Components.StrokedFrame + UIScale tween. Internal rows
+  (members/deposit/withdraw/chat) keep their legacy styling since
+  the panel's destroy-on-refresh loop would clobber any newly
+  added GuiObject children. Full internal migration is its own
+  LOC chunk; deferred.
+
+**Clan long-press sub-menu (in `HUD/ActionBar.luau`):**
+
+- Clan action-bar button now distinguishes short-tap vs long-press
+  (≥500ms hold). Short-tap = ClanController.Toggle (unchanged
+  V1 behavior). Long-press = open small "Social" sub-menu sheet
+  with Friends + Leaderboard buttons.
+- SocialMenu is a StrokedFrame parented to the ActionBar ScreenGui
+  (not to the bar Frame, to avoid UIListLayout interference).
+  Positioned centered above the Clan button at runtime.
+- Auto-dismiss on tap-outside via a one-shot
+  UserInputService.InputBegan listener; menu buttons hide-menu-
+  then-Toggle the corresponding panel.
+- Components.Button's auto onActivated is suppressed for Clan; a
+  custom MouseButton1Down/Up handler runs the press-duration logic.
+  Components.Button's internal press-tween still fires (no conflict).
+
+### Commit
+
+`feat(phaseG5.2b.3): social layer migration + clan long-press menu`

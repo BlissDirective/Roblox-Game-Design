@@ -92,6 +92,8 @@ type ButtonDef = {
 	onActivated: () -> (),
 }
 
+local LONG_PRESS_SECONDS = 0.5
+
 local BUTTON_DEFS: { ButtonDef } = {
 	{
 		name = "Shop",
@@ -187,6 +189,154 @@ local function applyVisibility()
 	end
 end
 
+-- G5.2b: Social sub-menu (Friends + Leaderboard) opened by long-
+-- pressing the Clan action-bar button. Short-tap on Clan still calls
+-- ClanController.Toggle().
+local socialMenuFrame: Frame? = nil
+local socialMenuVisible = false
+
+local function ensureSocialMenu(): Frame
+	if socialMenuFrame and socialMenuFrame.Parent then
+		return socialMenuFrame
+	end
+	-- Parent to the ActionBar's ScreenGui (not the bar Frame) so the
+	-- bar's UIListLayout doesn't lay the menu out as a sibling button.
+	local menu = Components.StrokedFrame({
+		parent = screenGui :: Instance,
+		name = "SocialMenu",
+		size = UDim2.fromOffset(140, 96),
+		bgSlot = "panel",
+		strokeSlot = "highlight",
+		cornerAccent = false,
+	})
+	menu.Visible = false
+	-- Position immediately above the Clan button. The bar is anchored
+	-- bottom-LEFT (right thumb) or bottom-RIGHT (left thumb); the menu
+	-- sits ABOVE the Clan button regardless.
+	menu.AnchorPoint = Vector2.new(0.5, 1)
+
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Vertical
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = menu
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 4)
+	pad.PaddingBottom = UDim.new(0, 4)
+	pad.PaddingLeft = UDim.new(0, 4)
+	pad.PaddingRight = UDim.new(0, 4)
+	pad.Parent = menu
+
+	local function hideMenu()
+		socialMenuVisible = false
+		menu.Visible = false
+	end
+
+	Components.Button({
+		parent = menu,
+		name = "Friends",
+		text = "Friends",
+		size = UDim2.new(1, 0, 0, 36),
+		strokeSlot = "secondary",
+		onActivated = function()
+			hideMenu()
+			local ok, mod = pcall(require, script.Parent.Parent.Social.FriendsPanel)
+			if ok and mod and type(mod.Toggle) == "function" then
+				mod.Toggle()
+			end
+		end,
+	})
+	Components.Button({
+		parent = menu,
+		name = "Leaderboard",
+		text = "Leaderboard",
+		size = UDim2.new(1, 0, 0, 36),
+		strokeSlot = "highlight",
+		onActivated = function()
+			hideMenu()
+			local ok, mod = pcall(require, script.Parent.Parent.Social.LeaderboardController)
+			if ok and mod and type(mod.Toggle) == "function" then
+				mod.Toggle()
+			end
+		end,
+	})
+
+	socialMenuFrame = menu
+	return menu
+end
+
+local function showSocialMenu(clanBtn: GuiObject)
+	local menu = ensureSocialMenu()
+	-- Position the menu centered above the Clan button. The menu's
+	-- AnchorPoint is (0.5, 1) so Position = top-center of the menu.
+	local btnAbs = clanBtn.AbsolutePosition
+	local btnSize = clanBtn.AbsoluteSize
+	local centerX = btnAbs.X + btnSize.X * 0.5
+	local topY = btnAbs.Y - 6 -- 6px gap above the button
+	menu.Position = UDim2.fromOffset(centerX, topY)
+	menu.Visible = true
+	socialMenuVisible = true
+
+	-- Auto-dismiss on tap-outside: a one-shot InputBegan listener.
+	local dismiss: RBXScriptConnection?
+	dismiss = UserInputService.InputBegan:Connect(function(input)
+		if not socialMenuVisible then
+			if dismiss then
+				dismiss:Disconnect()
+			end
+			return
+		end
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+			return
+		end
+		-- Tap inside the menu? Let the menu buttons handle it.
+		local pos = input.Position
+		local menuAbs = menu.AbsolutePosition
+		local menuSize = menu.AbsoluteSize
+		local inside = pos.X >= menuAbs.X
+			and pos.X <= menuAbs.X + menuSize.X
+			and pos.Y >= menuAbs.Y
+			and pos.Y <= menuAbs.Y + menuSize.Y
+		if not inside then
+			socialMenuVisible = false
+			menu.Visible = false
+			if dismiss then
+				dismiss:Disconnect()
+			end
+		end
+	end)
+end
+
+local function attachClanLongPress(btn: GuiObject, shortTapHandler: () -> ())
+	local pressStart: number? = nil
+	local longPressFired = false
+
+	btn.MouseButton1Down:Connect(function()
+		pressStart = os.clock()
+		longPressFired = false
+		task.delay(LONG_PRESS_SECONDS, function()
+			if pressStart and not longPressFired and os.clock() - pressStart >= LONG_PRESS_SECONDS then
+				longPressFired = true
+				showSocialMenu(btn)
+			end
+		end)
+	end)
+	btn.MouseButton1Up:Connect(function()
+		if pressStart and not longPressFired then
+			shortTapHandler()
+		end
+		pressStart = nil
+	end)
+	btn.MouseLeave:Connect(function()
+		pressStart = nil
+	end)
+	btn.TouchTap:Connect(function()
+		-- Touch path: TouchTap fires on short tap. Long-press on touch
+		-- is detected by the same MouseButton1Down/Up bridge (Roblox
+		-- forwards touch to mouse). The TouchTap fire is a no-op since
+		-- the Down/Up already triggered the short-tap branch.
+	end)
+end
+
 local function buildActionBar()
 	local player = Players.LocalPlayer
 	local playerGui = player:WaitForChild("PlayerGui")
@@ -219,16 +369,22 @@ local function buildActionBar()
 	layout.Parent = bar
 
 	for i, def in BUTTON_DEFS do
+		-- G5.2b: Clan button special-cases long-press → social sub-
+		-- menu. Disable Components.Button's auto onActivated so we
+		-- can attach our own press-duration logic.
 		local handle = Components.Button({
 			parent = bar,
 			name = def.name,
 			text = def.text,
 			size = UDim2.fromOffset(BTN_SIZE, BTN_SIZE),
 			strokeSlot = def.strokeSlot,
-			onActivated = def.onActivated,
+			onActivated = if def.name == "Clan" then function() end else def.onActivated,
 		})
 		handle.instance.LayoutOrder = i
 		btnHandles[def.name] = handle
+		if def.name == "Clan" then
+			attachClanLongPress(handle.instance, def.onActivated)
+		end
 	end
 
 	-- Mode toggle. Anchored opposite the action bar.
