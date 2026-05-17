@@ -1206,3 +1206,81 @@ so the claim chime is the sole audio cue.
 ### Commit
 
 `feat(phaseG5.2b.3): social layer migration + clan long-press menu`
+
+---
+
+## G8 — FTUE polish
+
+**Goal.** Convert the placeholder F4 FTUE flow into a taste-worthy
+first 30 seconds. The state machine (Cinematic → Scout →
+PlaceExtractor → FirstCredits → Completed) stays untouched; G8 is
+visuals + audio cue wiring + UX polish only.
+
+### Design decisions (locked with user, 2026-05-17)
+
+| Decision | Answer |
+|---|---|
+| Cinematic | Multi-stage scripted (3 keyframes: wide overhead → orbit → gameplay-angle pull-back) with title cards ("OUTPOST-7" / "// Sector 14-J"). `ftue_intro_sting` audio cue fires at start. Skip button visible throughout. No new model assets needed. |
+| Scout-step beacon | Rotating ring (12 segments arranged as a circle, slow Y-axis rotation over 4s) + emissive pulse (Brightness via Transparency 0.2↔0.7 over 1.5s) + faint vertical pillar for visibility from afar. Color = Theme.accent (biome-aware). |
+| Polish details | All four: arrow pointer on PlaceExtractor step (targets ActionBar.Shop button), arrow pointer on FirstCredits step (targets CreditsPill), step-advance audio cue on every transition, hint banner auto-dismiss after 8s. |
+
+### Approach
+
+**`src/client/Modules/FTUE/FTUEController.luau`** rebuilt around the
+new visual primitives. The G4 state subscription + Remote ACK shape
+stays the same — purely client-side rendering changes.
+
+Key additions:
+
+- **Multi-stage cinematic** — three camera keyframes tweened
+  sequentially over `Constants.FTUE.CinematicSeconds`. Stage 1 (40%):
+  wide overhead at y=180. Stage 2 (30%): orbit around drop point at
+  70° rotation, y=60. Stage 3 (30%): hold on the gameplay angle
+  (y=30, z=-25) so the title card has time to fade out. Skip button
+  short-circuits to the post-cinematic state.
+
+- **Title cards** — two TextLabels (title + subtitle) centered on
+  screen, fade in 0.4s, fade out 0.5s before cinematic ends.
+  `Theme.textPrimary` + `Theme.accent` colors with black text-stroke
+  for legibility against any biome backdrop.
+
+- **Rotating ring beacon** — `RunService.Heartbeat`-driven rotation +
+  pulse on 12 Neon segments arranged in an 8-stud-diameter ring 4
+  studs above the target node. Faint vertical Neon pillar from node
+  to ring center keeps it visible from far away. Color resolves from
+  `Theme.accent` at build time.
+
+- **HUD pointer arrow** — diamond-shaped `Components.StrokedFrame`
+  rotated 45° with a `!` glyph; tracked to a target `GuiObject` via
+  Heartbeat, auto-positions above/below based on screen quadrant,
+  bobs ±4px over 1s. `getTarget` is a thunk that resolves the target
+  per-frame so even if the target ScreenGui is rebuilt mid-step the
+  pointer reconnects.
+
+- **Hint banner** — migrated to `Components.StrokedFrame` + Theme
+  palette. Auto-dismiss `task.delay(8, clearHint)` cancellable if a
+  new step arrives first.
+
+- **Step-advance audio cue** — `ftue_step_advance` fires on every
+  transition (excluding the initial push). `ftue_intro_sting` fires
+  at cinematic start. Both registered in `AudioRegistry` with
+  assetId=0 (asset uploads land in Phase H; G8 wires the triggers).
+
+### Files touched / added
+
+- NEW audio entries `ftue_intro_sting` + `ftue_step_advance` in
+  `src/shared/Modules/Registry/AudioRegistry.luau`.
+- `src/client/Modules/FTUE/FTUEController.luau` — full rewrite of the
+  rendering layer. Subscription + ACK shape unchanged.
+
+### Deferred to Phase H (asset uploads)
+
+- Drop-pod descent model + landing animation
+- Operator landing animation
+- Voice-over for the intro cinematic
+- Actual sound assets for `ftue_intro_sting` and `ftue_step_advance`
+- Localized + writer-polished overlay copy (V1 ships English placeholders)
+
+### Commit
+
+`feat(phaseG8): FTUE polish — multi-stage cinematic + beacon + arrows`

@@ -216,6 +216,24 @@ AudioRegistry.Catalog = {
 		looped = false,
 		description = "Invalid input / insufficient currency / rate-limited.",
 	},
+	ftue_intro_sting = {
+		id = "ftue_intro_sting",
+		category = "ui",
+		assetId = 0,
+		volume = 0.75,
+		pitch = 1.0,
+		looped = false,
+		description = "FTUE cinematic intro sting — fires at the start of the 5s opening shot.",
+	},
+	ftue_step_advance = {
+		id = "ftue_step_advance",
+		category = "ui",
+		assetId = 0,
+		volume = 0.5,
+		pitch = 1.0,
+		looped = false,
+		description = "FTUE progress confirmation — fires on each step transition (cinematic→scout→place→credits→done).",
+	},
 
 	-- ============ Music ============
 	music_main_loop = {
