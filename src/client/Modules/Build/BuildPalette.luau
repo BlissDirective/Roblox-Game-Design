@@ -29,8 +29,8 @@ local handlers: { SelectionChangedHandler } = {}
 local screenGui: ScreenGui? = nil
 
 -- Order matters for the palette's left-to-right layout. V1 ships with
--- two entries; Phase B+ adds turret, drone-bay, etc.
-local PALETTE_ORDER = { "extractor", "wall" }
+-- three entries (E2.5 added turret); Phase G/V1.5 adds drone-bay, decor.
+local PALETTE_ORDER = { "extractor", "wall", "turret" }
 
 local function notify(id: string?)
 	for _, handler in handlers do
@@ -66,8 +66,8 @@ local function build()
 	screenGui = gui
 
 	local container = Instance.new("Frame")
-	container.Size = UDim2.new(0, 320, 0, 80)
-	container.Position = UDim2.new(0.5, -160, 1, -100)
+	container.Size = UDim2.new(0, 460, 0, 80)
+	container.Position = UDim2.new(0.5, -230, 1, -100)
 	container.BackgroundTransparency = 1
 	container.Parent = gui
 

@@ -15,7 +15,10 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
 local Enums = require(Shared:WaitForChild("Enums"))
 
+local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
+
 local HudController = require(script.Modules.HUD.HudController)
+local ToastService = require(script.Modules.HUD.ToastService)
 local CameraController = require(script.Modules.Core.CameraController)
 local InputRouter = require(script.Modules.Core.InputRouter)
 local BuildController = require(script.Modules.Build.BuildController)
@@ -24,6 +27,33 @@ local ShopController = require(script.Modules.Shop.ShopController)
 local DailyQuestsPanel = require(script.Modules.Retention.DailyQuestsPanel)
 local WelcomeBackPopup = require(script.Modules.Retention.WelcomeBackPopup)
 local MonetizationController = require(script.Modules.Shop.MonetizationController)
+local RaidController = require(script.Modules.Raid.RaidController)
+local CombatController = require(script.Modules.Combat.CombatController)
+local ClanController = require(script.Modules.Social.ClanController)
+local LeaderboardController = require(script.Modules.Social.LeaderboardController)
+local FriendsPanel = require(script.Modules.Social.FriendsPanel)
+local VoiceController = require(script.Modules.Voice.VoiceController)
+local FTUEController = require(script.Modules.FTUE.FTUEController)
+local CosmeticController = require(script.Modules.Cosmetics.CosmeticController)
+local AudioController = require(script.Modules.Audio.AudioController)
+
+-- G4: AudioController.Init wires the AudioCue Remote listener BEFORE
+-- any other controller fires a local UI cue, so the throttle ledger
+-- is live from frame 0.
+AudioController.Init()
+
+-- G5: Theme.BindClientReplication subscribes to the ReplicatedStorage
+-- `OutpostActiveTheme` StringValue so server-side biome theme swaps
+-- propagate to the client palette + every Components-built widget.
+-- Must run BEFORE HUD pieces build so they read the active palette
+-- on first frame.
+Theme.BindClientReplication()
+
+-- G5: ToastService builds the 3 split-by-severity containers (top-
+-- center / bottom-center / right-column) and subscribes to
+-- CosmeticUnlocked for the built-in info toast. Init early so any
+-- controller can fire toasts during their own Init.
+ToastService.Init()
 
 HudController.Init()
 CameraController.Init()
@@ -34,6 +64,14 @@ ShopController.Init()
 DailyQuestsPanel.Init()
 WelcomeBackPopup.Init()
 MonetizationController.Init()
+RaidController.Init()
+CombatController.Init()
+ClanController.Init()
+LeaderboardController.Init()
+FriendsPanel.Init()
+VoiceController.Init()
+FTUEController.Init()
+CosmeticController.Init()
 
 print(
 	string.format(

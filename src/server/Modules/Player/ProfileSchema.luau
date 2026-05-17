@@ -33,6 +33,62 @@
 	read on demand via `GamePassService.Owns`. Season transitions
 	reset XP/tier/claims lazily on the next GetState/GrantXP/TryClaim
 	when `battlePassSeasonId != Constants.BATTLE_PASS.SeasonId`.
+	Phase E1: adds `raidWins`, `raidLosses`, `raidsDefended`,
+	`raidsRaided` for offensive + defensive raid counters. These are
+	the canonical inputs for E5's weekly leaderboard. Additive; older
+	saves get 0 from defaults via Reconcile.
+	Phase E2: adds `wavesSurvived` for the PvE wave system's lifetime
+	counter. Drives a future "wave_survived" quest objective entry
+	(Phase G expands the quest pool) and a possible E5 leaderboard
+	column. Additive; older saves get 0.
+	Phase E2.5: adds `turretsKilled` — lifetime aliens killed by
+	this player's turrets. Mutated only by `TurretService` on the
+	frame the alien's HP transitions from > 0 to <= 0 from a turret
+	shot. Future quest objective ("turret_kill") and Phase G "PvE
+	hero" leaderboard candidate.
+	Phase E2.6: adds `dronesKilled` — same semantics as turretsKilled
+	but for the drone swarm (DroneSwarmService). Counted separately
+	so future "PvE hero" leaderboards can weight player-owned vs
+	autonomous-defender kills differently.
+	Phase E3: adds `clanId: string?` — the player's current clan
+	membership. nil = no clan. Mutated only by `ClanService` on
+	successful create / join / leave / kick / disband. Clan member
+	role + the clan's full state lives in the separate `ClanData_v1`
+	DataStore keyed by clanId.
+	Phase F0 (V1.5 expansion prep): adds `creditsInvestedLifetime`
+	for the V1.5 Tier system gate (60% weight per
+	`docs/architecture/V1_5_TIER_PROGRESSION.md` §3). Mutated only by
+	`PlacementService` on successful (non-trusted) placement; never
+	decremented on demolish/refund — sticky tycoon-spend signal.
+	Tracking starts in V1 so V1.5 doesn't need a lossy backfill from
+	`baseLayout`. Also adds `tier: number` (default 0) — gates the
+	tier UI hidden in V1, set by `TierService` in V1.5; V1→V1.5
+	migration sets to 4 (Outpost) for existing V1 profiles.
+	Phase F4 (FTUE): adds `ftueCompleted` (sticky boolean) +
+	`ftueStep` (string?, current step). The step field lets a
+	disconnected mid-FTUE player resume from their last checkpoint
+	on rejoin. ftueCompleted is the gate that hides the FTUE flow
+	for returning players.
+	Phase F5 (tutorial gates): adds `tutorialQuestsCompleted` (sticky
+	boolean) + `tutorialQuests` (map parallel to `dailyQuests`,
+	holding the 3 fixed tutorial-quest progress entries until all
+	are claimed). The completion flag is the gate that hides the
+	tutorial track for returning players. Once all 3 tutorial quests
+	are claimed, DailyQuestManager flips the flag and the player
+	transitions to the regular daily-roll pool.
+	Phase G7 (cosmetic system): adds `cosmeticsOwned` (map of
+	cosmeticId → acquiredAt timestamp, used for "New!" badges) and
+	`equippedCosmetics` (map of slot → cosmeticId, one entry per V1
+	slot per Constants.COSMETIC.Slots). Closes the D4 BattlePass
+	launch-blocker — BP cosmetic-marked tiers grant items here
+	instead of placeholder Credits/Cores. Defaults granted on first
+	join (combatant skin, default decal/trail/flair).
+	Phase G5 (UI polish): adds `uiPrefs.dominantThumb` — `"left"` |
+	`"right"` | `nil`. Set client-side by the first-tap heuristic
+	(touch X < half-screen → "left"; else "right") and persisted via
+	UiPrefsUpdate Remote. The action bar layout flips based on this
+	value on the next session. Additive — older saves get an empty
+	uiPrefs table on next load via Reconcile.
 
 	Renaming or removing a field requires:
 	  1. Bump CURRENT_SCHEMA_VERSION
@@ -90,6 +146,36 @@ export type PlayerData = {
 	battlePassTier: number, -- derived from XP; capped at MaxTier
 	battlePassClaimed: { [string]: BattlePassClaimEntry }, -- key = tostring(tier)
 	battlePassSeasonId: string?, -- season-reset detector
+	-- Phase E1 — Raid stats (E5 reads these for the weekly leaderboard).
+	raidWins: number, -- offensive raids won
+	raidLosses: number, -- offensive raids lost
+	raidsDefended: number, -- successful defenses (defender survived a raid)
+	raidsRaided: number, -- total times this player has been raided
+	-- Phase E2 — PvE wave stats.
+	wavesSurvived: number, -- lifetime count of waves survived
+	-- Phase E2.5 — turret kill stats.
+	turretsKilled: number, -- lifetime aliens killed by this player's turrets
+	-- Phase E2.6 — drone swarm kill stats.
+	dronesKilled: number, -- lifetime aliens killed by this player's drone swarm
+	-- Phase E3 — clan membership.
+	clanId: string?, -- nil = unaffiliated; set by ClanService on join, cleared on leave / disband / kick
+	-- Phase F0 — V1.5 expansion prep (foundation tracking; no V1 UI).
+	creditsInvestedLifetime: number, -- sticky tycoon-spend signal for V1.5 Tier gate
+	tier: number, -- 0 = Drop Pod (V1 default); V1.5 TierService sets > 0
+	-- Phase F4 — FTUE state.
+	ftueCompleted: boolean, -- true = onboarding done; FTUE flow skipped on rejoin
+	ftueStep: string?, -- current FTUE step; nil when completed; resumes mid-flow on rejoin
+	-- Phase F5 — Tutorial quest gates.
+	tutorialQuestsCompleted: boolean, -- true = all 3 tutorial quests claimed; daily-roll pool active
+	tutorialQuests: { [string]: QuestProgress }, -- 3 fixed entries until completed
+	-- Phase G7 — Cosmetic system (closes D4 launch blocker).
+	cosmeticsOwned: { [string]: number }, -- cosmeticId -> acquiredAt timestamp (for "New!" badges)
+	equippedCosmetics: { [string]: string }, -- slot -> cosmeticId (one entry per equipped slot)
+	-- Phase G5 — UI preferences. dominantThumb flips the mobile action
+	-- bar layout (right thumb default, left thumb on detection).
+	uiPrefs: {
+		dominantThumb: string?, -- "left" | "right" | nil (unset)
+	},
 }
 
 ProfileSchema.DEFAULT_DATA = {
@@ -111,6 +197,25 @@ ProfileSchema.DEFAULT_DATA = {
 	battlePassTier = 0,
 	battlePassClaimed = {},
 	battlePassSeasonId = nil,
+	raidWins = 0,
+	raidLosses = 0,
+	raidsDefended = 0,
+	raidsRaided = 0,
+	wavesSurvived = 0,
+	turretsKilled = 0,
+	dronesKilled = 0,
+	clanId = nil,
+	creditsInvestedLifetime = 0,
+	tier = 0,
+	ftueCompleted = false,
+	ftueStep = nil,
+	tutorialQuestsCompleted = false,
+	tutorialQuests = {},
+	cosmeticsOwned = {},
+	equippedCosmetics = {},
+	uiPrefs = {
+		dominantThumb = nil,
+	},
 } :: PlayerData
 
 -- Each migrator mutates a profile in place from version K to version K+1.

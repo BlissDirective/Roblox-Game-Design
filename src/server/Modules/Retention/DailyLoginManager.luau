@@ -36,6 +36,8 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local QuestObjectives = require(script.Parent.QuestObjectives)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
 
 local DailyLoginManager = {}
 
@@ -184,6 +186,13 @@ function DailyLoginManager.Init()
 	-- result inline (cleaner UX than a paired event).
 	local claimRemote = Remotes.ClaimDailyReward :: RemoteFunction
 	claimRemote.OnServerInvoke = function(player: Player): ClaimResult
+		-- F1: token-bucket rate limit. Server-side semantic limit
+		-- (1/UTC-day) is dominant, but the rate check rejects spam
+		-- before we even compute eligibility.
+		if not AntiExploit.RateCheck(player, "ClaimDailyReward") then
+			AuditLog.Record(player, "rate_limited", "ClaimDailyReward")
+			return { ok = false, error = "rate-limited" }
+		end
 		local result = DailyLoginManager.TryClaim(player)
 		-- Re-push the state (canClaim now false, currentStreakDay
 		-- updated) so the client UI can roll to the "claimed" view.

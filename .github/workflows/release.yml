@@ -1,16 +1,22 @@
-name: Release — publish place via Open Cloud
+name: Release — publish places via Open Cloud
 
 # Tag-triggered (v0.x.y) or manual.
-# Builds Game.rbxl with Rojo, then publishes a new live version of the start
-# place via the Roblox Open Cloud Place Publishing API.
+# Builds Game.rbxl + Raid.rbxl with Rojo, then publishes new live versions of
+# the main place AND the raid place via the Roblox Open Cloud Place Publishing
+# API. Per ADR-009, V1 ships a true two-PlaceId split: the main place hosts
+# the persistent colony / matchmaker, the raid place hosts reserved-server
+# raid rounds.
 #
 # Required GitHub repository config:
 #   secrets:
 #     ROBLOX_API_KEY     — Open Cloud API key, scope: universe-places:write
-#                          (also recommend universe.places:write for older grants)
+#                          on the universe containing both PlaceIds
 #   variables:
 #     UNIVERSE_ID        — the Experience (universe) ID
-#     PLACE_ID           — the start place ID inside that Experience
+#     PLACE_ID           — the main start place ID inside that Experience
+#     RAID_PLACE_ID      — the raid place ID inside the same Experience
+#                          (created in Phase H; until then leave 0 and the
+#                          raid publish step short-circuits)
 #
 # Reference: https://create.roblox.com/docs/cloud/guides/usage-place-publishing
 
@@ -28,6 +34,15 @@ on:
         options:
           - Saved
           - Published
+      target:
+        description: "Which place(s) to publish"
+        type: choice
+        required: true
+        default: "both"
+        options:
+          - both
+          - main
+          - raid
 
 permissions:
   contents: write
@@ -56,7 +71,7 @@ jobs:
 
       - name: Ensure package realm dirs exist
         # See ci.yml for the same step's rationale: Wally only creates dirs
-        # for realms with declared deps; default.project.json maps all three.
+        # for realms with declared deps; both project files map all three.
         run: mkdir -p Packages ServerPackages DevPackages
 
       - name: Lint (Selene)
@@ -65,13 +80,18 @@ jobs:
       - name: Format check (StyLua)
         run: stylua --check src/
 
-      - name: Build place (Rojo)
+      - name: Build main place (Rojo)
         run: |
           mkdir -p build
-          rojo build --output build/Game.rbxl
+          rojo build default.project.json --output build/Game.rbxl
+
+      - name: Build raid place (Rojo)
+        run: |
+          rojo build raid.project.json --output build/Raid.rbxl
           ls -la build/
 
-      - name: Publish to Roblox (Open Cloud)
+      - name: Publish main place to Roblox (Open Cloud)
+        if: github.event_name == 'push' || github.event.inputs.target == 'main' || github.event.inputs.target == 'both'
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UNIVERSE_ID: ${{ vars.UNIVERSE_ID }}
@@ -94,16 +114,52 @@ jobs:
 
           echo "Response: $RESPONSE"
           VERSION=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('versionNumber','?'))")
-          echo "Published version: $VERSION"
-          echo "PUBLISHED_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Published main version: $VERSION"
+          echo "PUBLISHED_MAIN_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Publish raid place to Roblox (Open Cloud)
+        if: github.event_name == 'push' || github.event.inputs.target == 'raid' || github.event.inputs.target == 'both'
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UNIVERSE_ID: ${{ vars.UNIVERSE_ID }}
+          RAID_PLACE_ID: ${{ vars.RAID_PLACE_ID }}
+          VERSION_TYPE: ${{ github.event.inputs.version_type || 'Published' }}
+        run: |
+          if [ -z "$ROBLOX_API_KEY" ] || [ -z "$UNIVERSE_ID" ]; then
+            echo "::error::Missing ROBLOX_API_KEY secret or UNIVERSE_ID var"
+            exit 1
+          fi
+          if [ -z "$RAID_PLACE_ID" ] || [ "$RAID_PLACE_ID" = "0" ]; then
+            echo "::warning::RAID_PLACE_ID not configured — skipping raid publish (Phase H prerequisite)."
+            echo "PUBLISHED_RAID_VERSION=skipped" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          ENDPOINT="https://apis.roblox.com/universes/v1/${UNIVERSE_ID}/places/${RAID_PLACE_ID}/versions?versionType=${VERSION_TYPE}"
+          echo "Publishing build/Raid.rbxl to $ENDPOINT"
+
+          RESPONSE=$(curl --fail-with-body --silent --show-error \
+            -X POST "$ENDPOINT" \
+            -H "x-api-key: $ROBLOX_API_KEY" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary "@build/Raid.rbxl")
+
+          echo "Response: $RESPONSE"
+          VERSION=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('versionNumber','?'))")
+          echo "Published raid version: $VERSION"
+          echo "PUBLISHED_RAID_VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: build/Game.rbxl
+          files: |
+            build/Game.rbxl
+            build/Raid.rbxl
           generate_release_notes: true
           body: |
-            Published to Roblox as place version `${{ env.PUBLISHED_VERSION }}`.
+            Published to Roblox:
+            - main place version: `${{ env.PUBLISHED_MAIN_VERSION }}`
+            - raid place version: `${{ env.PUBLISHED_RAID_VERSION }}`
 
             See `CHANGELOG.md` for the full change list.

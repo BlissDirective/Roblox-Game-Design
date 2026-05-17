@@ -40,10 +40,161 @@ local Constants = {
 	-- Server.Security.AntiExploit.RateCheck. The default is the floor;
 	-- specific Remotes override per docs/architecture/REMOTES_REGISTRY.md.
 	-- Tuned in Phase F1.
+	--
+	-- Phase F1 token-bucket model:
+	--   - Each (player, remoteName) has a bucket with `capacity` tokens
+	--     and refill rate equal to the rate-limit value (tokens/sec).
+	--   - Each Remote call consumes 1 token.
+	--   - Empty bucket = denied + logged.
+	--   - Capacity = burst size; refill rate = sustained rate.
+	-- Default capacity scales with rate (capacity = rate × 2) so a
+	-- 10/sec limit allows up to 20-token bursts before rate-limiting.
+	-- Override per Remote where burst behavior shouldn't apply.
 	RATE_LIMITS = {
 		Default = 10,
 		Placement = 60, -- build-mode placement bursts
 		Purchase = 1, -- monetization Remotes
+		-- Phase F1 — fine-grained per-Remote tuning. Values < 1 = sub-Hz
+		-- (e.g., Chat = 0.5 means 1 message per 2 seconds sustained).
+		ClanCreate = 0.2, -- 1 per 5s sustained — anti-spam clan creation
+		ClanJoin = 0.5, -- 1 per 2s — anti-spam join
+		ClanLeave = 1, -- 1/s
+		ClanKick = 1, -- 1/s
+		ClanStashOp = 5, -- 5/s — deposit / withdraw / approve combined
+		ClanChatSend = 0.5, -- 1 per 2s sustained — chat anti-spam
+		RaidQueue = 1, -- 1/s — anti queue spam
+		FriendsRefresh = 0.05, -- 1 per 20s — server-side throttle is 60s; this is defensive
+		BattlePassClaim = 2, -- 2/s — players may claim multiple tiers in quick burst
+		ShopBuy = 5, -- 5/s — shop browsing speed
+		QuestClaim = 5, -- 5/s — multiple quests claimed in burst
+		DailyLogin = 1, -- 1/s — server-side semantic limit (1/UTC-day) is dominant
+	},
+
+	-- Phase F2 — central validation primitives. Length / range / depth
+	-- caps used by `Server.Security.RemoteValidator`. Defensive caps —
+	-- legitimate clients send well below these; exploiters get rejected
+	-- + audit-logged.
+	VALIDATION = {
+		-- String length caps per category.
+		MaxBuildableIdLength = 32, -- "extractor" / "wall" / specialty extractor IDs
+		MaxQuestIdLength = 32, -- daily quest IDs
+		MaxBlueprintIdLength = 32, -- shop blueprint IDs
+		MaxClanIdLength = 40, -- HttpService:GenerateGUID(false) is 36 chars; 40 = defensive
+		MaxWithdrawalIdLength = 40, -- same shape as clanId
+		MaxActionLength = 16, -- enum-style action strings (e.g., "queue" / "cancel")
+		-- Integer range caps.
+		MaxAmountValue = 1e9, -- max stash deposit / withdraw — guards integer overflow
+		MaxUserIdValue = 2 ^ 53, -- Roblox UserIds are bounded by JS-safe integer range
+		-- Table primitives (forward-looking — V1 has no table-typed
+		-- C→S Remote payloads, but V1.5+ may add them).
+		MaxTableDepth = 4, -- nested {} levels permitted
+		MaxTableKeys = 64, -- top-level + per-level key count cap
+	},
+
+	-- Phase F2 — audit log retention.
+	AUDIT_LOG = {
+		-- In-memory ring buffer per player. Keeps the most recent N
+		-- suspicious events for diagnostics. Cleared on PlayerRemoving
+		-- (Phase H prep adds DataStore persistence + cross-server
+		-- aggregation for live-monitoring).
+		MaxRecordsPerPlayer = 50,
+	},
+
+	-- Phase G7 — Cosmetic system (closes D4 launch-blocker tech debt).
+	-- 8 slots per user-approved maximalist scope (2026-05-05): skin,
+	-- helmet_decal, drone_trail, nameplate_flair (V1 has catalog items);
+	-- emote, banner, vehicle_paint, mount_cosmetic (V1.5/V2 expansion
+	-- slots — schema reserved, no V1 items).
+	--
+	-- Defaults granted on first join: combatant skin, default decal
+	-- (clear), default drone trail (preset-driven), default flair
+	-- (none). Tier 5+ Settlement unlocks banner slot (V1.5+).
+	--
+	-- BP integration: additive per user-approved scope. Existing
+	-- per-tier cr/cores rewards stay; cosmetic granted ALONGSIDE at
+	-- 6 milestone tiers (5, 10, 15, 20, 25, 30). VIP Operator pass
+	-- unlocks heavy_defender skin (manual-equip + toast).
+	COSMETIC = {
+		-- 8 slot identifiers. V1 catalog items only exist for the first
+		-- 4; remaining 4 are V1.5+ reservations (schema additive).
+		Slots = {
+			Skin = "skin",
+			HelmetDecal = "helmet_decal",
+			DroneTrail = "drone_trail",
+			NameplateFlair = "nameplate_flair",
+			Emote = "emote",
+			Banner = "banner",
+			VehiclePaint = "vehicle_paint",
+			MountCosmetic = "mount_cosmetic",
+		},
+		-- Defaults applied on first join (insurance-checked so
+		-- re-grants don't double-fire). One cosmetic per V1 slot.
+		Defaults = {
+			skin = "skin_combatant",
+			helmet_decal = "decal_default",
+			drone_trail = "trail_default",
+			nameplate_flair = "flair_default",
+		},
+		-- BP milestone tiers (additive grants). Each tier rewards
+		-- cr/cores per existing BattlePass formulas PLUS the cosmetic
+		-- below. Multiple cosmetics per tier supported (tier 25, 30).
+		BattlePassMilestones = {
+			[5] = { "trail_neon_red" },
+			[10] = { "decal_chevron_red" },
+			[15] = { "skin_recon" },
+			[20] = { "trail_neon_blue" },
+			[25] = { "decal_skull_amber", "flair_op7_veteran" },
+			[30] = { "decal_op7_emblem", "trail_neon_gold" },
+		},
+		-- Pass-bound cosmetics. On GamePassService.OnOwnershipChanged
+		-- with owned=true, CosmeticService grants the listed cosmetics.
+		PassUnlocks = {
+			VipOperator = { "skin_heavy_defender" },
+		},
+		-- "New!" badge window — cosmetic acquiredAt within this many
+		-- seconds shows the badge in the equip UI.
+		NewBadgeWindowSeconds = 24 * 60 * 60, -- 24h
+		-- Inventory cap (defensive — V1 unlikely to approach).
+		MaxOwnedCosmetics = 200,
+	},
+
+	-- Phase F4 — First-Time User Experience (the 30-second rule per
+	-- finalized-brainstorm.md §4.7 F4 / CLAUDE.md). New players see
+	-- something interesting in 30 seconds; first reward by ~25-30s. F4 ships the *infrastructure* — server state machine + client
+	-- hint overlay scaffolding. Per build protocol §Phase F escalation
+	-- ("FTUE is taste-critical — needs human input"), the cinematic
+	-- visuals / audio / exact copy / camera framing are Phase G work.
+	-- This block ships the timing budgets + step IDs.
+	--
+	-- Step flow:
+	--   1. cinematic       (5s — intro camera; auto-advances on timer or skip)
+	--   2. scout           (~10s — first node highlighted; auto-advances on extractor place)
+	--   3. place_extractor (~5s — starter grant fires; auto-advances on place_extractor event)
+	--   4. first_credits   (~5s — wait for first credits earned; auto-advances on earn_credits event)
+	--   5. completed       (sticky; clears overlay; ftueCompleted flag set)
+	-- Total budget ≤ 30s with smooth play.
+	FTUE = {
+		-- Step identifiers. Order = state machine progression.
+		Steps = {
+			Cinematic = "cinematic",
+			Scout = "scout",
+			PlaceExtractor = "place_extractor",
+			FirstCredits = "first_credits",
+			Completed = "completed",
+		},
+		-- Timing budgets per step.
+		CinematicSeconds = 5,
+		StepTimeoutSeconds = 60, -- safety: if a step doesn't auto-advance in this window, force-skip
+		-- Starter grant — guarantees the player can afford their first
+		-- extractor placement (50 cr) immediately on the scout step.
+		-- Insurance: only granted if profile.credits < this threshold,
+		-- so re-entering the FTUE flow doesn't double-grant.
+		StarterCredits = 50,
+		-- Node-to-spawn proximity for the highlighted scout target.
+		-- The closest unclaimed node within this radius is highlighted;
+		-- if no node within range, fall back to the closest node anywhere
+		-- on the plot. Tuned for a ≤10s walk per the 30s budget.
+		ScoutNodeMaxDistance = 40, -- studs
 	},
 
 	-- Game cadence (seconds unless noted). Per-system tick rates.
@@ -209,12 +360,33 @@ local Constants = {
 	-- N fixed plots. Each plot is a square of `PlotSize` studs centered
 	-- on its origin. Plots are arranged in a 2×2 grid with a `PlotGap`
 	-- gutter between them.
+	--
+	-- F0 (V1.5 expansion prep): plot slots reserve enough space for the
+	-- V1.5 max tier (128×128). V1 plots render at PlotSize (64) but the
+	-- inter-plot stride is `PlotSlotSize + PlotGap` so V1.5 tier-up
+	-- expansion stays inside the reserved slot — no world re-layout
+	-- needed when tier system ships. Cost: more empty space between V1
+	-- plots than would otherwise exist. Worth it to avoid V1.5 migration
+	-- pain. Per `docs/architecture/V1_5_TIER_PROGRESSION.md` §2.
 	WORLD = {
 		PlotCount = 4, -- 2×2 grid; matches squad max (4) per finalized-brainstorm.md §2.6
-		PlotSize = 64, -- studs; mobile-camera-friendly footprint
-		PlotGap = 32, -- studs between adjacent plots
+		PlotSize = 64, -- V1 default plot footprint (Tier 4 in V1.5 terms)
+		PlotSlotSize = 128, -- V1.5 max tier plot size; reserves world-slot space NOW for V1.5 expansion
+		PlotGap = 32, -- studs between adjacent plot slots
 		BaseY = 0, -- world Y of all plot floors
 		PlotFloorThickness = 1,
+		-- V1.5 lookup; V1 ignores this and uses PlotSize directly. F0
+		-- ships the lookup so V1.5 TierService has a single source of
+		-- truth without a Constants migration.
+		PlotSizePerTier = {
+			[0] = 8, -- Drop Pod
+			[1] = 16, -- Pioneer Tent
+			[2] = 32, -- Forward Shelter
+			[3] = 48, -- Operating Base
+			[4] = 64, -- Outpost (V1 default)
+			[5] = 96, -- Settlement
+			[6] = 128, -- Megacity
+		},
 	},
 
 	-- Resource node spawner params (Phase B1). Per-plot Poisson disk
@@ -251,6 +423,565 @@ local Constants = {
 		-- Roblox DevForum for tycoon games using StreamingEnabled.
 		BulkDestroyBatchSize = 8,
 		BulkDestroyBatchDelay = 0.05, -- seconds
+	},
+
+	-- Phase G1 — Biome lighting profiles. V1 ships 3 biomes (jungle,
+	-- volcanic, ice). The main place defaults to jungle per
+	-- `DefaultBiome`; future multi-biome PvE rotation (V1.5+) selects
+	-- per server seed. Profiles tuned for mobile via ShadowMap (Soft)
+	-- lighting tech per the Phase G research findings: <50 active
+	-- lights per area, CastShadow off on decorative parts, atmosphere
+	-- haze for the bioluminescent vibe without per-pixel lighting cost.
+	--
+	-- Each profile carries enough state to fully apply via
+	-- `Lighting.<property>` writes + an Atmosphere child instance.
+	-- BiomeLightingService.luau owns the apply path; profiles are
+	-- pure data (no behavior) so taste tuning is single-file edits
+	-- here.
+	BIOME = {
+		DefaultBiome = "jungle", -- V1 main place; V1.5+ adds rotation
+		LightingTechnology = "ShadowMap", -- ShadowMap (now "Soft" per Jan 2025) for mobile-first
+		Profiles = {
+			jungle = {
+				displayName = "Bioluminescent Jungle",
+				-- Lighting.* properties
+				ambient = Color3.fromRGB(40, 20, 60), -- deep purple base — night-jungle feel
+				outdoorAmbient = Color3.fromRGB(30, 15, 50),
+				brightness = 1.5,
+				clockTime = 19.5, -- post-dusk; jungle is "alive" at night per brainstorm §2.5
+				geographicLatitude = 41.7,
+				exposureCompensation = 0.0,
+				-- Atmosphere.* properties (instance child of Lighting)
+				atmosphereDensity = 0.45, -- foggy bioluminescent haze
+				atmosphereOffset = 0.25,
+				atmosphereColor = Color3.fromRGB(80, 30, 100), -- magenta-tinted air
+				atmosphereDecay = Color3.fromRGB(120, 50, 180),
+				atmosphereGlare = 0.2,
+				atmosphereHaze = 1.5,
+				-- ColorCorrection.* (instance child of Lighting)
+				colorTint = Color3.fromRGB(220, 200, 255),
+				colorBrightness = 0.05,
+				colorContrast = 0.1,
+				colorSaturation = 0.15,
+				-- Skybox (per-biome optional override; nil = default skybox)
+				skyboxAssetId = nil, -- replaced in Phase G/H once authored
+				-- Fog (legacy support; modern Atmosphere does most of the work)
+				fogStart = 80,
+				fogEnd = 320,
+				fogColor = Color3.fromRGB(40, 20, 60),
+			},
+			volcanic = {
+				displayName = "Volcanic Wastes",
+				ambient = Color3.fromRGB(60, 25, 15),
+				outdoorAmbient = Color3.fromRGB(50, 20, 12),
+				brightness = 2.0,
+				clockTime = 18.0, -- sunset on the volcanic plain — orange-orange-orange
+				geographicLatitude = 25.0,
+				exposureCompensation = -0.15,
+				atmosphereDensity = 0.55, -- ash-laden air; thicker than jungle
+				atmosphereOffset = 0.30,
+				atmosphereColor = Color3.fromRGB(140, 60, 30),
+				atmosphereDecay = Color3.fromRGB(200, 90, 40),
+				atmosphereGlare = 0.5, -- harsh sun-through-ash glare
+				atmosphereHaze = 2.5,
+				colorTint = Color3.fromRGB(255, 220, 200),
+				colorBrightness = 0.0,
+				colorContrast = 0.15,
+				colorSaturation = 0.2,
+				skyboxAssetId = nil,
+				fogStart = 60,
+				fogEnd = 240,
+				fogColor = Color3.fromRGB(60, 30, 20),
+			},
+			ice = {
+				displayName = "Cryo Ice Caves",
+				ambient = Color3.fromRGB(20, 40, 60),
+				outdoorAmbient = Color3.fromRGB(15, 35, 55),
+				brightness = 1.2, -- dimmer; it's a cave biome
+				clockTime = 6.0, -- pre-dawn cold-blue
+				geographicLatitude = 78.0, -- arctic
+				exposureCompensation = 0.1,
+				atmosphereDensity = 0.40,
+				atmosphereOffset = 0.10,
+				atmosphereColor = Color3.fromRGB(150, 200, 230), -- pale ice-blue
+				atmosphereDecay = Color3.fromRGB(80, 130, 180),
+				atmosphereGlare = 0.0,
+				atmosphereHaze = 1.8,
+				colorTint = Color3.fromRGB(200, 230, 255),
+				colorBrightness = 0.1,
+				colorContrast = 0.05,
+				colorSaturation = -0.1, -- desaturated for the frigid feel
+				skyboxAssetId = nil,
+				fogStart = 70,
+				fogEnd = 280,
+				fogColor = Color3.fromRGB(30, 50, 80),
+			},
+		},
+
+		-- G2 Decoration layer. Per-biome ambient flora / particles /
+		-- sound stubs that BiomeDecorationService spawns when a biome
+		-- activates. Decorations are *server-spawned, world-anchored*
+		-- (around plot centers within DecorationRadius) and stay for
+		-- the server lifetime — same model as PlotManager floors.
+		--
+		-- V1 visuals are placeholder programmatic emissive Parts +
+		-- procedural ParticleEmitters. Phase G art queue replaces the
+		-- floraTemplate field (currently nil → procedural cube)
+		-- with imported MeshPart references from `assets/world/biome_*/`.
+		--
+		-- ambientSfxAssetId is a `rbxassetid://` integer placeholder
+		-- until Phase H asset pipeline uploads the per-biome ambient
+		-- loops.
+		DecorationRadius = 96, -- decorations spawn within this stud radius of plot center
+		DecorationsPerPlot = 24, -- placeholder; tuned in Phase G playtest
+		ParticleSpawnRate = 6, -- particles per second per emitter
+		AmbientSfxVolume = 0.3, -- 0..1 — V1 floor; mixer tuning in G4
+		Decorations = {
+			jungle = {
+				floraColor = Color3.fromRGB(255, 62, 200), -- magenta bioluminescent
+				floraAccent = Color3.fromRGB(0, 232, 216), -- teal accent
+				floraEmissive = 0.9,
+				floraSize = Vector3.new(1, 4, 1),
+				floraTemplate = nil, -- procedural cube placeholder; Phase G replaces
+				particleColor = Color3.fromRGB(200, 100, 255),
+				particleTransparency = 0.4,
+				particleLifetimeMin = 4,
+				particleLifetimeMax = 8,
+				particleUpwardSpeed = 1.5,
+				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — jungle creature ambient loop
+			},
+			volcanic = {
+				floraColor = Color3.fromRGB(255, 106, 26), -- molten orange
+				floraAccent = Color3.fromRGB(255, 40, 24), -- lava red
+				floraEmissive = 1.0,
+				floraSize = Vector3.new(1.5, 3, 1.5),
+				floraTemplate = nil, -- procedural; Phase G replaces with obsidian fissure mesh
+				particleColor = Color3.fromRGB(60, 50, 45), -- ash grey-orange
+				particleTransparency = 0.2,
+				particleLifetimeMin = 6,
+				particleLifetimeMax = 12,
+				particleUpwardSpeed = 3.0, -- ash drifts up faster than jungle spores
+				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — volcanic rumble + ash hiss
+			},
+			ice = {
+				floraColor = Color3.fromRGB(200, 232, 255), -- pale ice-blue crystal
+				floraAccent = Color3.fromRGB(150, 200, 230),
+				floraEmissive = 0.6,
+				floraSize = Vector3.new(0.8, 3.5, 0.8),
+				floraTemplate = nil, -- procedural; Phase G replaces with crystal cluster mesh
+				particleColor = Color3.fromRGB(230, 244, 255), -- frost mist
+				particleTransparency = 0.5,
+				particleLifetimeMin = 5,
+				particleLifetimeMax = 10,
+				particleUpwardSpeed = 0.5, -- frost drifts slowly
+				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — glacial wind howl
+				-- G3: Cave-specific overlay (only set on biomes that
+				-- have one — jungle/volcanic leave nil and the
+				-- BiomeDecorationService skips this branch). Stalactites
+				-- hang from above the plot bounds; stalagmites rise from
+				-- around the plot ring. Glacier walls give the player
+				-- a sense of cave enclosure in the mid-distance.
+				caveOverlay = {
+					stalactitesPerPlot = 8, -- hanging icicles above each plot
+					stalactiteHeight = 18, -- studs above plot floor
+					stalactiteSize = Vector3.new(1.2, 8, 1.2),
+					stalagmitesPerPlot = 12, -- ground-rising icicle clusters
+					stalagmiteHeight = 4,
+					stalagmiteSize = Vector3.new(1, 5, 1),
+					glacierWallsPerPlot = 4, -- large flat walls at the horizon ring
+					glacierWallSize = Vector3.new(24, 16, 4),
+					glacierWallDistance = 120, -- studs from plot center (outside DecorationRadius)
+					emissive = 0.7,
+					crystalColor = Color3.fromRGB(170, 220, 255),
+					crystalAccent = Color3.fromRGB(120, 180, 220),
+				},
+			},
+		},
+	},
+
+	-- Raid pipeline (Phase E1). The raid system uses MemoryStoreService
+	-- for the cross-server queue + snapshot + targets pool, MessagingService
+	-- for matched broadcasts and outcome relay, and TeleportService's
+	-- ReserveServerAsync for the raid instance.
+	--
+	-- Two-place architecture per ADR-009: V1 ships true two-PlaceId
+	-- split. `default.project.json` builds the main `.rbxl`;
+	-- `raid.project.json` builds the raid `.rbxl`. Both are published
+	-- to separate PlaceIds in the same Universe via release.yml. Each
+	-- bootstrap branches on `game.PrivateServerId` so the same server
+	-- code can run in either context — matchmaker on main, raid round
+	-- on raid place — without cross-contamination. Future Phase G can
+	-- specialize raid.project.json's Workspace properties (e.g.,
+	-- always-night lighting for the bioluminescent jungle ambush vibe)
+	-- without touching main.
+	--
+	-- All real-money / placement-id-sensitive values are placeholders
+	-- (REPLACE_BEFORE_LAUNCH per the protocol's escalation rule). The
+	-- ReservedServerLauncher refuses to teleport with id = 0 and warns.
+	RAID = {
+		-- Main place id. V1 dev = 0; Phase H sets to the public-facing
+		-- PlaceId. Used by the raid place to teleport attackers home.
+		MainPlaceId = 0, -- REPLACE_BEFORE_LAUNCH
+		-- Reserved-server target. V1 dev = 0; Phase H sets to a separate
+		-- PlaceId in the same Universe (the raid place id).
+		RaidPlaceId = 0, -- REPLACE_BEFORE_LAUNCH
+		-- Round duration. Brainstorm §2.1: "queue into a 5-min round".
+		RoundSeconds = 5 * 60,
+		-- After the round ends, give the player a brief grace window in
+		-- the raid place before forcing the home teleport.
+		PostRoundGraceSeconds = 8,
+		-- Matchmaker cadence. The elected leader runs this loop.
+		MatchmakerTickSeconds = 2,
+		-- An attacker who's been queued past this without being matched
+		-- is auto-popped and offered a PvE wave (Phase E2 fallback).
+		QueueDeadlineSeconds = 30,
+		-- MemoryStoreService expirations.
+		QueueEntryTtl = 90, -- queue rows; cleared on match or deadline
+		SnapshotTtl = 180, -- snapshot lives just long enough to load
+		TargetsTtlSeconds = 90, -- raidable-target heartbeats expire after 2 missed heartbeats
+		-- How often each main server heartbeats its online players into
+		-- the global "raidable" pool.
+		TargetsHeartbeatSeconds = 30,
+		-- Sentinel-based matchmaker leader election. First server to
+		-- claim the sentinel via MemoryStore SetAsync(absent) wins for
+		-- ttl seconds; the leader extends its lease each tick.
+		MatchmakerSentinelKey = "raid.matchmaker.leader",
+		MatchmakerSentinelTtl = 15,
+		-- MemoryStoreService bucket names (single-source-of-truth).
+		QueueMapName = "OutpostRaidQueue",
+		TargetsMapName = "OutpostRaidableTargets",
+		SnapshotMapName = "OutpostRaidSnapshots",
+		SentinelMapName = "OutpostRaidSentinels",
+		-- MessagingService topics.
+		TopicMatched = "outpost.raid.matched",
+		TopicOutcome = "outpost.raid.outcome",
+		-- V1 placeholder reward bands (Phase G/E2 tunes via
+		-- config/balance/raid_rewards.json).
+		AttackerWinCredits = 1000,
+		AttackerLossCredits = 100,
+		-- Defender's consolation reward when raided (the "asynchronous
+		-- defense reward" per brainstorm §2.1). Tuned in Phase G.
+		DefenderRaidedCredits = 250,
+	},
+
+	-- PvE waves (Phase E2). Brainstorm §2.1: "By night, the jungle moves.
+	-- Aggressive alien fauna swarm your perimeter." V1 ships one alien
+	-- type (Stalker — matches the bioluminescent jungle theme) and a
+	-- linear difficulty curve scaling with wave number. Phase G adds
+	-- biome-specific variants (volcanic, ice cave) and tunes the curve
+	-- via `config/balance/wave_scaling.json`.
+	--
+	-- Object pooling per CLAUDE.md "anything spawned in bulk" rule. The
+	-- pool is sized to `AlienPoolSize` per server; aliens beyond that
+	-- spawn fresh instances (graceful degradation if a wave overshoots
+	-- the pool, but the warn surfaces tuning regressions).
+	COMBAT = {
+		-- How often a wave fires for every online player who has a plot.
+		-- 600s = 10 min. Approximates the brainstorm's "by night, the
+		-- jungle moves" cadence without needing a real day/night cycle
+		-- yet (Phase G adds the cycle).
+		WaveClockSeconds = 600,
+		-- Wave difficulty curve. Linear: wave N spawns
+		-- `AliensPerWaveBase + (N-1) * AliensPerWaveScale` aliens, capped
+		-- at `AliensPerWaveCap`. V1 placeholder; Phase G tunes after
+		-- playtest data shows where the difficulty wall lands.
+		AliensPerWaveBase = 5,
+		AliensPerWaveScale = 1,
+		AliensPerWaveCap = 30,
+		-- How long a wave runs before auto-ending (regardless of remaining
+		-- aliens). 90s caps the round so a player who can't kill them all
+		-- isn't stuck forever.
+		WaveDurationSeconds = 90,
+		-- Stagger spawns over this fraction of the wave duration. Prevents
+		-- a "bulk Instance.new spike" footgun on wave start.
+		WaveSpawnWindowSeconds = 15,
+		-- Object pool size per server. V1 cap of 30 aliens × 1.5 buffer
+		-- for overlap when waves stack from queue-deadline fallback +
+		-- regular wave clock. Pool overflow logs and falls back to
+		-- ad-hoc spawn (correct, just slower).
+		AlienPoolSize = 50,
+		-- Alien stats — Stalker (V1 sole type).
+		AlienBaseHp = 100,
+		AlienMeleeDamage = 10,
+		AlienMeleeCooldownSeconds = 1.0,
+		AlienWalkSpeed = 14,
+		-- Spawn ring: aliens appear at the plot edge and walk toward the
+		-- player. `SpawnRingPadding` is the additional distance outside
+		-- the plot bounds where they spawn (so they don't clip the wall).
+		SpawnRingPadding = 6,
+		-- Turret stats (E2.5). The first offensive option for the player —
+		-- auto-targets nearest alien within range, raycasts for damage.
+		-- Phase G adds turret HP (currently invincible), targeting
+		-- priorities, and projectile VFX.
+		TurretRange = 40, -- studs; alien must be within this radius
+		TurretDamage = 25, -- HP per shot (4 shots to kill a Stalker)
+		TurretFireSeconds = 1.0, -- one shot per second per turret
+		-- Turret tick cadence. Decoupled from fire cadence so a low fire
+		-- rate doesn't starve targeting (e.g. tracking a moving alien
+		-- between shots).
+		TurretTickSeconds = 0.5,
+		-- Drone swarm stats (E2.6). 3 mobile drones per player; smaller
+		-- range than turrets, faster fire rate, lower per-shot damage.
+		-- Combat preset is the only V1-functional preset; Recon /
+		-- Engineering are catalog stubs, deferred to Phase G.
+		DroneSwarmCount = 3, -- drones per player
+		DroneOrbitRadius = 8, -- studs around player when no target
+		DroneOrbitHeight = 4, -- studs above player's HumanoidRootPart
+		DroneOrbitSpeedDeg = 90, -- degrees per second
+		DroneAttackRange = 25, -- studs; mobile drones fire at closer aliens
+		DroneDamage = 8, -- per shot (3 shots to kill a 24HP-remaining Stalker)
+		DroneFireSeconds = 0.5, -- 2 shots/sec (vs turret 1/sec)
+		DroneTickSeconds = 0.4, -- targeting cadence
+		DroneMoveSpeed = 32, -- studs/sec; how fast a drone closes on a target
+		-- Pool sized for the Roblox 20-default-server-cap × 3 drones
+		-- per player + buffer for character respawn churn.
+		DronePoolSize = 80,
+		-- F3 BeamPool — shared between TurretService + DroneSwarmService
+		-- (any "shoot a brief visual line" use case). Replaces the
+		-- per-shot `Instance.new("Part") + Debris:AddItem` pattern that
+		-- E2.5 / E2.6 shipped — that pattern would create ~64 Parts/sec
+		-- at peak (40 turrets + 12 drones at full fire rate).
+		--
+		-- Pool size 60 covers the worst-case burst: 60 simultaneous
+		-- in-flight 0.1s-lifetime beams. Beyond that, BeamPool falls
+		-- back to ad-hoc Instance.new with a warn log (graceful
+		-- degradation per the AlienPool / DroneSwarm pattern).
+		BeamPoolSize = 60,
+		BeamLifetimeSeconds = 0.1, -- standard turret/drone beam visual duration
+		-- G6: Beam visual polish. Real Beam-with-attachments replaces
+		-- the F3 Part-line-segment. Width tapers from start (wide muzzle
+		-- flare) to end (narrow impact). Muzzle + impact particle counts
+		-- are one-shot Emits at acquire time (no continuous spawn cost
+		-- because the host part is short-lived).
+		BeamWidthStart = 0.6, -- studs at attachment0 (origin / muzzle)
+		BeamWidthEnd = 0.2, -- studs at attachment1 (impact)
+		BeamSegments = 4, -- GPU-side beam subdivision; higher = smoother but more draw cost
+		MuzzleParticleCount = 4, -- one-shot Emit at fire origin per shot
+		ImpactParticleCount = 6, -- one-shot Emit at impact point per shot
+	},
+
+	-- Clan / squad system (Phase E3). 4-person max per brainstorm §2.6
+	-- with a shared Credits + Cores stash; large withdrawals require
+	-- leader approval (anti-grief per §4.6). Cross-server clan chat via
+	-- MessagingService topic per clan.
+	--
+	-- Clan data lives in its own DataStore (`StoreName` below) keyed by
+	-- clanId, separate from `PlayerData_v1`. Mutations go through
+	-- `DataStoreService:UpdateAsync` for atomic CAS — multi-server
+	-- deposits/withdrawals can't lose updates. Cache invalidation across
+	-- servers is push-based via MessagingService.
+	CLAN = {
+		-- Membership cap (brainstorm §2.6 "4-person squads").
+		MaxMembers = 4,
+		-- Tag is the short visible prefix (e.g. "[OPS]") in chat /
+		-- leaderboards. Name is the full title.
+		TagMinLength = 2,
+		TagMaxLength = 5,
+		NameMinLength = 3,
+		NameMaxLength = 24,
+		-- Withdrawals at or below this amount are auto-approved
+		-- (instant grant). Above requires leader approval. Brainstorm
+		-- §4.6 anti-grief rule.
+		AutoApproveWithdrawalThreshold = 5000,
+		-- Maximum pending withdrawals per clan; bounds the
+		-- pendingWithdrawals dictionary so a malicious member can't
+		-- inflate a single clan's DataStore payload past the 4MB limit.
+		MaxPendingWithdrawals = 16,
+		-- Chat message length cap; F1 hardens with rate limits.
+		ChatMessageMaxLength = 240,
+		-- DataStore (separate keyspace from PlayerData_v1).
+		StoreName = "ClanData_v1",
+		-- MessagingService topics.
+		ChatTopicPrefix = "outpost.clan.chat", -- per-clan suffix appended
+		InvalidateTopic = "outpost.clan.invalidate",
+		WithdrawalGrantTopic = "outpost.clan.withdrawal.grant",
+		-- Cache TTL — cached clan data is considered stale after this
+		-- many seconds and re-fetched on next access. Belt-and-suspenders
+		-- next to MessagingService invalidation (handles missed
+		-- broadcasts).
+		CacheTtlSeconds = 60,
+	},
+
+	-- Leaderboards + friends (Phase E5). OrderedDataStore-backed
+	-- per ADR-010: one store per ISO-week bucket for weekly boards
+	-- (key shape `RaidWins_<isoYear>W<isoWeek>`); a single perpetual
+	-- store for the lifetime global Credits board.
+	--
+	-- Score push cadence: each home server pushes its online players'
+	-- current credits + raid-wins to the relevant OrderedDataStore
+	-- every `ScorePushIntervalSeconds`. Reads (top-N for the leaderboard
+	-- panel) cache per-server and refresh every `ReadCacheTtlSeconds`.
+	-- The asymmetric cadence (push 60s, read 300s) keeps DataStore call
+	-- volume bounded under the 2026 per-Experience quota.
+	LEADERBOARD = {
+		ScorePushIntervalSeconds = 60,
+		ReadCacheTtlSeconds = 300,
+		TopN = 50, -- entries fetched per board; client UI shows top 10 by default
+		-- Store name prefixes (suffixed with bucket key for weekly).
+		GlobalCreditsStoreName = "Outpost_GlobalCredits_v1",
+		WeeklyRaidWinsStorePrefix = "Outpost_RaidWins_v1",
+	},
+
+	-- Friends (Phase E5). Cache `Players:GetFriendsAsync` per-session
+	-- with hourly refresh. V1 only surfaces "online in this server"
+	-- presence; cross-server friend presence is V1.5+ (would need a
+	-- MemoryStoreService presence map; flagged as tech debt).
+	FRIENDS = {
+		RefreshIntervalSeconds = 60 * 60, -- 1 hour
+		MaxFriendsListed = 200, -- safety cap; Roblox account caps friends at 200
+	},
+
+	-- Spatial Voice (Phase E4). Enabled at the *place* level via
+	-- raid.project.json's `VoiceChatService.EnableDefaultVoice = true`.
+	-- The main place inherits the platform default (off). Server-side
+	-- VoiceGate is a defensive verifier + state-push so the client HUD
+	-- can render an indicator when voice is active.
+	--
+	-- Universe-level voice toggle lives in the Roblox Creator Dashboard
+	-- (NOT something Rojo can configure). Phase H prerequisite.
+	--
+	-- Voice availability also depends on per-account permissions:
+	--   - Account is 13+
+	--   - Account has voice chat enabled in Roblox account settings
+	--   - User is in a region where voice chat is available
+	-- We surface "voice unavailable for this user" via the VoiceState
+	-- payload so the client HUD can show a muted indicator instead of
+	-- a misleading "voice active" one.
+	VOICE = {
+		-- How often the gate verifies VoiceChatService is still in the
+		-- expected state (defensive — catches a future Roblox API rename
+		-- or property change). Logs once per state flip.
+		VerifyIntervalSeconds = 30,
+		-- Roblox 2026 Feb API: GetChatGroupsAsync diagnostic call. We
+		-- use it to verify chat group membership at raid round start.
+		-- If it fails, voice is degraded but not blocking — we log and
+		-- continue.
+		UseChatGroupDiagnostic = true,
+	},
+
+	-- Phase G4 — central audio mixer + cue policy.
+	--
+	-- Cue assets live in AudioRegistry (`src/shared/Modules/Registry/AudioRegistry.luau`);
+	-- the registry's `assetId` field is `0` until Phase H upload. The
+	-- AudioController treats `0` as a no-op so the entire system runs
+	-- silently in V1 dev builds — wiring stays exercised, no broken
+	-- Sound instances spam the output.
+	--
+	-- Per-category volume sliders feed the SoundService.SoundGroup
+	-- pre-mix; players can override at runtime via the settings panel
+	-- (V1.5+ — V1 ships fixed mix). Music vs. SFX are kept distinct so
+	-- adaptive music (Phase H) can duck during combat without nuking
+	-- gunfire.
+	AUDIO = {
+		-- Master gain (post-mix). 1.0 = unity. Players hit master via
+		-- settings; never written by gameplay code.
+		MasterVolume = 1.0,
+		-- Per-category gains. Pre-mix; multiplied by master at playback.
+		CategoryVolume = {
+			sfx = 0.85, -- combat + UI feedback foreground
+			music = 0.55, -- background, intentionally lower than sfx
+			ui = 0.7, -- click / claim / toast
+			ambient = 0.4, -- per-biome loops; quieter than sfx so combat punches
+			voice_emote = 0.8, -- V1.5+ voice clips (cosmetic taunts)
+		},
+		-- Pool tuning. Combat cues (turret_fire_*, drone_fire_*) fire at
+		-- bursty rates; pooling Sound instances avoids Instance.new spam.
+		-- Pool is per-cue id, lazy-allocated up to PoolSizePerCue.
+		PoolSizePerCue = 8, -- max concurrent Sound copies per cue id
+		-- Spatial audio defaults for PlayAtPosition. Roblox's Sound
+		-- attenuation properties are stud-based; mobile playtest tunes.
+		Spatial = {
+			RollOffMinDistance = 10,
+			RollOffMaxDistance = 200,
+			RollOffMode = "InverseTapered", -- Enum.RollOffMode name; AudioController converts
+		},
+		-- Throttle: identical cueId triggered by the server more than
+		-- once per <ThrottleMs> ms on the same client gets coalesced
+		-- (prevents minigun-style sub-frame Remote spam from drowning
+		-- the player's mix when 6 drones fire in the same frame).
+		-- Per-cue overrides land in AudioRegistry.throttleMs.
+		ThrottleMs = 40,
+		-- Music crossfade duration when AudioService.SwitchMusic fires.
+		-- Implemented client-side via tween on Sound.Volume.
+		MusicCrossfadeSeconds = 1.5,
+	},
+
+	-- Phase G5 — UI theming, motion, and toast policy. Components +
+	-- Theme module live in `src/shared/Modules/UI/`. Per-biome palette
+	-- swap is driven by BiomeLightingService.Apply → Theme.SetActive.
+	--
+	-- Raid place (PrivateServerId set) always uses the `industrial`
+	-- palette; main place uses the active biome palette (defaults to
+	-- jungle per BIOME.DefaultBiome).
+	UI = {
+		-- Canonical slot keys. Theme module exposes a palette table
+		-- with one Color3 per slot — every panel/button references
+		-- these instead of literal RGB triples.
+		Slots = {
+			"background",
+			"panel",
+			"textPrimary",
+			"textMuted",
+			"accent",
+			"secondary",
+			"danger",
+			"highlight",
+		},
+		-- Default theme used in the raid place + as the base of the
+		-- main place industrial branch (e.g., generic raid arena UI).
+		BaseTheme = "industrial",
+		-- Frame style constants (sharp angular sci-fi per user spec).
+		Frame = {
+			CornerRadius = 2, -- pixels — near-square corners
+			StrokeThickness = 2,
+			StrokeTransparency = 0.0, -- fully opaque accent stroke
+			BackgroundTransparency = 0.10, -- slight transparency for layered feel
+			CornerAccentSize = 14, -- pixels — top-right diagonal accent
+			CornerAccentThickness = 2,
+		},
+		-- Motion presets. Component primitives reference these by name
+		-- so tuning is single-file.
+		Motion = {
+			HudSnap = { duration = 0.05, easing = "Linear" },
+			ButtonPress = { duration = 0.08, easing = "QuadIn", scale = 0.95 },
+			ButtonRelease = { duration = 0.10, easing = "BackOut" },
+			ToastSlideIn = { duration = 0.20, easing = "QuadOut" },
+			ToastSlideOut = { duration = 0.18, easing = "QuadIn" },
+			PanelOpen = { duration = 0.25, easing = "CubicOut" },
+			PanelClose = { duration = 0.22, easing = "CubicIn" },
+		},
+		-- Toast layout (G5 split-by-severity).
+		Toast = {
+			-- Auto-dismiss in seconds. Critical errors get a longer
+			-- read; rewards short-and-punchy; info middle ground.
+			AutoDismissSeconds = {
+				error = 5.0,
+				reward = 3.0,
+				info = 4.0,
+			},
+			-- Stack caps per slot — overflow drops oldest.
+			MaxVisible = {
+				error = 3, -- top-center cascade
+				reward = 1, -- bottom-center single-replaces
+				info = 4, -- right-side column
+			},
+			-- Position presets (UDim2 anchors handled inside ToastService;
+			-- these are the visual offsets from screen edges).
+			OffsetTopPx = 64,
+			OffsetBottomPx = 96,
+			OffsetRightPx = 16,
+			InterToastGapPx = 8,
+			ToastWidthPx = 360,
+			ToastHeightPx = 64,
+		},
+		-- HUD layout — mode-contextual surfaces.
+		Hud = {
+			CurrencyTopOffsetPx = 16,
+			ActionBarBottomOffsetPx = 24,
+			ActionBarButtonSize = 56,
+			ActionBarGapPx = 8,
+			ModeTogglePaddingPx = 32,
+		},
 	},
 }
 

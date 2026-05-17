@@ -236,17 +236,35 @@ This is the **definitive V1 feature list.** Anything not on this list is V1.5+ u
 - [ ] Game icon + 3 thumbnails (per `02_ROBLOX_PLATFORM.md` discovery best practices)
 - [ ] Game description + tags
 
+**Asset concepts (added 2026-05-05; full design + integration in Phase G — see `docs/playbooks/ASSETS.md`):**
+- [ ] 3 biome arches — Bioluminescent Jungle, Volcanic, Ice Cave (signature colony entry gates per biome)
+- [ ] 3 operator skin packs — Recon, Combatant (default V1 silhouette), Heavy Defender
+- [ ] 3 alien variants — Stalker (jungle, V1 active), Magmaling (volcanic), Cryowraith (ice cave)
+- [ ] 3 turret tiers — Auto-Turret (basic, V1 active), Heavy Cannon (anti-armor), Burst Laser (anti-swarm)
+- [ ] 3 drone swarm presets — Recon (V1.5 spotting), Combat (V1 active), Engineering (V1.5 repair)
+- [ ] 3 vehicles — All-Terrain Rover, Sleek Hover Bike, Armed Hover Tank (driver + gunner)
+
 ### 2.9 V1.5+ deferred list
 
-- Trading marketplace between players (V1.5 or V2)
-- Drone swarm customization (advanced editor) — V1 ships with 3 preset swarm types
-- Cross-biome resource trading (V1.5)
+**Formalized post-V1 expansions** (full design specs in `docs/architecture/`; sequencing in `docs/architecture/POST_V1_ROADMAP.md`):
+
+- **Colony Tier Progression** (V1.5) — Drop Pod → Megacity 7-tier arc. See `V1_5_TIER_PROGRESSION.md`.
+- **Material Crafting + Vehicle Workshop** (V1.1 seed → V1.5 full) — 30+ exotic materials + Workshop + Vehicle Builder UI + paint system. See `V1_5_MATERIAL_CRAFTING.md`.
+- **Solo Scouting Expeditions** (V1.5) — 6 pocket types, procedural generation, 50+ datapad codex. See `V1_5_SCOUTING_EXPEDITIONS.md`.
+- **Living Jungle / Tameable Wildlife** (V2) — full creature taxonomy, breeding with rare color variants, migration events, monthly 4-player co-op bosses. See `V2_LIVING_JUNGLE.md`.
+
+**Pre-existing brainstorm deferred items** (not in the four formalized expansions):
+
+- Trading marketplace between players (V2; depends on V1.5 economy maturity)
+- Drone swarm customization (advanced editor) — V1 ships with 3 preset swarm types per E2.6 + ASSETS.md
+- Cross-biome resource trading (V2)
 - Player-built PvP arenas (V2)
 - Seasonal events (V1.1+)
 - 4th–6th biomes (V1.2)
 - Battle Pass Season 2+ content (V1.1+)
 - Auto-clip / replay system (V1.5)
 - Mobile UI overhaul if data shows mobile retention is below desktop (V1.1)
+- **Corporate sponsor faction system** (re-evaluate at V2.0 + 6 weeks; held pending V2 wildlife retention data)
 
 ---
 

@@ -232,6 +232,20 @@ function BattlePassService.TryClaim(player: Player, tier: number, track: TrackNa
 		CurrencyService.AddCores(player, reward.cores)
 	end
 
+	-- G7: Additive cosmetic grant at BP milestone tiers (per
+	-- user-approved design call 2026-05-05). Existing cr/cores rewards
+	-- preserved above; cosmetics granted ALONGSIDE at the milestone
+	-- list in Constants.COSMETIC.BattlePassMilestones. Lazy-require
+	-- CosmeticService to avoid a load-time cycle (CosmeticService may
+	-- itself require BattlePass-adjacent modules in Phase G+ work).
+	local milestone = Constants.COSMETIC.BattlePassMilestones[tier]
+	if milestone then
+		local CosmeticService = require(script.Parent.Parent.Parent.Cosmetics.CosmeticService)
+		for _, cosmeticId in milestone do
+			CosmeticService.GrantCosmetic(player, cosmeticId)
+		end
+	end
+
 	if track == "free" then
 		entry.free = true
 	else

@@ -77,16 +77,33 @@ local function buildFloor(parent: Folder, plotId: number, center: Vector3, size:
 	return floor
 end
 
+-- F0 (V1.5 prep): plot stride uses PlotSlotSize (max-tier reservation),
+-- not PlotSize. V1 plots render at PlotSize (64) but the inter-plot
+-- stride is PlotSlotSize (128) + PlotGap (32) so V1.5 tier expansion to
+-- the slot's max stays inside the reserved space. See V1_5_TIER_PROGRESSION.md.
 local function plotCenterFor(plotId: number, plotCount: number): Vector3
 	-- Square grid layout. cols = ceil(sqrt(N)) so we get a tight square.
 	local cols = math.ceil(math.sqrt(plotCount))
 	local row = math.floor((plotId - 1) / cols)
 	local col = (plotId - 1) % cols
-	local stride = Constants.WORLD.PlotSize + Constants.WORLD.PlotGap
+	local stride = Constants.WORLD.PlotSlotSize + Constants.WORLD.PlotGap
 	-- Center the grid on world origin.
 	local cx = (col - (cols - 1) / 2) * stride
 	local cz = (row - (cols - 1) / 2) * stride
 	return Vector3.new(cx, Constants.WORLD.BaseY, cz)
+end
+
+-- F0 (V1.5 prep): looks up plot size for a tier. V1 callers pass tier 4
+-- (Outpost) explicitly via Constants.WORLD.PlotSize equivalent, OR
+-- omit and default to Constants.WORLD.PlotSize. V1.5 TierService passes
+-- the player's current tier. Returns the max plot size if tier is out
+-- of bounds (defensive against schema drift).
+function PlotManager.GetPlotSizeForTier(tier: number?): number
+	if not tier then
+		return Constants.WORLD.PlotSize
+	end
+	local size = Constants.WORLD.PlotSizePerTier[tier]
+	return size or Constants.WORLD.PlotSlotSize
 end
 
 local function buildSpawn(parent: Folder, center: Vector3): SpawnLocation
@@ -105,14 +122,19 @@ local function buildSpawn(parent: Folder, center: Vector3): SpawnLocation
 	return spawn
 end
 
-local function buildPlot(plotsRoot: Folder, plotId: number): PlotInfo
+-- F0 (V1.5 prep): buildPlot accepts an optional `plotSize` parameter so
+-- V1.5's PlotExpander can rebuild a plot at a tier-specific size without
+-- changing the slot stride or world layout. V1 callers omit the argument
+-- and get the default Constants.WORLD.PlotSize behavior.
+local function buildPlot(plotsRoot: Folder, plotId: number, plotSize: number?): PlotInfo
+	local size = plotSize or Constants.WORLD.PlotSize
 	local center = plotCenterFor(plotId, Constants.WORLD.PlotCount)
 
 	local folder = Instance.new("Folder")
 	folder.Name = "Plot" .. plotId
 	folder.Parent = plotsRoot
 
-	local floor = buildFloor(folder, plotId, center, Constants.WORLD.PlotSize)
+	local floor = buildFloor(folder, plotId, center, size)
 	local spawn = buildSpawn(folder, center)
 
 	local nodes = Instance.new("Folder")
@@ -126,7 +148,7 @@ local function buildPlot(plotsRoot: Folder, plotId: number): PlotInfo
 	return {
 		id = plotId,
 		center = center,
-		size = Constants.WORLD.PlotSize,
+		size = size,
 		folder = folder,
 		floor = floor,
 		spawn = spawn,

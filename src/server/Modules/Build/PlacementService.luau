@@ -43,7 +43,12 @@ local BuildableRegistry =
 local PlotManager = require(script.Parent.Parent.World.PlotManager)
 local BaseSerializer = require(script.Parent.BaseSerializer)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
+local DataManager = require(script.Parent.Parent.Player.DataManager)
 local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
+local TurretService = require(script.Parent.Parent.Combat.TurretService)
+local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
+local AuditLog = require(script.Parent.Parent.Security.AuditLog)
+local RemoteValidator = require(script.Parent.Parent.Security.RemoteValidator)
 
 type Buildable = BuildableRegistry.Buildable
 type PlotInfo = PlotManager.PlotInfo
@@ -168,6 +173,15 @@ function PlacementService.TryPlace(
 		CurrencyService.RegisterExtractor(player, buildable, part)
 	end
 
+	-- Combat-role buildables (E2.5+): turrets register with TurretService
+	-- so the targeting tick can find them. Both fresh placements and
+	-- restorations (trusted) register — the runtime registry is per-
+	-- session, not persisted, so a rejoin restoring 5 turrets needs all
+	-- 5 added back.
+	if buildable.combatRole == "turret" then
+		TurretService.RegisterTurret(player, part)
+	end
+
 	-- 8. Persist to baseLayout — fresh placements only; restorations
 	-- skip because the entry is already in the saved layout.
 	if not trusted then
@@ -176,6 +190,14 @@ function PlacementService.TryPlace(
 		-- + a generic "place_any" so quest authors can target either.
 		QuestObjectives.Emit("place_" .. buildable.id, player, 1)
 		QuestObjectives.Emit("place_any", player, 1)
+		-- F0: V1.5 Tier system foundation — track lifetime tycoon spend
+		-- on placements (NOT shop / quest grants). Sticky signal; never
+		-- decremented on demolish/refund. See V1_5_TIER_PROGRESSION.md §3.
+		local data = DataManager.GetData(player)
+		if data and buildable.cost > 0 then
+			data.creditsInvestedLifetime = (data.creditsInvestedLifetime or 0) + buildable.cost
+			QuestObjectives.Emit("credits_invested", player, buildable.cost)
+		end
 	end
 
 	if trusted then
@@ -203,25 +225,35 @@ function PlacementService.TryPlace(
 end
 
 local function onRemote(player: Player, buildableId: any, cellX: any, cellZ: any)
-	-- F1 will route this through Security.AntiExploit + RemoteValidator;
-	-- B1 does the type checks inline so the audit can exercise the path.
-	if typeof(buildableId) ~= "string" then
+	-- F1 token-bucket rate limit.
+	if not AntiExploit.RateCheck(player, "PlaceBuilding") then
+		AuditLog.Record(player, "rate_limited", "PlaceBuilding")
 		return
 	end
-	if typeof(cellX) ~= "number" or cellX ~= math.floor(cellX) then
+	-- F2 central wire-shape validation. Reject + audit-log invalid
+	-- payloads before any game-state read. The cell range uses
+	-- PlotSlotSize (V1.5-ready max) rather than PlotSize so V1.5 tier
+	-- expansion doesn't reject placements; PlacementService.TryPlace
+	-- still does the per-tier IsInsidePlot check for the actual
+	-- bounds.
+	local maxCells = Constants.WORLD.PlotSlotSize / Constants.GRID.Size + 4
+	local idOk, idValue = RemoteValidator.IsString(buildableId, 1, Constants.VALIDATION.MaxBuildableIdLength)
+	if not idOk then
+		AuditLog.Record(player, "validation_failed", "PlaceBuilding: buildableId invalid")
 		return
 	end
-	if typeof(cellZ) ~= "number" or cellZ ~= math.floor(cellZ) then
+	local xOk, xValue = RemoteValidator.IsInteger(cellX, -maxCells, maxCells)
+	if not xOk then
+		AuditLog.Record(player, "validation_failed", "PlaceBuilding: cellX out of range")
 		return
 	end
-	-- Sanity bounds — cell coords beyond ±2× the plot grid are
-	-- nonsensical; reject before doing more work.
-	local maxCells = Constants.WORLD.PlotSize / Constants.GRID.Size + 4
-	if math.abs(cellX) > maxCells or math.abs(cellZ) > maxCells then
+	local zOk, zValue = RemoteValidator.IsInteger(cellZ, -maxCells, maxCells)
+	if not zOk then
+		AuditLog.Record(player, "validation_failed", "PlaceBuilding: cellZ out of range")
 		return
 	end
 
-	PlacementService.TryPlace(player, buildableId, cellX, cellZ)
+	PlacementService.TryPlace(player, idValue :: string, xValue :: number, zValue :: number)
 end
 
 function PlacementService.Init()

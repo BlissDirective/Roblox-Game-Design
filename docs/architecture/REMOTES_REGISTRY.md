@@ -26,17 +26,67 @@ rows as Remotes are introduced.
 | `BattlePassState` | Server → Client (Event) | `(state: BattlePassService.State)` — fired only to the affected client | n/a (server-driven) | D4 | Push of seasonId, current XP, derived tier, premium-owned flag, and per-tier claim view (30 entries). Fired on join, on every GrantXP, after every successful ClaimBattlePassTier, and when premium ownership flips. |
 | `ClaimBattlePassTier` | Client → Server (Function) | `(tier: number, track: "free" \| "premium")` | `RATE_LIMITS.Default` (further gated by per-tier-per-track one-shot) | D4 | Server validates: tier in `[1, MaxTier]`, tier ≤ player's current tier, premium track requires `BattlePassPremium` GamePass ownership, not-already-claimed for this `(tier, track)` pair. Returns `BattlePassService.ClaimResult`. |
 | `OwnershipState` | Server → Client (Event) | `(ownership: { [passKey: string]: boolean })` — fired only to the affected client | n/a (server-driven) | D5 | Server-replicated GamePass ownership map for the pass shop's "Owned" badges. Avoids the `UserOwnsGamePassAsync` staleness bug per ADR-006 — server's local cache is the source of truth, and `MonetizationService` rebuilds the map from `GamePassService.Owns` per pass on every flip. Push initial state ~1s after join (lets the prime cycle complete) + on every `OnOwnershipChanged`. |
+| `RaidQueue` | Client → Server (Function) | `(action: "queue" \| "cancel")` | `RATE_LIMITS.Default` (semantic limit: a queued player can't double-enqueue; cancel is idempotent) | E1 | Server enqueues the player into a MemoryStore SortedMap (`OutpostRaidQueue`) or removes them. Returns `RaidMatchmaker.QueueResult` (`{ ok = true, state }` or `{ ok = false, error }`). Server is authoritative — client cannot spoof the matched flag. |
+| `RaidQueueState` | Server → Client (Event) | `(state: RaidMatchmaker.QueueState)` — fired only to the affected client | n/a (server-driven) | E1 | Push of current queue position state (`queued`, `matched`, `deadlineAt`, `error`). Fires on enqueue, cancel, the leader-driven match callback, deadline-pop, and on PlayerAdded for fresh joins. Client renders the queue button + countdown off this. |
+| `RaidStarted` | Server → Client (Event) | `(info: RaidSession.StartInfo)` — fired only in raid place to the attacker on join | n/a (raid-place-only) | E1 | Single fire when the raid round begins. Carries `defenderName`, `roundSeconds`, `endsAt` (server `os.time`). Client uses this to show the round HUD; the round ends when the server fires `RaidEnded` or teleports the player home. |
+| `RaidEnded` | Server → Client (Event) | `(outcome: RaidSession.Outcome)` — fired to attacker (raid place) and defender (main place via reward relay) | n/a (server-driven) | E1 | Carries `attackerWon`, credit deltas, both userIds, `endedAt`. Attacker receives it in the raid place before the home-teleport grace window; defender receives it on their home server when `RaidRewardService` consumes the `outpost.raid.outcome` MessagingService payload. Client renders a 5-second toast off this. |
+| `WaveStarted` | Server → Client (Event) | `(info: WaveDirector.StartInfo)` — fired only to the targeted player | n/a (server-driven) | E2 | Carries `waveNumber`, `alienCount`, `endsAt` (server `os.time`), `reason` (`"clock"` / `"queue_deadline"` / `"manual"`). Client renders the wave HUD off this. Fires from `WaveDirector.startWaveInternal` on every wave begin (clock tick, raid-queue deadline pop, or future Phase G manual triggers). |
+| `WaveEnded` | Server → Client (Event) | `(result: WaveDirector.EndResult)` — fired only to the targeted player | n/a (server-driven) | E2 | Carries `waveNumber`, `survived` boolean, `aliensRemaining`. Fires when the wave timer expires, all aliens are dead, or the player's character dies. Client clears the wave HUD and shows a 5s result toast. |
+| `ClanState` | Server → Client (Event) | `(state: ClanService.State?)` — fired only to the affected member; `nil` payload = no clan | n/a (server-driven) | E3 | Pushes the player's current clan state on join (after profile load) + on every clan mutation (member join/leave/kick, deposit, withdraw, approve, chat, cross-server cache invalidate). The state includes the player's own role (`youAre`) for client-side UI gating. |
+| `CreateClan` | Client → Server (Function) | `(name: string, tag: string)` — name 3-24 alnum+space, tag 2-5 alnum (uppercased server-side) | `RATE_LIMITS.Default` (semantic: a clan-affiliated player can't double-create) | E3 | Server validates name + tag character classes/length, generates a GUID clanId, writes the new ClanData via UpdateAsync (single-shot — collision-resistant), sets `profile.clanId`. Returns `ClanService.Result`. |
+| `JoinClan` | Client → Server (Function) | `(clanId: string)` | `RATE_LIMITS.Default` | E3 | Server checks clan exists + has room (≤ `Constants.CLAN.MaxMembers`) + player isn't already in a clan; appends the player as a member via UpdateAsync (atomic CAS — concurrent joins can't overflow). Sets `profile.clanId`. Returns `ClanService.Result`. |
+| `LeaveClan` | Client → Server (Function) | `()` | `RATE_LIMITS.Default` | E3 | Removes the player from their clan via UpdateAsync. If the player is the leader and other members exist, leadership transfers to the longest-tenured officer (or oldest member if no officers). If they were the last member, the row is deleted (UpdateAsync `nil` return). Returns `ClanService.Result`. |
+| `KickFromClan` | Client → Server (Function) | `(targetUserId: number)` | `RATE_LIMITS.Default` (semantic: only leader/officer can call; only leader can kick officers; no one can kick the leader) | E3 | Server enforces role hierarchy server-side; the client doesn't choose roles. Returns `ClanService.Result`. |
+| `ClanStashDeposit` | Client → Server (Function) | `(amount: number)` — positive integer | `RATE_LIMITS.Default` | E3 | Server `CurrencyService.TrySpend(amount)` first, then UpdateAsync increments `stashCredits`. If the UpdateAsync fails, the spend is refunded so wallet+stash stay consistent. Returns `ClanStashLedger.Result`. |
+| `ClanStashWithdraw` | Client → Server (Function) | `(amount: number)` — positive integer | `RATE_LIMITS.Default` | E3 | If `amount ≤ Constants.CLAN.AutoApproveWithdrawalThreshold`, atomic decrement + grant via `CurrencyService.Add`. Above threshold, queues a `PendingWithdrawal` entry; leader must approve. Bounded by `Constants.CLAN.MaxPendingWithdrawals`. Returns `ClanStashLedger.Result` with `status` ∈ `{"instant","pending"}`. |
+| `ClanStashApprove` | Client → Server (Function) | `(withdrawalId: string, approve: boolean)` | `RATE_LIMITS.Default` (semantic: leader-only — server enforces role) | E3 | On approve: UpdateAsync atomically removes the pending entry + decrements stash, then publishes `outpost.clan.withdrawal.grant` MessagingService payload so the requester's home server applies the credits via `CurrencyService.Add`. On deny: UpdateAsync removes the pending entry; no grant. Returns `ClanStashLedger.Result`. |
+| `ClanChatSend` | Client → Server (Function) | `(message: string)` — 1-`Constants.CLAN.ChatMessageMaxLength` chars | `RATE_LIMITS.Default` (F1 will tighten to per-player chat-specific bucket) | E3 | Server validates length + sanitizes control chars; publishes to MessagingService topic `outpost.clan.chat.<clanId>`; the topic listener (this server + every other server with at least one online clan member) fires `ClanChatReceived` to local members. Returns `ClanChatService.Result`. |
+| `ClanChatReceived` | Server → Client (Event) | `(entry: ClanChatService.Entry)` — fired only to local clan members | n/a (server-driven) | E3 | Carries `clanId`, `senderUserId`, `senderName`, `message`, `sentAt` (server `os.time`). Client appends to a 50-entry ring buffer; sender sees their own message via the same topic loopback. |
+| `VoiceState` | Server → Client (Event) | `(state: VoiceGate.State)` — fired only to the affected player | n/a (server-driven) | E4 | Carries `enabled` (place-level `VoiceChatService.EnableDefaultVoice`), `userVoiceAvailable` (yielding `IsVoiceEnabledForUserIdAsync` for this player's account), `inRaidPlace` (whether the indicator should render at all). Pushed once per player ~0.5s after PlayerAdded. The mic toggle is owned by Roblox's native voice UI; this Remote is render-only. |
+| `LeaderboardState` | Server → Client (Event) | `(boards: LeaderboardService.BoardsState)` — fired to all online players on cache refresh | n/a (server-driven) | E5 | Carries top-N entries for the Global Credits and Weekly Raid Wins boards (the latter scoped to the current ISO-week bucket per ADR-010). Pushed on join (after first board fetch) + on every cache refresh (`Constants.LEADERBOARD.ReadCacheTtlSeconds`, default 300s). Notification-only — score writes go through profile mutations, not this Remote. |
+| `FriendsList` | Server → Client (Event) | `(state: FriendsService.State)` — fired only to the affected player | n/a (server-driven) | E5 | Per-friend list with `inThisServer` flag. Pushed on join (after `GetFriendsAsync` resolves) + on every hourly refresh + on local presence changes (any player joining/leaving this server triggers a re-push to all online players whose friend list might be affected). |
+| `RefreshFriends` | Client → Server (Function) | `()` | Server-side throttled to ≥ 60s between refreshes per player | E5 | Triggers a yielding `Players:GetFriendsAsync` re-fetch. Returns `FriendsService.Result`. Used by the Friends panel's "Refresh" button. |
+| `FTUEState` | Server → Client (Event) | `(state: FTUEService.State?)` — fired only to the affected player; `nil` payload = FTUE complete (clear overlay) | n/a (server-driven) | F4 | Server-authoritative FTUE step push. Carries `step`, `hint`, optional `cinematicSeconds` (for the cinematic step) and `targetCellX/targetCellZ` (for the scout step). Pushed on join (after profile load + 1s plot-allocation delay) for first-timers; cleared with nil for returning players (`ftueCompleted == true`). |
+| `FTUEStepAck` | Client → Server (Function) | `(step: string)` — only `"cinematic"` is acceptable in V1 | `RATE_LIMITS.Default` (semantic: only the cinematic step is client-ackable; others are server-observed) | F4 | Client acks completion of a step it owns (cinematic finishing or skipped). Server validates the ack matches the player's current step AND that the step is in the client-ownable allowlist. Returns `FTUEService.AckResult`. |
+| `CosmeticState` | Server → Client (Event) | `(state: CosmeticService.State)` — fired only to the affected player | n/a (server-driven) | G7 | Carries `owned: { [cosmeticId]: acquiredAt }` + `equipped: { [slot]: cosmeticId }`. Pushed on join (after profile load + first-time defaults applied), on every grant (BP claim, VIP unlock, default seed), and on every successful equip change. |
+| `EquipCosmetic` | Client → Server (Function) | `(slot: string, cosmeticId: string)` — slot ≤ 32 chars, cosmeticId ≤ 64 chars | `RATE_LIMITS.Default` (10/s — UI equip clicks) | G7 | Server validates: slot is in `Constants.COSMETIC.Slots`, cosmeticId is in CosmeticRegistry, `cosmetic.slot == slot` (no cross-slot cheats), player owns the cosmetic. On success, mutates `profile.equippedCosmetics[slot]` and re-applies the cosmetic to the character. Returns `CosmeticService.Result`. |
+| `CosmeticUnlocked` | Server → Client (Event) | `(toast: CosmeticService.UnlockToast)` — fired only to the affected player | n/a (server-driven) | G7 | Fired when CosmeticService.GrantCosmetic succeeds. Carries `cosmeticId` + `source` (e.g., `"battle_pass:tier5"`, `"vip_pass"`, `"default"`). Client renders a 5-second rarity-colored toast. |
 
 ---
 
 ## Conventions
 
 - Every inbound (Client → Server) Remote passes through
-  `Security.AntiExploit:RateCheck` + `Security.RemoteValidator` before any
-  game-state mutation.
+  `Security.AntiExploit:RateCheck` (F1, token-bucket) before any
+  game-state mutation. F2 adds central `Security.RemoteValidator` for
+  type/range/structure validation.
 - Default rate limit: **10 calls/sec/player**. Per-Remote overrides live in
   `Constants.RATE_LIMITS` and are documented in this table.
 - Outbound (Server → Client) Remotes are notification-only. Clients never trust
   outbound payloads as sources of truth — they're display hints.
 - Adding a Remote: add row here in the same PR that adds the registry entry,
   or CI fails the docs check.
+
+## F1 token-bucket rate-limit summary
+
+Per `Constants.RATE_LIMITS` post-F1 tuning. Capacity for rates ≥1 = `rate × 2` (allows
+legitimate UI burst); for sub-Hz rates capacity = 1 (no burst). Exceeded buckets log + reject
+with `{ ok = false, error = "rate-limited" }` (no game-state mutation). Names match
+`AntiExploit.RATE_LIMITS_BY_REMOTE`:
+
+| Remote | Bucket name | Sustained rate | Capacity |
+|---|---|---|---|
+| `PlaceBuilding` | `Placement` | 60 / s | 120 |
+| `ClaimDailyReward` | `DailyLogin` | 1 / s | 2 |
+| `BuyShopItem` | `ShopBuy` | 5 / s | 10 |
+| `ClaimQuest` | `QuestClaim` | 5 / s | 10 |
+| `ClaimBattlePassTier` | `BattlePassClaim` | 2 / s | 4 |
+| `RaidQueue` | `RaidQueue` | 1 / s | 2 |
+| `CreateClan` | `ClanCreate` | 0.2 / s (1 per 5s) | 1 |
+| `JoinClan` | `ClanJoin` | 0.5 / s (1 per 2s) | 1 |
+| `LeaveClan` | `ClanLeave` | 1 / s | 2 |
+| `KickFromClan` | `ClanKick` | 1 / s | 2 |
+| `ClanStashDeposit` / `ClanStashWithdraw` / `ClanStashApprove` | `ClanStashOp` | 5 / s shared | 10 |
+| `ClanChatSend` | `ClanChatSend` | 0.5 / s (1 per 2s) | 1 |
+| `RefreshFriends` | `FriendsRefresh` | 0.05 / s (1 per 20s) | 1 |
+| (any unlisted) | `Default` | 10 / s | 20 |

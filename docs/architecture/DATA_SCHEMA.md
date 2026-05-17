@@ -33,8 +33,212 @@ changes are safe — `ProfileStore:Reconcile()` merges defaults).
     lastQuestReset       = nil :: string?, -- "YYYY-MM-DD" UTC of last quest roll
     -- Phase D2 — Monetization / receipt idempotency:
     purchaseHistory      = {},             -- { [purchaseId: string]: true } — keys are Roblox PurchaseIds
+    -- Phase E1 — Raid stats:
+    raidWins        = 0, -- offensive raids won
+    raidLosses      = 0, -- offensive raids lost (incl. mid-round bails)
+    raidsDefended   = 0, -- successful defenses (attacker bailed or — once E2 ships — was killed by snapshot defenders)
+    raidsRaided     = 0, -- total times this player has been the defender of a raid
+    -- Phase E2 — Wave stats:
+    wavesSurvived   = 0, -- lifetime count of PvE waves survived
+    -- Phase E2.5 — Turret kill stats:
+    turretsKilled   = 0, -- lifetime aliens killed by this player's turrets
+    -- Phase E2.6 — Drone swarm kill stats:
+    dronesKilled    = 0, -- lifetime aliens killed by this player's drone swarm
+    -- Phase E3 — Clan membership:
+    clanId          = nil :: string?, -- nil = unaffiliated; the clan's full state lives in ClanData_v1
+    -- Phase F0 — V1.5 expansion prep (not yet wired to V1 UI):
+    creditsInvestedLifetime = 0,
+    tier                    = 0,
+    -- Phase F4 — FTUE state:
+    ftueCompleted = false,
+    ftueStep      = nil :: string?,
+    -- Phase F5 — Tutorial quest gates:
+    tutorialQuestsCompleted = false,
+    tutorialQuests          = {},
+    -- Phase G7 — Cosmetic system (closes D4 launch-blocker):
+    cosmeticsOwned     = {},
+    equippedCosmetics  = {},
 }
 ```
+
+### Raid stat fields (E1)
+
+Counters mutated only by `RaidRewardService` on the home server that
+holds the player's profile. The raid server never writes these
+directly (ADR-008). E5's weekly leaderboard reads `raidWins` for the
+"weekly raid wins" board; the global Credits board uses `credits`.
+
+### Wave stat field (E2)
+
+```luau
+wavesSurvived: number  -- lifetime count of PvE waves survived
+```
+
+Mutated only by `WaveDirector.endWave` when the player survives a
+wave (alien-kill-all OR timer-expiry-with-player-alive). Player-died
+counts as a loss; no increment. Drives a future `wave_survived`
+quest objective (Phase G expands the quest pool) and is a candidate
+column for E5's secondary leaderboard if Phase G playtest data shows
+PvE engagement.
+
+### Turret kill field (E2.5)
+
+```luau
+turretsKilled: number  -- lifetime aliens killed by this player's turrets
+```
+
+Mutated only by `TurretService.fireTurret` on the shot that drops
+an alien's HP from > 0 to <= 0. Multi-turret kill credit goes to
+whichever turret landed the killing blow (no split). Drives a future
+`turret_kill` quest objective and a Phase G "PvE hero" leaderboard
+candidate.
+
+### FTUE state fields (F4)
+
+```luau
+ftueCompleted: boolean  -- sticky; true after first-time onboarding finishes
+ftueStep: string?       -- current step in the FTUE flow; nil when complete
+```
+
+`ftueCompleted` is the gate that hides the FTUE flow for returning
+players. `ftueStep` lets a player who disconnects mid-FTUE resume from
+their last checkpoint on rejoin (the step persists via ProfileStore's
+auto-save). Mutated only by `FTUEService` on step transitions; never
+mutated by client-issued Remotes.
+
+Step values per `Constants.FTUE.Steps`: `"cinematic"`, `"scout"`,
+`"place_extractor"`, `"first_credits"`, `"completed"` (sentinel — when
+this transition fires, `ftueCompleted` flips to `true` and `ftueStep`
+is cleared to nil).
+
+### Cosmetic system fields (G7)
+
+```luau
+cosmeticsOwned: { [string]: number }       -- cosmeticId -> acquiredAt timestamp
+equippedCosmetics: { [string]: string }    -- slot -> cosmeticId
+```
+
+8 cosmetic slots per `Constants.COSMETIC.Slots` (V1 catalog covers
+4: skin, helmet_decal, drone_trail, nameplate_flair; remaining 4
+are V1.5/V2 reservations). The `acquiredAt` timestamp drives the
+24-hour "NEW!" badge in the equip panel. The `equipped` map has at
+most one entry per slot — equipping replaces.
+
+Mutated only by `CosmeticService`. Trust boundary: client cannot
+forge grants; `EquipCosmetic` Remote validates ownership before
+mutating the equipped map. BattlePass milestone tiers and VIP pass
+purchase grant cosmetics via `CosmeticService.GrantCosmetic`;
+defaults seeded on first join.
+
+Closes the D4 BattlePass launch-blocker tech debt: cosmetic-marked
+BP tiers (5, 10, 15, 20, 25, 30) grant items here instead of
+placeholder Credits/Cores. Per the user-approved G7 design
+(2026-05-05), rewards are **additive** — existing per-tier
+cr/cores rewards stay; cosmetics grant alongside at milestones.
+
+### Tutorial quest fields (F5)
+
+```luau
+tutorialQuestsCompleted: boolean                 -- sticky; true after all 3 tutorial quests claimed
+tutorialQuests: { [string]: QuestProgress }      -- 3 fixed entries until completion
+```
+
+Players in **tutorial mode** (`ftueCompleted == true` AND
+`tutorialQuestsCompleted == false`) see ONLY the 3 tutorial quests
+in the quest panel. The fixed set is held in `tutorialQuests` (not
+`dailyQuests`) so UTC day rollover has no effect on tutorial progress
+— the player works through the tutorial at their own pace.
+
+The 3 V1 tutorial quests:
+- `tut_first_steps` — Place 1 extractor (200 cr / 3 cores)
+- `tut_hold_the_line` — Survive 1 alien wave (500 cr / 5 cores)
+- `tut_daily_routine` — Claim today's daily login reward (100 cr / 2 cores)
+
+On all 3 claims, `DailyQuestManager.TryClaim` flips
+`tutorialQuestsCompleted = true`. The next `GetState` falls through to
+the regular daily-roll path. Mutated only by `DailyQuestManager`.
+
+### Drone-kill field (E2.6)
+
+```luau
+dronesKilled: number  -- lifetime aliens killed by this player's drone swarm
+```
+
+Same single-writer semantics as `turretsKilled` but for the autonomous
+drone swarm. Mutated only by `DroneSwarmService.tickTargetingFor` on
+the shot that drops alien HP from > 0 to <= 0. Counted separately
+from turret kills so future "PvE hero" leaderboards can weight
+player-placed-defender (turret) vs autonomous-defender (drone) kills
+differently.
+
+### Clan membership pointer (E3)
+
+```luau
+clanId: string?  -- nil = unaffiliated; otherwise GUID matching a row in ClanData_v1
+```
+
+Mutated only by `ClanService` on successful create/join/leave/kick/disband. The
+player profile carries only the *pointer*; the clan's full state
+(name, tag, members, stash, pending withdrawals) lives in the separate
+`ClanData_v1` DataStore keyed by `clanId`. This keeps profile size
+small and lets multiple players share a clan row without per-player
+duplication.
+
+**Cross-keyspace consistency** is best-effort:
+- `profile.clanId` is set AFTER the ClanData `UpdateAsync` succeeds.
+  Worst case (server crash between the two writes): the player has
+  been added to the clan members table but their profile still says
+  unaffiliated. They re-join freely on next session and the duplicate-
+  member branch in `TryJoinClan` is idempotent.
+- A *kicked* player's `profile.clanId` is cleared inline if they're
+  on the kicker's server. Cross-server kick-while-they-are-elsewhere
+  leaves their profile pointer stale until their next join — the
+  rejoin path is `PushStateToPlayer` → `GetClanForPlayer` reads
+  ClanData → `IsMember(data, userId) == false` → clear `profile.clanId`
+  needs to be added (V1.5+ tech debt) OR the `outpost.clan.kicked.<userId>`
+  MessagingService topic for prompt cross-server clearing.
+
+### `ClanData_v1` keyspace (E3)
+
+Separate DataStore from `PlayerData_v1`. Keyed by `clanId` (a
+GUID generated via `HttpService:GenerateGUID(false)` on create).
+Value shape:
+
+```luau
+type ClanData = {
+    clanId: string,
+    name: string,         -- 3-24 alnum+space chars
+    tag: string,          -- 2-5 alnum chars, uppercase
+    createdAt: number,    -- os.time() of creation
+    leaderUserId: number, -- UserId of the current leader
+    members: { [string]: ClanMember },  -- key = tostring(userId)
+    stashCredits: number,
+    stashCores: number,
+    pendingWithdrawals: { [string]: PendingWithdrawal },  -- key = withdrawalId
+    schemaVersion: number,
+}
+
+type ClanMember = {
+    userId: number,
+    name: string,
+    role: "leader" | "officer" | "member",
+    joinedAt: number,
+}
+
+type PendingWithdrawal = {
+    withdrawalId: string,  -- GUID
+    requesterUserId: number,
+    requesterName: string,
+    amount: number,
+    requestedAt: number,
+}
+```
+
+**All mutations go through `ClanService.MutateClan` which wraps
+`UpdateAsync`** — atomic CAS preserves invariants (member count cap,
+stash never goes negative, max pending cap). Reads use a per-server
+in-memory cache invalidated via MessagingService topic
+`outpost.clan.invalidate` and bounded by `Constants.CLAN.CacheTtlSeconds`.
 
 ### `dailyQuests[id].vipOnly` (D3)
 
