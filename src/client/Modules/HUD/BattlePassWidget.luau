@@ -2,26 +2,23 @@
 --[[
 	Outpost-7 — Battle Pass progress widget (client).
 
-	Phase G5. Small top-left HUD widget showing the player's current BP
-	tier + XP progress to next tier. Tap = open the BattlePassPanel.
-	Replaces the original "Battle Pass" toggle button that MonetizationController
-	built at x=320 in the top row.
+	Phase G5 (G5.2a). Top-left HUD widget showing tier + XP progress.
+	Tap = open BattlePassPanel. Replaces the original BP toggle button.
+	Phase G5.2c: refactored to accept an external parent so the
+	HudController-owned "Wallet" cluster can host it alongside the
+	Store button.
 
 	Drives BP awareness during normal play (always visible during Build
 	mode); on tier-up, a brief highlight pulse signals the unlock so
 	the player taps through.
-
-	State source: `Remotes.BattlePassState` (same Remote that
-	BattlePassPanel subscribes to). The widget caches the latest state
-	and re-renders on every push.
 --]]
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Components = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Components"))
+local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
 
 local BattlePassWidget = {}
 
@@ -41,15 +38,11 @@ local xpBarFill: Frame?
 
 local lastTier = -1
 
-local function setText(label: TextLabel, value: string)
-	label.Text = value
-end
-
 local function applyState(state: State)
 	if not rootFrame or not tierLabel or not xpBarFill then
 		return
 	end
-	setText(tierLabel, string.format("BP Tier %d", state.tier))
+	tierLabel.Text = string.format("BP Tier %d", state.tier)
 	local capacity = math.max(1, state.xpPerTier)
 	local intoTier = state.xp - (state.tier * capacity)
 	if state.tier >= state.maxTier then
@@ -62,11 +55,11 @@ local function applyState(state: State)
 		-- Tier-up: tap-through hint. Flash the widget border briefly.
 		local stroke = rootFrame:FindFirstChildOfClass("UIStroke")
 		if stroke then
-			local original = stroke.Color
-			stroke.Color = Color3.fromRGB(255, 220, 80) -- highlight pulse
+			local restColor = Theme.GetActive().highlight
+			stroke.Color = Color3.fromRGB(255, 240, 120)
 			task.delay(0.6, function()
 				if stroke.Parent then
-					stroke.Color = original
+					stroke.Color = restColor
 				end
 			end)
 		end
@@ -74,30 +67,13 @@ local function applyState(state: State)
 	lastTier = state.tier
 end
 
-local function build()
-	local player = Players.LocalPlayer
-	local playerGui = player:WaitForChild("PlayerGui")
-
-	local existing = playerGui:FindFirstChild("BattlePassWidget")
-	if existing then
-		existing:Destroy()
-	end
-
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "BattlePassWidget"
-	gui.ResetOnSpawn = false
-	gui.IgnoreGuiInset = true
-	gui.DisplayOrder = 18
-	gui.Parent = playerGui
-
-	-- Use Components.Button so the press feedback + ui_button_click +
-	-- StrokedFrame styling are free.
+local function build(parent: Instance, position: UDim2)
 	local btn = Components.Button({
-		parent = gui,
-		name = "Widget",
+		parent = parent,
+		name = "BattlePassWidget",
 		text = "",
 		size = UDim2.fromOffset(176, 48),
-		position = UDim2.new(0, 16, 0, 16),
+		position = position,
 		strokeSlot = "highlight",
 		onActivated = function()
 			local ok, panel = pcall(require, script.Parent.Parent.Shop.BattlePassPanel)
@@ -107,9 +83,8 @@ local function build()
 		end,
 	})
 	rootFrame = btn.instance
-
-	-- Override default button center-aligned text with a tier label +
-	-- XP bar layered inside. Clear the button text first.
+	-- Clear default centered button text; widget renders its own
+	-- left-aligned label + XP bar below.
 	btn.instance.Text = ""
 
 	local label = Instance.new("TextLabel")
@@ -120,10 +95,21 @@ local function build()
 	label.Font = Enum.Font.GothamBold
 	label.TextScaled = true
 	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.TextColor3 = Color3.fromRGB(230, 230, 220)
+	label.TextColor3 = Theme.GetActive().textPrimary
 	label.Text = "BP Tier 0"
 	label.Parent = btn.instance
 	tierLabel = label
+
+	-- Live re-tint the label on theme swap (Components doesn't auto-
+	-- tint child instances we add manually).
+	local conn = Theme.Changed:Connect(function()
+		if label.Parent then
+			label.TextColor3 = Theme.GetActive().textPrimary
+		end
+	end)
+	btn.instance.Destroying:Connect(function()
+		conn:Disconnect()
+	end)
 
 	-- XP bar.
 	local barBg = Instance.new("Frame")
@@ -140,17 +126,52 @@ local function build()
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
 	fill.Size = UDim2.new(0, 0, 1, 0)
-	fill.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
+	fill.BackgroundColor3 = Theme.GetActive().highlight
 	fill.BorderSizePixel = 0
 	fill.Parent = barBg
 	local fillCorner = Instance.new("UICorner")
 	fillCorner.CornerRadius = UDim.new(0, 2)
 	fillCorner.Parent = fill
 	xpBarFill = fill
+
+	-- Live re-tint the XP fill on theme swap.
+	local fillConn = Theme.Changed:Connect(function()
+		if fill.Parent then
+			fill.BackgroundColor3 = Theme.GetActive().highlight
+		end
+	end)
+	fill.Destroying:Connect(function()
+		fillConn:Disconnect()
+	end)
 end
 
-function BattlePassWidget.Init()
-	build()
+export type InitOpts = {
+	parent: Instance?, -- if nil, widget builds its own ScreenGui (legacy)
+	position: UDim2?, -- defaults to UDim2.new(0, 16, 0, 16) when standalone
+}
+
+function BattlePassWidget.Init(opts: InitOpts?)
+	local options: InitOpts = opts or {}
+	local parent: Instance
+	if options.parent then
+		parent = options.parent
+	else
+		local Players = game:GetService("Players")
+		local player = Players.LocalPlayer
+		local playerGui = player:WaitForChild("PlayerGui")
+		local existing = playerGui:FindFirstChild("BattlePassWidget")
+		if existing then
+			existing:Destroy()
+		end
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "BattlePassWidget"
+		gui.ResetOnSpawn = false
+		gui.IgnoreGuiInset = true
+		gui.DisplayOrder = 18
+		gui.Parent = playerGui
+		parent = gui
+	end
+	build(parent, options.position or UDim2.new(0, 16, 0, 16))
 	Remotes.BattlePassState.OnClientEvent:Connect(function(state: State)
 		applyState(state)
 	end)

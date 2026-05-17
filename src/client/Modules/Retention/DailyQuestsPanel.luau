@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local Components = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Components"))
 local HudFormat = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("HudFormat"))
 
 type QuestView = {
@@ -187,9 +188,13 @@ local function rebuildList(state: State)
 			pendingClaims[capturedId] = true
 			task.spawn(function()
 				local remote = Remotes.ClaimQuest :: RemoteFunction
-				pcall(function()
-					remote:InvokeServer(capturedId)
+				local ok, result = pcall(function()
+					return remote:InvokeServer(capturedId)
 				end)
+				-- G5.2c: claim chime fires on confirmed success.
+				if ok and typeof(result) == "table" and result.ok then
+					Components.PlayClaimChime()
+				end
 				pendingClaims[capturedId] = nil
 			end)
 		end)

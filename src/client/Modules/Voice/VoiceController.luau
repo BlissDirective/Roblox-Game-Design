@@ -2,23 +2,23 @@
 --[[
 	Outpost-7 — voice indicator (client).
 
-	Phase E4. Listens to `VoiceState` and renders a minimal mic
-	indicator top-right when the player is in the raid place AND voice
-	is available for their account. Three visual states:
+	Phase E4 (original). Phase G5.2c theme migration.
+
+	Listens to `VoiceState` and renders a mic indicator top-right when
+	the player is in the raid place AND voice is available. Three
+	visual states:
 
 	  - Hidden (`inRaidPlace == false`): main place; no indicator
-	  - Muted (`inRaidPlace == true` AND voice unavailable): grey mic
-	    icon with "voice unavailable" tooltip — surfaces account-level
-	    blockers (under-13 / region / Roblox-side voice off)
-	  - Active (`inRaidPlace == true` AND voice available): red mic
-	    icon with "voice active" label
+	  - Muted: grey stroke + "Voice Off" label
+	  - Active: danger-slot (red across all themes) stroke + label
+
+	The active-state color is intentionally pulled from the Theme's
+	`danger` slot — the universal "mic broadcasting" visual is red
+	regardless of biome, and the Theme's danger slot is the red-family
+	color across all 4 palettes.
 
 	The mic toggle itself lives in Roblox's native voice UI; this
-	indicator is read-only. Phase G replaces with proper mic icons +
-	speaker amplitude visualization.
-
-	Public API:
-	  Init  — wires VoiceState listener + builds indicator
+	indicator is read-only.
 --]]
 
 local Players = game:GetService("Players")
@@ -26,6 +26,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local Components = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Components"))
+local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
 
 local VoiceController = {}
 
@@ -37,69 +39,90 @@ type State = {
 
 local current: State = { enabled = false, userVoiceAvailable = false, inRaidPlace = false }
 
+local screenGui: ScreenGui?
+local indicatorFrame: Frame?
+local labelInst: TextLabel?
+
 local function ensureScreenGui(): ScreenGui
-	local pg = Players.LocalPlayer:WaitForChild("PlayerGui") :: PlayerGui
-	local gui = pg:FindFirstChild("OutpostVoice")
-	if gui and gui:IsA("ScreenGui") then
-		return gui
+	if screenGui and screenGui.Parent then
+		return screenGui
 	end
-	gui = Instance.new("ScreenGui")
+	local pg = Players.LocalPlayer:WaitForChild("PlayerGui") :: PlayerGui
+	local existing = pg:FindFirstChild("OutpostVoice")
+	if existing and existing:IsA("ScreenGui") then
+		screenGui = existing
+		return existing
+	end
+	local gui = Instance.new("ScreenGui")
 	gui.Name = "OutpostVoice"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 19
 	gui.Parent = pg
-	return gui :: ScreenGui
+	screenGui = gui
+	return gui
+end
+
+local function isActive(): boolean
+	return current.userVoiceAvailable and current.enabled
+end
+
+local function ensureIndicator()
+	if indicatorFrame and indicatorFrame.Parent then
+		return
+	end
+	local gui = ensureScreenGui()
+	-- Sharp-angular sci-fi frame in the danger-slot color when active,
+	-- textMuted when off. StrokedFrame handles the corner+stroke
+	-- bookkeeping and live-tints on theme swap.
+	local frame = Components.StrokedFrame({
+		parent = gui,
+		name = "VoiceIndicator",
+		size = UDim2.fromOffset(160, 32),
+		position = UDim2.new(1, -176, 0, 8),
+		bgSlot = "panel",
+		strokeSlot = "danger", -- overridden in refresh() based on active state
+		cornerAccent = false,
+	})
+	indicatorFrame = frame
+
+	local label = Instance.new("TextLabel")
+	label.Name = "Label"
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.new(1, -16, 1, 0)
+	label.Position = UDim2.new(0, 8, 0, 0)
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 13
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = frame
+	labelInst = label
 end
 
 local function refresh()
-	local gui = ensureScreenGui()
-	local existing = gui:FindFirstChild("VoiceIndicator")
 	if not current.inRaidPlace then
-		if existing then
-			existing:Destroy()
+		if indicatorFrame then
+			indicatorFrame:Destroy()
+			indicatorFrame = nil
+			labelInst = nil
 		end
 		return
 	end
-
-	local label: TextLabel
-	if existing and existing:IsA("TextLabel") then
-		label = existing
-	else
-		if existing then
-			existing:Destroy()
-		end
-		label = Instance.new("TextLabel")
-		label.Name = "VoiceIndicator"
-		label.Size = UDim2.fromOffset(160, 32)
-		label.Position = UDim2.new(1, -176, 0, 8)
-		label.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-		label.BorderSizePixel = 0
-		label.Font = Enum.Font.GothamBold
-		label.TextSize = 13
-
-		local stroke = Instance.new("UIStroke")
-		stroke.Thickness = 2
-		stroke.Parent = label
-
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 6)
-		corner.Parent = label
-
-		label.Parent = gui
+	ensureIndicator()
+	if not labelInst or not indicatorFrame then
+		return
 	end
-
-	local stroke = label:FindFirstChildOfClass("UIStroke")
-	if current.userVoiceAvailable and current.enabled then
-		label.Text = "🎤  Voice Active"
-		label.TextColor3 = Color3.fromRGB(255, 100, 100)
+	local stroke = indicatorFrame:FindFirstChildOfClass("UIStroke")
+	if isActive() then
+		labelInst.Text = "MIC  Voice Active"
+		labelInst.TextColor3 = Theme.GetActive().danger
 		if stroke then
-			stroke.Color = Color3.fromRGB(220, 80, 90)
+			stroke.Color = Theme.GetActive().danger
 		end
 	else
-		label.Text = "🎤  Voice Off"
-		label.TextColor3 = Color3.fromRGB(140, 140, 140)
+		labelInst.Text = "MIC  Voice Off"
+		labelInst.TextColor3 = Theme.GetActive().textMuted
 		if stroke then
-			stroke.Color = Color3.fromRGB(80, 80, 90)
+			stroke.Color = Theme.GetActive().textMuted
 		end
 	end
 end
@@ -111,6 +134,11 @@ function VoiceController.Init()
 			return
 		end
 		current = state :: State
+		refresh()
+	end)
+	-- Live re-tint on biome theme swap (the active/muted colors are
+	-- biome-aware via Theme.danger / Theme.textMuted).
+	Theme.Changed:Connect(function()
 		refresh()
 	end)
 end

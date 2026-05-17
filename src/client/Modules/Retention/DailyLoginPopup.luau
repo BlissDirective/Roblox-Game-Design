@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local HudFormat = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("HudFormat"))
+local Components = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Components"))
 
 type State = {
 	canClaim: boolean,
@@ -139,6 +140,8 @@ local function build()
 		pendingClaim = false
 		btn.AutoButtonColor = true
 		if ok and typeof(result) == "table" and result.ok then
+			-- G5.2c: claim chime fires on confirmed success.
+			Components.PlayClaimChime()
 			-- Server-pushed DailyLoginState will hide the popup via
 			-- the next showFromState call; until then, show "Claimed!".
 			btn.Text = string.format("+%s ✓", HudFormat.Abbreviated(result.reward))

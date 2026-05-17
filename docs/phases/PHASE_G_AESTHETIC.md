@@ -1077,3 +1077,68 @@ their internals to Theme/Components.
 ### Commit
 
 `feat(phaseG5.2a): action bar + dominant thumb detection + BP widget`
+
+#### G5.2c slice — voice + wallet cluster + claim chimes
+
+User direction: skip G5.2b (panel theme migrations + clan long-press)
+and go straight to G5.2c.
+
+**Files added/modified:**
+
+- NEW `src/client/Modules/HUD/StoreButton.luau` — owns the Store
+  (GamePass) entry. Components.Button + secondary stroke slot.
+  Accepts an external parent so HudController can host it inside the
+  Wallet cluster.
+- `src/client/Modules/HUD/BattlePassWidget.luau` — refactored to
+  accept `{ parent, position }` opts so the widget can live inside
+  the Wallet container instead of its own ScreenGui. Tier label +
+  XP bar fill colors now resolve from `Theme.textPrimary` /
+  `Theme.highlight` (live re-tint on biome swap).
+- `src/client/Modules/HUD/HudController.luau` — owns the new
+  `WalletCluster` ScreenGui. Top-left container at (16, 16) hosts
+  BP widget (y=0) + Store button (y=56). Subscribes to
+  `ModeController.OnModeChanged` and hides the entire cluster in
+  Combat/Raid mode (Build mode only — matches the action bar
+  visibility rule).
+- `src/client/Modules/Shop/MonetizationController.luau` — Store
+  toggle teardown completed (was relocated to top-left in G5.2a,
+  now fully owned by HUD). Controller's only job is the two
+  `*.Init()` calls for the panel surfaces.
+- `src/client/Modules/Voice/VoiceController.luau` — voice indicator
+  migrated to Components.StrokedFrame + Theme palette. Active state
+  uses `Theme.danger` (red-family across all biomes); muted state
+  uses `Theme.textMuted`. The mic-on-red visual stays universally
+  recognisable across biomes since `danger` is the red slot in
+  every palette. Live re-tints on biome swap via Theme.Changed.
+
+**Claim chime wiring (Components.PlayClaimChime):**
+
+- `DailyLoginPopup.luau` — fires after `result.ok` confirmed.
+- `DailyQuestsPanel.luau` — captures InvokeServer return; fires on
+  `result.ok` only (already-claimed / not-complete denials stay
+  silent).
+- `BattlePassPanel.luau` — both free and premium track claim
+  handlers; fires on `result.ok` only.
+
+Cosmetic-unlock chime is intentionally not wired — `CosmeticUnlocked`
+already routes through `ToastService.ShowInfo` (right-column toast,
+no chime). When the cosmetic comes from a BP tier claim, the BP
+claim button's chime covers the audio feedback; standalone cosmetic
+grants (e.g., VIP gamepass first-grant) get a visual-only toast.
+
+**Why no chime on tap (vs success):** the original spec said "claim
+chimes." Firing on tap would play the chime even for failed claims
+(rate-limit denial, already-claimed). For high-conversion BP / login
+flows, firing only on confirmed success keeps the celebratory cue
+honest — the chime is the reward, not the button press.
+
+**Deferred to future commits:**
+
+- G5.2b: Panel theme migrations (Shop, BP, Quests, Clan, Friends,
+  Leaderboard, DailyLogin, WelcomeBack, GamePass, Cosmetic).
+- Clan long-press → Friends/Leaderboard sub-menu.
+- Friends/Leaderboard standalone toggle teardown.
+
+### Commit
+
+`feat(phaseG5.2c): voice migration + wallet cluster + claim chimes`
