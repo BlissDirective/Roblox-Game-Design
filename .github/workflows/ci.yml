@@ -83,7 +83,14 @@ jobs:
         run: mkdir -p Packages ServerPackages DevPackages
 
       - name: Lint (Selene)
-        run: selene src/ tests/
+        # --allow-warnings honors selene.toml's severity design: only
+        # `unscoped_variables` is `deny` (fatal); shadowing / multiple_statements
+        # / deprecated are advisory `warn`. Without this flag selene exits
+        # non-zero on any warning, making the advisory lints fatal — which
+        # contradicts the config and is why CI failed on the first run that
+        # actually reached the lint (the prior [config] mis-placement had been
+        # aborting selene at config-parse before it linted anything).
+        run: selene --allow-warnings src/ tests/
 
       - name: Format check (StyLua)
         run: stylua --check src/ tests/
