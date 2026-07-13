@@ -186,11 +186,13 @@ local function tick()
 	previewPart.Position = snapped + Vector3.new(0, activeBuildable.size.Y / 2, 0)
 	previewPart.Transparency = 0.45
 
-	-- Advisory validation
+	-- Advisory validation. Out-of-plot and occupied-cell both fail the same
+	-- way, so they share a branch (selene `if_same_then_else`).
 	local valid = true
-	if not GridMath.IsInsidePlot(snapped.X, snapped.Z, plotCenter, Constants.WORLD.PlotSize) then
-		valid = false
-	elseif isCellOccupied(plotFolder, snapped, activeBuildable) then
+	if
+		not GridMath.IsInsidePlot(snapped.X, snapped.Z, plotCenter, Constants.WORLD.PlotSize)
+		or isCellOccupied(plotFolder, snapped, activeBuildable)
+	then
 		valid = false
 	elseif activeBuildable.requiresNode then
 		local node = findNodeAtCell(plotFolder, cellX, cellZ)
