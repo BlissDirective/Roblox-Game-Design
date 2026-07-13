@@ -1,8 +1,15 @@
 std = "roblox"
 
-[config]
-empty_if = { comments_count = true }
+# Lint severities. These belong under [lints] (not [config]); [config] is
+# reserved for per-lint configuration structs like empty_if below. The prior
+# layout put these severity strings under [config], which selene 0.27.1
+# rejected with "invalid type: string \"warn\", expected struct
+# DeprecatedLintConfig" — failing CI before it ever linted a file.
+[lints]
 unscoped_variables = "deny"
 shadowing = "warn"
 multiple_statements = "warn"
 deprecated = "warn"
+
+[config]
+empty_if = { comments_count = true }
