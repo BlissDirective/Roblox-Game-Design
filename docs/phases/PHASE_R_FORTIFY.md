@@ -42,10 +42,16 @@ assaults the base; structures have HP and breach; the player repairs.
 - **Bug fixes**: `part.SetAttribute` → `part:SetAttribute` in
   `BuildableRegistry` + `ResourceNodeSpawner` (audit §4.7 never-run class).
 
-**Not in R1a (→ R1b):** client damage-state visuals (cracked/breached
-emissive states off the `StructureHealth` push) and the hold-to-repair input
-affordance. Until R1b, repair is exercisable via the `RepairStructure`
-Remote / command bar.
+### R1b — client visuals + repair input (delivered)
+
+- **`StructureHealthController`** (new, client): damage-state tint driven off
+  the replicated `CurrentHp` attribute — walls redden as the swarm chews them
+  and snap back on repair; a downed extractor dims. Event toasts (extractor
+  down / breached / repaired) come off the `StructureHealth` Remote.
+- **Tap-to-repair**: a tap/click raycast; if it lands on a damaged structure
+  the local player owns, fire `RepairStructure(cellX, cellZ)`. The server
+  restores full HP in one call, so one tap = one repair. Server re-validates
+  ownership + reach + affordability regardless of what the client sends.
 
 ### R1a audit gate (run in Studio — pending)
 

@@ -28,6 +28,12 @@ Pre-launch: each Phase A–I sub-phase gets its own entry under `[Unreleased]`.
     stamps `CellX`/`CellZ`; new `RemoveStructure` frees occupancy + unclaims the
     node + unregisters currency/turret + drops the `baseLayout` entry on death.
   - Remotes: `StructureHealth` (S→C) + `RepairStructure` (C→S, 10/s bucket).
+  - **R1b client** — `src/client/Modules/Combat/StructureHealthController.luau`:
+    damage-state tint driven off the replicated `CurrentHp` attribute (walls
+    redden as they're chewed, snap back on repair; downed extractors dim),
+    event toasts off the `StructureHealth` Remote (extractor down / breached /
+    repaired), and tap-to-repair (raycast → owned damaged structure →
+    `RepairStructure`; one tap fully repairs). Server re-validates everything.
   - `Constants`: `WORLD.PlotCount` 4→8 (+ `PlotGridCols` for a 4-wide strip);
     `COMBAT` structure/repair tunables + `WaveLossMode` (soft/medium/hard,
     default medium) with per-mode profiles.

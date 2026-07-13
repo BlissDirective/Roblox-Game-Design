@@ -29,6 +29,7 @@ local WelcomeBackPopup = require(script.Modules.Retention.WelcomeBackPopup)
 local MonetizationController = require(script.Modules.Shop.MonetizationController)
 local RaidController = require(script.Modules.Raid.RaidController)
 local CombatController = require(script.Modules.Combat.CombatController)
+local StructureHealthController = require(script.Modules.Combat.StructureHealthController)
 local ClanController = require(script.Modules.Social.ClanController)
 local LeaderboardController = require(script.Modules.Social.LeaderboardController)
 local FriendsPanel = require(script.Modules.Social.FriendsPanel)
@@ -66,6 +67,10 @@ WelcomeBackPopup.Init()
 MonetizationController.Init()
 RaidController.Init()
 CombatController.Init()
+-- R1b: structure damage-state visuals + tap-to-repair. Init after
+-- CombatController (both are Combat-domain client surfaces); depends on
+-- ToastService (Init'd above) + the replicated plot Buildings folder.
+StructureHealthController.Init()
 ClanController.Init()
 LeaderboardController.Init()
 FriendsPanel.Init()
