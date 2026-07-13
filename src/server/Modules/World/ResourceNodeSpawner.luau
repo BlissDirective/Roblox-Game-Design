@@ -59,9 +59,9 @@ local function buildNodePart(parent: Folder, worldPos: Vector3, cellX: number, c
 	part.Position = worldPos + Vector3.new(0, Constants.NODES.HeightOffset, 0)
 	part.Material = Enum.Material.Neon
 	part.Color = NODE_TINT
-	part.SetAttribute("CellX", cellX)
-	part.SetAttribute("CellZ", cellZ)
-	part.SetAttribute("Claimed", false)
+	part:SetAttribute("CellX", cellX)
+	part:SetAttribute("CellZ", cellZ)
+	part:SetAttribute("Claimed", false)
 	part.Parent = parent
 	return part
 end

@@ -42,6 +42,11 @@ local CurrencyService = {}
 -- player -> set of (BasePart -> Buildable). The Part is the canonical
 -- key so destruction (in Phase E plot-reset, etc.) maps cleanly.
 local extractorsByPlayer: { [Player]: { [BasePart]: Buildable } } = {}
+-- Phase R1: extractors beaten to 0 HP by a wave are "disabled" — they
+-- stay registered (so a repair can re-enable them) but contribute no
+-- income while in this set. Keyed by the Part so it survives the same
+-- lifecycle as the extractor registration.
+local disabledExtractors: { [BasePart]: boolean } = {}
 -- player -> credit multiplier (defaults to 1.0; Phase D's GamePassService
 -- bumps this for 2x Credits etc.).
 local multipliers: { [Player]: number } = {}
@@ -71,7 +76,12 @@ local function tickPlayer(player: Player)
 	end
 
 	local baseIncome = 0
-	for _, buildable in extractors do
+	for part, buildable in extractors do
+		-- Phase R1: disabled extractors (downed by a wave) earn nothing
+		-- until repaired.
+		if disabledExtractors[part] then
+			continue
+		end
 		baseIncome += buildable.income
 	end
 	if baseIncome <= 0 then
@@ -167,10 +177,50 @@ function CurrencyService.GetTotalIncomePerSecond(player: Player): number
 		return 0
 	end
 	local sum = 0
-	for _, buildable in set do
+	for part, buildable in set do
+		if disabledExtractors[part] then
+			continue
+		end
 		sum += buildable.income
 	end
 	return sum
+end
+
+-- Phase R1: drain credits without emitting a "spend" quest event (this is
+-- a loss to the wave, not a purchase). Deducts up to `amount`, never below
+-- zero, and returns how much was actually taken so the caller can report
+-- the real figure. Used by StructureHealthService's medium/hard wave-loss
+-- credit skim.
+function CurrencyService.Drain(player: Player, amount: number): number
+	if amount <= 0 then
+		return 0
+	end
+	local data = DataManager.GetData(player)
+	if not data then
+		return 0
+	end
+	local taken = math.min(data.credits, math.floor(amount))
+	if taken <= 0 then
+		return 0
+	end
+	data.credits -= taken
+	fireChanged(player, data.credits)
+	return taken
+end
+
+-- Phase R1: toggle an extractor's income contribution. StructureHealthService
+-- disables an extractor when the swarm beats it to 0 HP (soft/medium modes)
+-- and re-enables it on repair. Idempotent.
+function CurrencyService.SetExtractorDisabled(part: BasePart, disabled: boolean)
+	if disabled then
+		disabledExtractors[part] = true
+	else
+		disabledExtractors[part] = nil
+	end
+end
+
+function CurrencyService.IsExtractorDisabled(part: BasePart): boolean
+	return disabledExtractors[part] == true
 end
 
 function CurrencyService.SetMultiplier(player: Player, value: number)
@@ -208,6 +258,7 @@ function CurrencyService.UnregisterExtractor(player: Player, part: BasePart)
 		return
 	end
 	set[part] = nil
+	disabledExtractors[part] = nil
 end
 
 function CurrencyService.Init()
@@ -226,6 +277,12 @@ function CurrencyService.Init()
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
+		local set = extractorsByPlayer[player]
+		if set then
+			for part in set do
+				disabledExtractors[part] = nil
+			end
+		end
 		extractorsByPlayer[player] = nil
 		multipliers[player] = nil
 	end)

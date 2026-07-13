@@ -52,6 +52,13 @@ The minimum lovable game. Everything below must be live before public launch.
 - [ ] G2: Synthwave music (5+ tracks)
 - [ ] G3: Per-biome ambient + VFX
 
+### Phase R — Make the verbs real (inserted post-audit; see `Fable5-Game-To-Fruition.md` §6 + `docs/phases/PHASE_R_FORTIFY.md`)
+- [x] R1a: Fortify — structure HP, base-targeting alien AI, wave-loss modes, repair (server core)
+- [ ] R1b: Fortify — client damage-state visuals + hold-to-repair affordance
+- [ ] R3: Player weapon (server-validated hitscan rifle)
+- [ ] R2: Raid gameplay (render snapshot base, extraction loot, defenders fight back)
+- [ ] R4: Emergency Shield + 2× on offline grant + PlacementResult toast + quest pool → 30
+
 ### Phase H — Ship prep
 - [ ] H1: 3 thumbnails + game icon
 - [ ] H2: Closed beta (5–20 testers)

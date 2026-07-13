@@ -9,6 +9,34 @@ Pre-launch: each Phase A–I sub-phase gets its own entry under `[Unreleased]`.
 ## [Unreleased]
 
 ### Added
+- **Phase R1 — Fortify (structure combat)** — makes walls/turrets/extractors
+  mechanically real; closes audit finding §4.2 ("aliens never attack the base").
+  - `src/server/Modules/Combat/StructureHealthService.luau` — new module owning
+    structure HP, damage, destruction, repair, and the switchable wave-loss
+    policy. Canonical HP mirrored to Part `CurrentHp`/`MaxHp` attributes for the
+    client damage-state renderer.
+  - `BuildableRegistry`: additive `maxHp` field (wall 300, turret 250,
+    extractor 150); `BuildPart` stamps `MaxHp`/`CurrentHp` attributes.
+  - `AlienAI`: retargeted from "always the player" to marching on the base —
+    aliens chew through the nearest wall/turret within range, then press on to
+    the extractors; they fall back to hunting the player only when no structures
+    remain. The breach fantasy from brainstorm §2.5 is now possible.
+  - `CurrencyService`: extractor disable/re-enable (`SetExtractorDisabled`) so a
+    downed extractor stops earning until repaired; `Drain` for the wave-loss
+    credit skim (no "spend" quest emission).
+  - `PlacementService`: registers structure HP on placement (fresh + restore);
+    stamps `CellX`/`CellZ`; new `RemoveStructure` frees occupancy + unclaims the
+    node + unregisters currency/turret + drops the `baseLayout` entry on death.
+  - Remotes: `StructureHealth` (S→C) + `RepairStructure` (C→S, 10/s bucket).
+  - `Constants`: `WORLD.PlotCount` 4→8 (+ `PlotGridCols` for a 4-wide strip);
+    `COMBAT` structure/repair tunables + `WaveLossMode` (soft/medium/hard,
+    default medium) with per-mode profiles.
+- **Latent runtime-bug fixes** (never-run-in-Studio class, audit §4.7): changed
+  `part.SetAttribute(...)` dot-calls to `part:SetAttribute(...)` in
+  `BuildableRegistry.BuildPart` and `ResourceNodeSpawner` — the dot form passes
+  the attribute name as `self` and throws at runtime; the node-attribute bug
+  would have broken extractor-on-node validation outright.
+
 - **Phase A1 — Project scaffolding** ([commit](../../commit/f3c685c))
   - Hybrid `src/{server,client,shared}/` tree with all 32 domain subfolders
     (`.gitkeep` placeholders) per `docs/REPO_STRUCTURE.md` §1

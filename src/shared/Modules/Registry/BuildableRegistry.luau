@@ -23,6 +23,11 @@
 	  combatRole    — E2.5 dispatch: "turret" registers with
 	                  Combat.TurretService on placement; nil for purely
 	                  passive structures (walls, extractors)
+	  maxHp         — Phase R1: structure hit points. Aliens damage
+	                  structures via StructureHealthService; at 0 a wall/
+	                  turret is destroyed and an extractor is disabled or
+	                  destroyed per Constants.COMBAT.WaveLossMode. nil/0 =
+	                  indestructible (no V1 buildable relies on that).
 
 	F0 generalization (V1.5 expansion prep — additive fields):
 	  placementBehaviors — array of behavior tags; generalizes combatRole
@@ -62,6 +67,7 @@ export type Buildable = {
 	size: Vector3,
 	color: Color3,
 	combatRole: string?,
+	maxHp: number?, -- Phase R1 structure HP; nil/0 = indestructible
 	-- F0 V1.5 prep (all optional, additive — V1 callers ignore):
 	placementBehaviors: { string }?,
 	unlockTier: number?,
@@ -78,6 +84,9 @@ local BUILDABLES: { [string]: Buildable } = {
 		requiresNode = true,
 		size = Vector3.new(3, 4, 3),
 		color = Color3.fromRGB(180, 200, 80),
+		-- The income core. Lower HP than a wall so an unwalled extractor
+		-- is genuinely at risk — the whole point of R1 is that walls matter.
+		maxHp = 150,
 	},
 	wall = {
 		id = "wall",
@@ -87,6 +96,9 @@ local BUILDABLES: { [string]: Buildable } = {
 		requiresNode = false,
 		size = Vector3.new(4, 5, 1),
 		color = Color3.fromRGB(120, 120, 130),
+		-- Highest HP — walls are the perimeter meant to soak the swarm so
+		-- turrets and extractors behind them survive. ~15 alien hits.
+		maxHp = 300,
 	},
 	turret = {
 		id = "turret",
@@ -98,6 +110,9 @@ local BUILDABLES: { [string]: Buildable } = {
 		-- Steel-blue tactical visual; Phase G replaces with a real model.
 		color = Color3.fromRGB(80, 130, 180),
 		combatRole = "turret",
+		-- Between wall and extractor. A turret behind a wall outlasts the
+		-- wall; an exposed turret gets swarmed. Encourages layered defense.
+		maxHp = 250,
 	},
 }
 
@@ -123,8 +138,16 @@ function BuildableRegistry.BuildPart(buildable: Buildable, ownerUserId: number):
 	part.Size = buildable.size
 	part.Material = Enum.Material.Metal
 	part.Color = buildable.color
-	part.SetAttribute("BuildableId", buildable.id)
-	part.SetAttribute("OwnerUserId", ownerUserId)
+	part:SetAttribute("BuildableId", buildable.id)
+	part:SetAttribute("OwnerUserId", ownerUserId)
+	-- Phase R1: stamp HP so StructureHealthService and the client damage-
+	-- state renderer read a single source of truth off the Part. maxHp nil
+	-- means indestructible — leave the attributes unset so consumers can
+	-- treat "no MaxHp attribute" as "cannot be damaged".
+	if buildable.maxHp and buildable.maxHp > 0 then
+		part:SetAttribute("MaxHp", buildable.maxHp)
+		part:SetAttribute("CurrentHp", buildable.maxHp)
+	end
 	return part
 end
 

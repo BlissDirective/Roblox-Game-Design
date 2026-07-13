@@ -76,6 +76,7 @@ else
 	local RaidMatchmaker = require(script.Modules.Raid.RaidMatchmaker)
 	local RaidRewardService = require(script.Modules.Raid.RaidRewardService)
 	local BeamPool = require(script.Modules.Combat.BeamPool)
+	local StructureHealthService = require(script.Modules.Combat.StructureHealthService)
 	local TurretService = require(script.Modules.Combat.TurretService)
 	local WaveDirector = require(script.Modules.Combat.WaveDirector)
 	local DroneSwarmService = require(script.Modules.Combat.DroneSwarmService)
@@ -114,6 +115,11 @@ else
 	-- before Init too — but ordering this way makes the dependency
 	-- explicit.)
 	TurretService.Init()
+	-- R1: structure HP + repair Remote + wave-loss handling. Init after
+	-- TurretService (both are combat structure services) and before
+	-- PlacementService, which calls StructureHealthService.Register on
+	-- every placement. Depends on CurrencyService + PlotManager (Init'd above).
+	StructureHealthService.Init()
 	PlacementService.Init()
 	BuildRestorer.Init()
 	DailyLoginManager.Init()

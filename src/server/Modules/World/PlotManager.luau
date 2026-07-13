@@ -60,6 +60,10 @@ local PLOT_TINTS: { Color3 } = {
 	Color3.fromRGB(60, 50, 90), -- Plot 2: muted purple
 	Color3.fromRGB(90, 70, 40), -- Plot 3: muted amber
 	Color3.fromRGB(40, 80, 100), -- Plot 4: muted teal
+	Color3.fromRGB(90, 50, 60), -- Plot 5: muted rose
+	Color3.fromRGB(50, 70, 90), -- Plot 6: muted slate
+	Color3.fromRGB(70, 90, 50), -- Plot 7: muted olive
+	Color3.fromRGB(80, 60, 90), -- Plot 8: muted mauve
 }
 
 local function buildFloor(parent: Folder, plotId: number, center: Vector3, size: number): BasePart
@@ -82,8 +86,9 @@ end
 -- stride is PlotSlotSize (128) + PlotGap (32) so V1.5 tier expansion to
 -- the slot's max stays inside the reserved space. See V1_5_TIER_PROGRESSION.md.
 local function plotCenterFor(plotId: number, plotCount: number): Vector3
-	-- Square grid layout. cols = ceil(sqrt(N)) so we get a tight square.
-	local cols = math.ceil(math.sqrt(plotCount))
+	-- Grid layout. Explicit PlotGridCols wins (R1: a 4-wide strip for the
+	-- 8-plot layout); otherwise fall back to the ceil(sqrt(N)) tight square.
+	local cols = Constants.WORLD.PlotGridCols or math.ceil(math.sqrt(plotCount))
 	local row = math.floor((plotId - 1) / cols)
 	local col = (plotId - 1) % cols
 	local stride = Constants.WORLD.PlotSlotSize + Constants.WORLD.PlotGap

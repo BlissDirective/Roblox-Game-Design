@@ -30,9 +30,15 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
 
 local DamageService = require(script.Parent.DamageService)
 local AlienPool = require(script.Parent.AlienPool)
+local StructureHealthService = require(script.Parent.StructureHealthService)
+local PlotManager = require(script.Parent.Parent.World.PlotManager)
 
 type ActiveAlien = AlienPool.ActiveAlien
 
@@ -45,16 +51,58 @@ export type Controller = {
 
 local MOVE_TICK_HZ = 1
 
-local function getTargetCharacter(alien: ActiveAlien): Model?
+local function getTargetPlayer(alien: ActiveAlien): Player?
 	local userId = alien.targetUserId
 	if not userId then
 		return nil
 	end
-	local player = Players:GetPlayerByUserId(userId)
+	return Players:GetPlayerByUserId(userId)
+end
+
+local function getTargetCharacter(alien: ActiveAlien): Model?
+	local player = getTargetPlayer(alien)
 	if not player or not player.Character then
 		return nil
 	end
 	return player.Character
+end
+
+-- R1: gather the target player's damageable structures and return the one
+-- nearest the alien plus its distance. Aliens march on structures (the base)
+-- rather than straight at the player, so walls/turrets actually matter. Only
+-- parts StructureHealthService is tracking (has HP, not yet destroyed) count.
+local function nearestStructure(alien: ActiveAlien): (BasePart?, number)
+	local player = getTargetPlayer(alien)
+	if not player then
+		return nil, math.huge
+	end
+	local plot = PlotManager.GetPlot(player)
+	if not plot then
+		return nil, math.huge
+	end
+	local origin = alien.root.Position
+	local best: BasePart? = nil
+	local bestDist = math.huge
+	for _, child in plot.buildings:GetChildren() do
+		if not child:IsA("BasePart") then
+			continue
+		end
+		if not StructureHealthService.IsDamageable(child) then
+			continue
+		end
+		-- Skip downed structures (a disabled extractor sits at 0 HP but
+		-- stays in the world until repaired) so aliens advance past it to
+		-- the next live target instead of piling on a corpse.
+		if StructureHealthService.GetHp(child) <= 0 then
+			continue
+		end
+		local dist = (child.Position - origin).Magnitude
+		if dist < bestDist then
+			best = child
+			bestDist = dist
+		end
+	end
+	return best, bestDist
 end
 
 function AlienAI.Drive(alien: ActiveAlien): Controller
@@ -98,8 +146,16 @@ function AlienAI.Drive(alien: ActiveAlien): Controller
 	end)
 	table.insert(connections, touched)
 
-	-- Movement path: 1Hz steering.
+	-- Movement + structure-attack path: 1Hz steering. R1 behavior:
+	--   1. If a damageable structure is within AlienStructureAttackRange,
+	--      stop and chew it (breach fantasy) on a per-alien cooldown.
+	--   2. Otherwise march toward the nearest structure (walls/turrets/
+	--      extractors) — the swarm assaults the base, not just the player.
+	--   3. If the base has no structures left, fall back to hunting the
+	--      player directly (pre-R1 behavior). The player-melee Touched
+	--      path above still handles damage when the alien reaches them.
 	local moveAccumulator = 0
+	local lastStructureHitAt = 0
 	local heartbeat = RunService.Heartbeat:Connect(function(dt: number)
 		if stopped or alien.humanoid.Health <= 0 then
 			return
@@ -109,6 +165,29 @@ function AlienAI.Drive(alien: ActiveAlien): Controller
 			return
 		end
 		moveAccumulator = 0
+
+		local structure, structureDist = nearestStructure(alien)
+		if structure and structureDist <= Constants.COMBAT.AlienStructureAttackRange then
+			-- In range of a structure — attack it instead of walking past.
+			local now = os.clock()
+			if now - lastStructureHitAt >= Constants.COMBAT.AlienStructureAttackCooldownSeconds then
+				lastStructureHitAt = now
+				StructureHealthService.Damage(structure, Constants.COMBAT.AlienStructureDamage, "alien_melee")
+			end
+			-- Hold position at the structure (MoveTo its base keeps the
+			-- alien pressed against the wall rather than clipping through).
+			alien.humanoid:MoveTo(structure.Position)
+			return
+		end
+
+		if structure and Constants.COMBAT.AliensPreferBlockingStructures then
+			-- March on the base.
+			alien.humanoid:MoveTo(structure.Position)
+			return
+		end
+
+		-- No structures left (or the alien has broken through) — hunt the
+		-- player directly.
 		local targetCharacter = getTargetCharacter(alien)
 		if not targetCharacter then
 			return

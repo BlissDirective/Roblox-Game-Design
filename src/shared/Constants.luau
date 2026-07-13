@@ -62,6 +62,7 @@ local Constants = {
 		ClanKick = 1, -- 1/s
 		ClanStashOp = 5, -- 5/s — deposit / withdraw / approve combined
 		ClanChatSend = 0.5, -- 1 per 2s sustained — chat anti-spam
+		RepairStructure = 10, -- Phase R1 — 10/s; hold-to-repair fires repeatedly
 		RaidQueue = 1, -- 1/s — anti queue spam
 		FriendsRefresh = 0.05, -- 1 per 20s — server-side throttle is 60s; this is defensive
 		BattlePassClaim = 2, -- 2/s — players may claim multiple tiers in quick burst
@@ -369,7 +370,17 @@ local Constants = {
 	-- plots than would otherwise exist. Worth it to avoid V1.5 migration
 	-- pain. Per `docs/architecture/V1_5_TIER_PROGRESSION.md` §2.
 	WORLD = {
-		PlotCount = 4, -- 2×2 grid; matches squad max (4) per finalized-brainstorm.md §2.6
+		-- Phase R1 decision (2026-07-13): bumped 4 → 8 for fuller servers,
+		-- better raid-queue liquidity, and less empty-world feel (audit
+		-- §4.5). Slot reservation (PlotSlotSize) is unchanged so the V1.5
+		-- tier expansion story still holds. Set the place's Max Players to
+		-- match PlotCount in the Creator Dashboard (PUBLISHING.md checklist).
+		PlotCount = 8, -- 4×2 grid; 2× the squad cap so a full squad + rivals share a server
+		-- Explicit column count for the plot grid. When set, PlotManager
+		-- lays plots out in this many columns instead of the ceil(sqrt(N))
+		-- square default — a 4-wide × 2-deep strip reads cleaner than the
+		-- 3×3-minus-1 the square heuristic would produce for 8 plots.
+		PlotGridCols = 4,
 		PlotSize = 64, -- V1 default plot footprint (Tier 4 in V1.5 terms)
 		PlotSlotSize = 128, -- V1.5 max tier plot size; reserves world-slot space NOW for V1.5 expansion
 		PlotGap = 32, -- studs between adjacent plot slots
@@ -758,6 +769,72 @@ local Constants = {
 		BeamSegments = 4, -- GPU-side beam subdivision; higher = smoother but more draw cost
 		MuzzleParticleCount = 4, -- one-shot Emit at fire origin per shot
 		ImpactParticleCount = 6, -- one-shot Emit at impact point per shot
+
+		-- Phase R1 — "Fortify" makes walls/turrets/extractors mechanically
+		-- real. Aliens now attack the base (StructureHealthService owns HP);
+		-- structures breach; extractors go down under pressure. Prior to R1
+		-- aliens only meleed the player and buildings were decoration
+		-- (audit §4.2). All values here are server-authoritative.
+		--
+		-- Structure max HP lives in BuildableRegistry (per-buildable), not
+		-- here, so a new buildable ships its own HP alongside its cost/size.
+		-- This block owns the *combat* tunables: how hard aliens hit
+		-- structures, how they pick a target, and the repair economy.
+
+		-- Alien → structure combat. Aliens march at the nearest extractor
+		-- (the objective worth defending); any wall/turret within
+		-- AlienStructureAttackRange gets chewed through first (the breach
+		-- fantasy). Player melee (AlienMeleeDamage above) is unchanged and
+		-- takes priority when the player is the closest valid target.
+		AlienStructureDamage = 20, -- HP per hit to a structure
+		AlienStructureAttackCooldownSeconds = 1.0, -- one structure hit/sec per alien
+		AlienStructureAttackRange = 6, -- studs; alien attacks a structure within this range
+		-- When true, aliens prefer chewing a wall that blocks their path to
+		-- the objective over walking around it (V1 flat-plot heuristic — no
+		-- pathfinding). Walls therefore actually stop/slow the swarm.
+		AliensPreferBlockingStructures = true,
+
+		-- Repair economy. Damaged structures repair to full for
+		-- `RepairCostPerHp × missingHp` Credits, floored at RepairCostMin so
+		-- a 1-HP top-up still costs something. Disabled extractors re-enable
+		-- on repair. Server validates ownership + reach + affordability.
+		RepairCostPerHp = 0.5, -- Credits per missing HP
+		RepairCostMin = 10, -- floor so trivial repairs aren't free
+		RepairReachStuds = 32, -- player must be within this of the structure to repair (matches BUILD.MaxReachStuds)
+
+		-- Wave-loss severity. User decision (2026-07-13): default MEDIUM,
+		-- switchable to soft / hard via this single tunable. Governs what
+		-- happens when an EXTRACTOR is beaten to 0 HP by the swarm. Walls
+		-- and turrets at 0 HP are always destroyed (removed) regardless of
+		-- mode — they're the breachable perimeter, and losing them IS the
+		-- drama. Only the extractor (the income core) reads the mode:
+		--   soft   — extractor disabled (income → 0) until repaired; no
+		--            credit loss. Safest for new players; keeps the 30s
+		--            FTUE promise intact.
+		--   medium — extractor disabled + the swarm skims a capped % of the
+		--            player's current Credits (the "loot"). Real stakes.
+		--   hard   — extractor destroyed (must be rebuilt from scratch) +
+		--            the capped Credit skim. Maximum tension.
+		-- Switchable at runtime by editing this value (or, later, a live
+		-- config in config/balance/). One source of truth.
+		WaveLossMode = "medium", -- "soft" | "medium" | "hard"
+		WaveLossProfiles = {
+			soft = {
+				extractorOnZero = "disable", -- keep the part, income → 0 until repaired
+				creditStealPct = 0.0, -- fraction of current Credits skimmed
+				creditStealCap = 0, -- absolute cap on the skim per extractor downed
+			},
+			medium = {
+				extractorOnZero = "disable",
+				creditStealPct = 0.05, -- 5% of current Credits
+				creditStealCap = 2000, -- never more than 2k per extractor downed
+			},
+			hard = {
+				extractorOnZero = "destroy", -- remove the extractor; player rebuilds
+				creditStealPct = 0.10, -- 10% of current Credits
+				creditStealCap = 5000,
+			},
+		},
 	},
 
 	-- Clan / squad system (Phase E3). 4-person max per brainstorm §2.6

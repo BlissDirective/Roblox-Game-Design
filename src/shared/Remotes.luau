@@ -137,6 +137,23 @@ local Remotes = {
 	-- the result toast.
 	WaveEnded = getOrCreate("WaveEnded", "RemoteEvent") :: RemoteEvent,
 
+	-- Phase R1 — Fortify / structure combat:
+	-- Server → Client. Args: (update: StructureHealthService.HealthUpdate).
+	-- Fired when a structure takes damage, is repaired, is disabled/
+	-- re-enabled (extractors), or is destroyed. Carries world position +
+	-- cell + hp/maxHp + a `state` enum ("damaged" | "destroyed" |
+	-- "disabled" | "repaired") so the client renders damage-state visuals
+	-- + a HUD alert without trusting the value. Server is authoritative —
+	-- HP lives on the Part attributes and in StructureHealthService.
+	StructureHealth = getOrCreate("StructureHealth", "RemoteEvent") :: RemoteEvent,
+	-- Client → Server (RemoteEvent). Args: (cellX: number, cellZ: number).
+	-- Player requests repair of the structure at that cell on their own
+	-- plot. Server validates: owns the plot, structure exists + is damaged,
+	-- player within Constants.COMBAT.RepairReachStuds, and can afford the
+	-- missing-HP cost. Fire-and-forget; the resulting StructureHealth
+	-- "repaired" push is the client's confirmation.
+	RepairStructure = getOrCreate("RepairStructure", "RemoteEvent") :: RemoteEvent,
+
 	-- Phase E3 — Clans / squads / shared stash / chat:
 	-- Server → Client. Args: (state: ClanService.State?).
 	-- Pushed on join (after profile load), on every clan mutation
