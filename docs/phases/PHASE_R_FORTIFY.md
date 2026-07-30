@@ -72,11 +72,24 @@ assaults the base; structures have HP and breach; the player repairs.
 
 ---
 
-## R3 — Weapon (next)
+## R3 — Weapon (delivered)
 
-One server-validated hitscan rifle: client intent → server re-raycast from
-the character (reach/rate validated via existing token buckets) →
-`DamageService` → `BeamPool` tracer. Works in PvE defense and R2 raids.
+One server-validated hitscan rifle (audit §4.3):
+
+- **`WeaponService`** (server): `FireWeapon` Remote takes only an aim
+  direction; the server raycasts from the player's OWN character head/root
+  (never a client origin), rate-limits (6/s bucket) + a 0.35s hard cooldown,
+  and damages any living non-player Humanoid (alien) hit via `DamageService`
+  (34 dmg → 3 shots kill a Stalker). Tracer drawn server-side via `BeamPool`.
+- **`WeaponController`** (client): fires the camera LookVector on tap/click,
+  Combat-mode only, with a client cooldown mirroring the server's.
+- Structures and other players are never damaged on this path — friendly
+  base fire in PvE is a no-op. Raid structure damage is R2, gated by context.
+
+### R3 audit gate (Studio — pending)
+Enter Combat mode, fire at an alien during a wave: confirm it takes 34/hit and
+dies in 3, the tracer renders, fire rate caps at ~2.8/s under spam, and
+shooting your own walls/extractors does nothing.
 
 ## R2 — Raid (after R3)
 

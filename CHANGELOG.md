@@ -9,6 +9,18 @@ Pre-launch: each Phase A–I sub-phase gets its own entry under `[Unreleased]`.
 ## [Unreleased]
 
 ### Added
+- **Phase R3 — Player weapon (server-validated hitscan rifle)** — closes audit
+  §4.3 (FP combat camera existed but the player couldn't deal damage).
+  - `src/server/Modules/Combat/WeaponService.luau` — `FireWeapon` Remote takes
+    only an aim direction; server raycasts from the player's own character
+    (never a client origin), rate-limits (6/s) + 0.35s hard cooldown, damages
+    living non-player Humanoids (aliens) via `DamageService`; `BeamPool` tracer.
+  - `src/client/Modules/Combat/WeaponController.luau` — fires the camera
+    LookVector on tap/click in Combat mode, client cooldown mirrors server.
+  - Remote `FireWeapon` (C→S); `Constants.COMBAT` weapon block +
+    `RATE_LIMITS.FireWeapon`; AntiExploit entry; bootstrap wiring both sides.
+  - Friendly structures/players are never damaged on this path (raid structure
+    damage is R2).
 - **Phase R1 — Fortify (structure combat)** — makes walls/turrets/extractors
   mechanically real; closes audit finding §4.2 ("aliens never attack the base").
   - `src/server/Modules/Combat/StructureHealthService.luau` — new module owning

@@ -30,6 +30,7 @@ local MonetizationController = require(script.Modules.Shop.MonetizationControlle
 local RaidController = require(script.Modules.Raid.RaidController)
 local CombatController = require(script.Modules.Combat.CombatController)
 local StructureHealthController = require(script.Modules.Combat.StructureHealthController)
+local WeaponController = require(script.Modules.Combat.WeaponController)
 local ClanController = require(script.Modules.Social.ClanController)
 local LeaderboardController = require(script.Modules.Social.LeaderboardController)
 local FriendsPanel = require(script.Modules.Social.FriendsPanel)
@@ -71,6 +72,8 @@ CombatController.Init()
 -- CombatController (both are Combat-domain client surfaces); depends on
 -- ToastService (Init'd above) + the replicated plot Buildings folder.
 StructureHealthController.Init()
+-- R3: player weapon fire input (Combat mode only).
+WeaponController.Init()
 ClanController.Init()
 LeaderboardController.Init()
 FriendsPanel.Init()

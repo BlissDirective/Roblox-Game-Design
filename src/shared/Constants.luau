@@ -63,6 +63,7 @@ local Constants = {
 		ClanStashOp = 5, -- 5/s — deposit / withdraw / approve combined
 		ClanChatSend = 0.5, -- 1 per 2s sustained — chat anti-spam
 		RepairStructure = 10, -- Phase R1 — 10/s; hold-to-repair fires repeatedly
+		FireWeapon = 6, -- Phase R3 — 6/s bucket over the 0.35s (~2.8/s) hard cooldown for burst headroom
 		RaidQueue = 1, -- 1/s — anti queue spam
 		FriendsRefresh = 0.05, -- 1 per 20s — server-side throttle is 60s; this is defensive
 		BattlePassClaim = 2, -- 2/s — players may claim multiple tiers in quick burst
@@ -835,6 +836,26 @@ local Constants = {
 				creditStealCap = 5000,
 			},
 		},
+
+		-- Phase R3 — player weapon. One hitscan rifle (audit §4.3: the FP
+		-- combat camera existed but the player had no way to deal damage;
+		-- turrets/drones did all the fighting). Server-authoritative: the
+		-- client sends only an aim direction, the server raycasts from the
+		-- character's own position (never a client-supplied origin),
+		-- rate-limits, and applies damage. Works in PvE defense now and in
+		-- R2 raids later (same service, same validation).
+		WeaponDamage = 34, -- HP per hit; 3 shots kill a 100 HP Stalker
+		WeaponRange = 250, -- studs; ray length cap
+		-- Server-enforced minimum interval between shots per player. Backs
+		-- the token-bucket rate limit with a hard per-player cooldown so a
+		-- burst-allowance bucket can't be drained into a faster-than-designed
+		-- fire rate. ~2.8 shots/sec.
+		WeaponFireCooldownSeconds = 0.35,
+		-- Reject aim directions that aren't (close to) unit length — a
+		-- well-behaved client always sends a normalized LookVector. The
+		-- server normalizes anyway; this just audit-logs the malformed case.
+		WeaponDirMinMagnitude = 0.5,
+		WeaponDirMaxMagnitude = 2.0,
 	},
 
 	-- Clan / squad system (Phase E3). 4-person max per brainstorm §2.6

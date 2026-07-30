@@ -77,6 +77,7 @@ else
 	local RaidRewardService = require(script.Modules.Raid.RaidRewardService)
 	local BeamPool = require(script.Modules.Combat.BeamPool)
 	local StructureHealthService = require(script.Modules.Combat.StructureHealthService)
+	local WeaponService = require(script.Modules.Combat.WeaponService)
 	local TurretService = require(script.Modules.Combat.TurretService)
 	local WaveDirector = require(script.Modules.Combat.WaveDirector)
 	local DroneSwarmService = require(script.Modules.Combat.DroneSwarmService)
@@ -120,6 +121,10 @@ else
 	-- PlacementService, which calls StructureHealthService.Register on
 	-- every placement. Depends on CurrencyService + PlotManager (Init'd above).
 	StructureHealthService.Init()
+	-- R3: player weapon. Independent of placement/wave order — it only wires
+	-- the FireWeapon Remote + reads character positions at fire time. Depends
+	-- on BeamPool (Init'd above) for the tracer.
+	WeaponService.Init()
 	PlacementService.Init()
 	BuildRestorer.Init()
 	DailyLoginManager.Init()

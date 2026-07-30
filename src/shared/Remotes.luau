@@ -153,6 +153,14 @@ local Remotes = {
 	-- missing-HP cost. Fire-and-forget; the resulting StructureHealth
 	-- "repaired" push is the client's confirmation.
 	RepairStructure = getOrCreate("RepairStructure", "RemoteEvent") :: RemoteEvent,
+	-- Phase R3 — player weapon:
+	-- Client → Server (RemoteEvent). Args: (direction: Vector3).
+	-- The client sends only an aim direction (its camera LookVector). The
+	-- server raycasts from the player's OWN character position (never a
+	-- client-supplied origin), rate-limits + hard-cooldowns, and applies
+	-- weapon damage to any alien hit. Fire-and-forget; the tracer is drawn
+	-- server-side via BeamPool so every client sees it.
+	FireWeapon = getOrCreate("FireWeapon", "RemoteEvent") :: RemoteEvent,
 
 	-- Phase E3 — Clans / squads / shared stash / chat:
 	-- Server → Client. Args: (state: ClanService.State?).
