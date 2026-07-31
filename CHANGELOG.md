@@ -9,6 +9,24 @@ Pre-launch: each Phase A–I sub-phase gets its own entry under `[Unreleased]`.
 ## [Unreleased]
 
 ### Added
+- **Phase R2a — Loot-extraction raids** — closes audit §4.1 (the E1 raid round
+  was an empty timer that always declared the attacker the winner).
+  - `src/server/Modules/Raid/RaidBaseRenderer.luau` — renders the defender's
+    `snapshot.baseLayout` as HP-bearing structures re-centered on the raid
+    arena, builds the arena floor, positions the attacker, and tracks loot.
+  - `WeaponService.SetStructureHitHandler` seam — the raid bootstrap routes
+    weapon shots into `RaidBaseRenderer.DamageStructure` so walls/extractors
+    take damage; the main place sets no handler (you can't shoot your own base).
+  - Loot model: extractable pool `min(credits × RaidStealPct, RaidStealCap)`
+    split across extractors; smashing one banks its share. `RaidSession` runs
+    the real win/loss (attacker keeps what they extract; round ends on timer /
+    leave / all extractors down).
+  - `RaidRewardService` drains the stolen credits from the defender's live
+    balance (`CurrencyService.Drain`); `Outcome` gains `defenderCreditsStolen`.
+  - Raid bootstrap inits `BeamPool` + `WeaponService` so the weapon works in
+    the raid place; client flips to Combat mode on `RaidStarted`; raid-end
+    toast shows haul (attacker) / loss (defender).
+  - `Constants.RAID` loot + arena tunables.
 - **Phase R3 — Player weapon (server-validated hitscan rifle)** — closes audit
   §4.3 (FP combat camera existed but the player couldn't deal damage).
   - `src/server/Modules/Combat/WeaponService.luau` — `FireWeapon` Remote takes

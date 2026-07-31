@@ -35,6 +35,7 @@ local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local RaidSnapshot = require(script.Parent.RaidSnapshot)
+local RaidBaseRenderer = require(script.Parent.RaidBaseRenderer)
 
 local RaidSession = {}
 
@@ -50,6 +51,10 @@ export type Outcome = {
 	attackerWon: boolean,
 	attackerCreditsDelta: number,
 	defenderCreditsDelta: number,
+	-- R2: credits actually stolen from the defender (drained on their home
+	-- server by RaidRewardService). Distinct from defenderCreditsDelta, which
+	-- is the consolation grant. Defaults to 0 for pre-R2 payloads.
+	defenderCreditsStolen: number,
 	endedAt: number,
 }
 
@@ -98,9 +103,14 @@ local function runRound(player: Player, joinData: any)
 		return
 	end
 
-	-- Push StartInfo to the client. E2/G will render the snapshot.baseLayout
-	-- into the world on the server side; for E1 we ship the timer+outcome
-	-- shell only.
+	-- R2: render the defender's snapshot base into the arena and drop the
+	-- attacker in front of it. The weapon's structure-hit handler
+	-- (registered on WeaponService in the raid bootstrap) routes shots into
+	-- RaidBaseRenderer, which tracks the loot tally.
+	RaidBaseRenderer.Render(snapshot)
+	RaidBaseRenderer.PositionAttacker(player)
+
+	-- Push StartInfo to the client (the client flips to Combat mode on this).
 	local startedRemote = Remotes.RaidStarted :: RemoteEvent
 	startedRemote:FireClient(player, {
 		defenderName = defenderName,
@@ -118,7 +128,7 @@ local function runRound(player: Player, joinData: any)
 		)
 	)
 
-	-- Wait until round end OR player leaves (e.g. closes Roblox).
+	-- Round loop: end on timer, attacker leaving, or all extractors smashed.
 	local stillIn = true
 	local connection: RBXScriptConnection?
 	connection = Players.PlayerRemoving:Connect(function(p)
@@ -131,28 +141,34 @@ local function runRound(player: Player, joinData: any)
 		end
 	end)
 	while os.time() < endsAt and stillIn do
+		local total = RaidBaseRenderer.GetTotalExtractors()
+		if total > 0 and RaidBaseRenderer.GetExtractorsDown() >= total then
+			break -- nothing left to loot; end early
+		end
 		task.wait(1)
 	end
 	if connection then
 		connection:Disconnect()
 	end
 
-	-- Outcome decision (V1 placeholder): attacker always "wins" because
-	-- the snapshot has no offensive AI in E1. E2 wires WaveDirector
-	-- defenders that can kill the attacker, flipping this to a real
-	-- decision tied to player health / objective progress.
-	local attackerWon = stillIn -- if they bailed mid-round, count as a loss
+	-- R2 outcome: the attacker keeps whatever they extracted. A base with no
+	-- extractors yields a flat consolation haul if any structure was broken.
+	local extracted = RaidBaseRenderer.GetExtracted()
+	if RaidBaseRenderer.GetTotalExtractors() == 0 and RaidBaseRenderer.GetStructuresDestroyed() > 0 then
+		extracted = Constants.RAID.RaidBaseLootNoExtractors
+	end
+	local attackerWon = extracted > 0
 	local outcome: Outcome = {
 		attackerUserId = player.UserId,
 		defenderUserId = defenderUserId,
 		attackerWon = attackerWon,
-		attackerCreditsDelta = if attackerWon
-			then Constants.RAID.AttackerWinCredits
-			else Constants.RAID.AttackerLossCredits,
+		attackerCreditsDelta = if attackerWon then extracted else Constants.RAID.AttackerLossCredits,
 		defenderCreditsDelta = Constants.RAID.DefenderRaidedCredits,
+		defenderCreditsStolen = if attackerWon then extracted else 0,
 		endedAt = os.time(),
 	}
 
+	RaidBaseRenderer.Cleanup()
 	announceOutcome(outcome)
 
 	-- Brief in-place results window before kicking the attacker home.

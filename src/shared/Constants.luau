@@ -669,11 +669,35 @@ local Constants = {
 		TopicOutcome = "outpost.raid.outcome",
 		-- V1 placeholder reward bands (Phase G/E2 tunes via
 		-- config/balance/raid_rewards.json).
-		AttackerWinCredits = 1000,
-		AttackerLossCredits = 100,
+		AttackerWinCredits = 1000, -- legacy E1 flat band; superseded by R2 loot model below
+		AttackerLossCredits = 100, -- attacker consolation on a failed raid (extracted nothing)
 		-- Defender's consolation reward when raided (the "asynchronous
 		-- defense reward" per brainstorm §2.1). Tuned in Phase G.
 		DefenderRaidedCredits = 250,
+
+		-- Phase R2 — loot-extraction raids (audit §4.1 + §7.1). The E1 round
+		-- was an empty timer that always declared the attacker the winner.
+		-- R2 renders the defender's snapshot base into the raid arena; the
+		-- attacker shoots through it (walls have HP) to reach the extractors
+		-- — the loot cores. Each extractor destroyed banks a share of the
+		-- extractable pool. Win = extracted anything before the timer.
+		--
+		-- Extractable pool = min(creditsAtSnapshot × StealPct, StealCap),
+		-- split evenly across the defender's extractors. The defender
+		-- actually LOSES the extracted amount (drained on their home server),
+		-- so raids move real credits — bounded so a single raid can't wipe
+		-- a colony.
+		RaidStealPct = 0.15, -- up to 15% of the defender's snapshot credits
+		RaidStealCap = 15000, -- hard ceiling on a single raid's haul
+		-- If the base has zero extractors, the attacker can still smash walls
+		-- for a small flat consolation haul (keeps empty-base raids non-zero).
+		RaidBaseLootNoExtractors = 250,
+		-- Arena render: the snapshot base is re-centered on this world origin
+		-- in the raid place (defender plot location is irrelevant). The
+		-- attacker spawns `AttackerSpawnOffset` studs out, facing the base.
+		RaidArenaOrigin = Vector3.new(0, 0, 0),
+		RaidArenaFloorSize = 256, -- studs; square arena floor
+		RaidAttackerSpawnOffset = 48, -- studs on -Z from arena origin
 	},
 
 	-- PvE waves (Phase E2). Brainstorm §2.1: "By night, the jungle moves.

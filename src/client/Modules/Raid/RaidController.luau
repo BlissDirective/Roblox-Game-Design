@@ -20,6 +20,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local Enums = require(Shared:WaitForChild("Enums"))
+
+local ModeController = require(script.Parent.Parent.Core.ModeController)
 
 local RaidController = {}
 
@@ -124,6 +127,13 @@ end
 function RaidController.Init()
 	local refresh = buildUI()
 
+	-- R2: when a raid round begins (raid place), drop into Combat mode so the
+	-- camera goes first-person and the weapon is enabled for the assault.
+	local startedRemote = Remotes.RaidStarted :: RemoteEvent
+	startedRemote.OnClientEvent:Connect(function()
+		ModeController.SetMode(Enums.Mode.Combat)
+	end)
+
 	local stateRemote = Remotes.RaidQueueState :: RemoteEvent
 	stateRemote.OnClientEvent:Connect(function(state: any)
 		if typeof(state) ~= "table" then
@@ -157,7 +167,12 @@ function RaidController.Init()
 				then string.format("Raid won — +%d credits", outcome.attackerCreditsDelta)
 				else string.format("Raid failed — +%d credits", outcome.attackerCreditsDelta)
 		else
-			toast.Text = string.format("Your colony was raided — +%d credits", outcome.defenderCreditsDelta)
+			local stolen = outcome.defenderCreditsStolen or 0
+			if stolen > 0 then
+				toast.Text = string.format("Colony raided! -%d stolen (+%d)", stolen, outcome.defenderCreditsDelta)
+			else
+				toast.Text = string.format("Colony defended! +%d credits", outcome.defenderCreditsDelta)
+			end
 		end
 
 		local stroke = Instance.new("UIStroke")

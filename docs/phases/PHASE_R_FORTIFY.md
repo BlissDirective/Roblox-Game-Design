@@ -91,12 +91,42 @@ Enter Combat mode, fire at an alien during a wave: confirm it takes 34/hit and
 dies in 3, the tracer renders, fire rate caps at ~2.8/s under spam, and
 shooting your own walls/extractors does nothing.
 
-## R2 — Raid (after R3)
+## R2 — Raid
 
-Render `snapshot.baseLayout` into the raid place (reuse `BuildRestorer`);
-attacker damages structures with the R3 weapon; extraction loot model caps
-the steal at a % of `creditsAtSnapshot`; snapshot turrets/drones fight back.
-Feed real results into the existing outcome relay.
+### R2a — loot-extraction raid (delivered)
+
+Closes audit §4.1 (the E1 round was an empty timer that always declared the
+attacker the winner).
+
+- **`RaidBaseRenderer`** (new, raid place): renders `snapshot.baseLayout` as
+  HP-bearing Parts re-centered on the arena origin (defender plot location is
+  irrelevant), builds an arena floor, and drops the attacker in front of the
+  base. Tracks the loot tally.
+- **Weapon damages structures in the raid place only:** `WeaponService` gained
+  a `SetStructureHitHandler` seam; the raid bootstrap registers
+  `RaidBaseRenderer.DamageStructure`. In the main place no handler is set, so
+  you never damage your own base.
+- **Loot model:** extractable pool = `min(credits × RaidStealPct,
+  RaidStealCap)`, split across the defender's extractors. Smash one → bank its
+  share. Walls (300 HP) stand between the attacker and the loot, so the raid is
+  a race against the 5-min timer. Empty bases yield a flat consolation haul.
+- **Real outcome:** attacker wins if they extracted anything; the defender
+  actually **loses** the stolen credits (drained on their home server via the
+  R1 `CurrencyService.Drain`) plus the consolation grant. Round ends on timer,
+  attacker leaving, or all extractors smashed.
+- **Client:** `RaidStarted` flips the attacker into Combat mode (FP + weapon);
+  the raid-end toast shows the haul (attacker) / the loss (defender).
+
+**R2a audit gate (Studio — pending):** 2-client local server. Player A builds a
+base with walls + extractors, Player B queues and raids: confirm the base
+renders in the arena, B shoots through walls to reach extractors, each extractor
+destroyed banks loot, the timer/early-end fires, and after B returns home both
+profiles reflect the credit move (B +haul, A −stolen +consolation).
+
+### R2b — defenders fight back (next)
+
+Snapshot turrets target the attacker (raid-aware `TurretService`), attacker can
+die → real loss; raid HUD with a live loot counter + attacker health.
 
 ## R4 — Shield + loose ends
 

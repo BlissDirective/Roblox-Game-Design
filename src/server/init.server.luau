@@ -37,12 +37,23 @@ if IS_RAID_SERVER then
 	-- Raid place: minimal stack. No plots, no currency tick, no shop —
 	-- the round runs against a snapshot, not a persistent base.
 	local RaidSession = require(script.Modules.Raid.RaidSession)
+	local RaidBaseRenderer = require(script.Modules.Raid.RaidBaseRenderer)
+	local BeamPool = require(script.Modules.Combat.BeamPool)
+	local WeaponService = require(script.Modules.Combat.WeaponService)
 	local VoiceGate = require(script.Modules.Voice.VoiceGate)
 	local BiomeLightingService = require(script.Modules.World.BiomeLightingService)
 	local AudioService = require(script.Modules.Audio.AudioService)
 	-- G4: Audio dispatch service initialised early so RaidSession can
 	-- broadcast round-start music as soon as the round timer arms.
 	AudioService.Init()
+	-- R2/R3: the attacker needs the weapon in the raid place too. BeamPool
+	-- backs the tracer; WeaponService wires the FireWeapon Remote; the
+	-- structure-hit handler routes shots into the rendered defender base so
+	-- walls/extractors take damage. Set the handler before RaidSession.Init
+	-- so it's live before the first round renders.
+	BeamPool.Init()
+	WeaponService.Init()
+	WeaponService.SetStructureHitHandler(RaidBaseRenderer.DamageStructure)
 	RaidSession.Init()
 	-- Voice is enabled at the place level via raid.project.json's
 	-- VoiceChatService.EnableDefaultVoice = true. VoiceGate.Init is

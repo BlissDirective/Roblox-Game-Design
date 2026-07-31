@@ -92,6 +92,20 @@ local function applyDefenderSide(player: Player, outcome: Outcome)
 	if not data then
 		return
 	end
+	-- R2: the attacker actually stole credits — drain them from the
+	-- defender's live balance (bounded by the snapshot cap on the raid side).
+	-- Drain first, then apply the consolation grant.
+	local stolen = outcome.defenderCreditsStolen or 0
+	if stolen > 0 then
+		local taken = CurrencyService.Drain(player, stolen)
+		print(
+			string.format(
+				"[RaidRewardService] Defender %s lost %d credits to a raid",
+				player.Name,
+				taken
+			)
+		)
+	end
 	if outcome.defenderCreditsDelta > 0 then
 		CurrencyService.Add(player, outcome.defenderCreditsDelta)
 	end

@@ -56,7 +56,8 @@ The minimum lovable game. Everything below must be live before public launch.
 - [x] R1a: Fortify — structure HP, base-targeting alien AI, wave-loss modes, repair (server core)
 - [x] R1b: Fortify — client damage-state visuals + tap-to-repair affordance
 - [x] R3: Player weapon (server-validated hitscan rifle)
-- [ ] R2: Raid gameplay (render snapshot base, extraction loot, defenders fight back)
+- [x] R2a: Raid gameplay — render snapshot base, weapon damages it, extraction loot, real win/loss + defender credit loss
+- [ ] R2b: Raid defenders fight back (snapshot turrets target the attacker) + raid HUD (live loot/health)
 - [ ] R4: Emergency Shield + 2× on offline grant + PlacementResult toast + quest pool → 30
 
 ### Phase H — Ship prep

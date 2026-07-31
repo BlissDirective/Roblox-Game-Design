@@ -47,6 +47,17 @@ local BEAM_COLOR = Color3.fromRGB(140, 220, 255)
 -- burst allowance can't translate into a faster-than-designed fire rate.
 local lastFireAt: { [Player]: number } = {}
 
+-- Optional structure-hit handler. Registered by the raid place (R2) so a
+-- weapon shot that lands on a rendered defender structure deals damage to
+-- it. In the main place no handler is set, so the weapon never damages
+-- structures (you can't shoot your own base apart in PvE). Signature:
+-- (player, hitPart, damage) -> ().
+local structureHitHandler: ((Player, BasePart, number) -> ())? = nil
+
+function WeaponService.SetStructureHitHandler(handler: (Player, BasePart, number) -> ())
+	structureHitHandler = handler
+end
+
 local function originFor(character: Model): BasePart?
 	local head = character:FindFirstChild("Head")
 	if head and head:IsA("BasePart") then
@@ -106,14 +117,15 @@ local function onFire(player: Player, direction: any)
 	local hitPoint = if result then result.Position else origin + dir * Constants.COMBAT.WeaponRange
 
 	if result and result.Instance then
-		local model = result.Instance:FindFirstAncestorOfClass("Model")
-		if model then
-			local humanoid = model:FindFirstChildOfClass("Humanoid")
-			-- Damage only living, non-player Humanoids (aliens). Player
-			-- characters and inert structures are ignored on this path.
-			if humanoid and humanoid.Health > 0 and not Players:GetPlayerFromCharacter(model) then
-				DamageService.ApplyToHumanoid(humanoid, Constants.COMBAT.WeaponDamage, "player_weapon")
-			end
+		local hitPart = result.Instance
+		local model = hitPart:FindFirstAncestorOfClass("Model")
+		local humanoid = if model then model:FindFirstChildOfClass("Humanoid") else nil
+		if humanoid and humanoid.Health > 0 and not Players:GetPlayerFromCharacter(model :: Model) then
+			-- Damage only living, non-player Humanoids (aliens).
+			DamageService.ApplyToHumanoid(humanoid, Constants.COMBAT.WeaponDamage, "player_weapon")
+		elseif structureHitHandler and hitPart:GetAttribute("MaxHp") ~= nil then
+			-- Raid context: the shot hit a rendered defender structure.
+			structureHitHandler(player, hitPart, Constants.COMBAT.WeaponDamage)
 		end
 	end
 
