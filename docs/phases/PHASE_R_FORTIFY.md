@@ -123,10 +123,21 @@ renders in the arena, B shoots through walls to reach extractors, each extractor
 destroyed banks loot, the timer/early-end fires, and after B returns home both
 profiles reflect the credit move (B +haul, A −stolen +consolation).
 
-### R2b — defenders fight back (next)
+### R2b — defenders fight back + raid HUD (delivered)
 
-Snapshot turrets target the attacker (raid-aware `TurretService`), attacker can
-die → real loss; raid HUD with a live loot counter + attacker health.
+- **`RaidBaseRenderer.StartDefense(attacker)`**: the snapshot's surviving
+  turrets fire on the attacker within `TurretRange` on the turret cadence
+  (`DamageService` + `BeamPool` orange tracer). Turrets the attacker destroys
+  stop firing — so clearing the perimeter is both the loot path *and* the way
+  to shut the defenses up.
+- **Attacker death ends the round** (`RaidSession` loop breaks on
+  `Humanoid.Health <= 0`); they keep whatever they already extracted.
+- **Live raid HUD** (`RaidProgress` Remote, ~1Hz): loot banked / extractors
+  smashed N/M / round timer. Cleared on `RaidEnded`.
+
+**R2b audit gate (Studio):** raid a base with turrets — confirm they shoot you
+(health drops), destroying a turret stops its fire, dying ends the round, and
+the HUD counts loot + ticks the timer.
 
 ## R4 — Shield + loose ends
 

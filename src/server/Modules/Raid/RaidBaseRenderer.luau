@@ -43,7 +43,13 @@ local Constants = require(Shared:WaitForChild("Constants"))
 local BuildableRegistry =
 	require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("BuildableRegistry"))
 
+local DamageService = require(script.Parent.Parent.Combat.DamageService)
+local BeamPool = require(script.Parent.Parent.Combat.BeamPool)
+
 local RaidBaseRenderer = {}
+
+-- Raid turret tracer — orange, distinct from the attacker's blue rifle.
+local TURRET_BEAM_COLOR = Color3.fromRGB(255, 150, 60)
 
 type ActiveBase = {
 	folder: Folder,
@@ -52,6 +58,8 @@ type ActiveBase = {
 	extracted: number,
 	extractorsDown: number,
 	structuresDestroyed: number,
+	turrets: { BasePart },
+	defending: boolean,
 }
 
 local active: ActiveBase? = nil
@@ -114,6 +122,7 @@ function RaidBaseRenderer.Render(snapshot: any)
 	local cx, cz = cellCentroid(layout)
 	local grid = Constants.GRID.Size
 	local origin = Constants.RAID.RaidArenaOrigin
+	local turrets: { BasePart } = {}
 
 	for _, entry in layout do
 		local buildable = BuildableRegistry.Get(entry.id)
@@ -129,6 +138,9 @@ function RaidBaseRenderer.Render(snapshot: any)
 		if buildable.income > 0 then
 			part:SetAttribute("RaidExtractor", true)
 		end
+		if buildable.combatRole == "turret" then
+			table.insert(turrets, part)
+		end
 		part.Parent = folder
 	end
 
@@ -139,6 +151,8 @@ function RaidBaseRenderer.Render(snapshot: any)
 		extracted = 0,
 		extractorsDown = 0,
 		structuresDestroyed = 0,
+		turrets = turrets,
+		defending = false,
 	}
 
 	print(
@@ -207,8 +221,50 @@ function RaidBaseRenderer.GetExtractorsDown(): number
 	return if active then active.extractorsDown else 0
 end
 
+-- R2b: the snapshot's surviving turrets shoot the attacker. Runs until the
+-- base is cleaned up or the attacker leaves/dies. Turrets the attacker has
+-- already destroyed (removed from the folder / 0 HP) stop firing. This makes
+-- a well-defended base a real threat instead of a shooting gallery.
+function RaidBaseRenderer.StartDefense(attacker: Player)
+	local base = active
+	if not base then
+		return
+	end
+	base.defending = true
+	task.spawn(function()
+		local lastFire: { [BasePart]: number } = {}
+		while active == base and base.defending do
+			local character = attacker.Character
+			local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+			local hrp = if character then character:FindFirstChild("HumanoidRootPart") else nil
+			if humanoid and humanoid.Health > 0 and hrp and hrp:IsA("BasePart") then
+				local now = os.clock()
+				for _, turret in base.turrets do
+					local hp = turret:GetAttribute("CurrentHp")
+					if turret.Parent and typeof(hp) == "number" and hp > 0 then
+						local dist = (turret.Position - hrp.Position).Magnitude
+						if dist <= Constants.COMBAT.TurretRange then
+							if now - (lastFire[turret] or 0) >= Constants.COMBAT.TurretFireSeconds then
+								lastFire[turret] = now
+								DamageService.ApplyToHumanoid(
+									humanoid,
+									Constants.COMBAT.TurretDamage,
+									"raid_turret"
+								)
+								BeamPool.Acquire(turret.Position + Vector3.new(0, 2, 0), hrp.Position, TURRET_BEAM_COLOR)
+							end
+						end
+					end
+				end
+			end
+			task.wait(Constants.COMBAT.TurretTickSeconds)
+		end
+	end)
+end
+
 function RaidBaseRenderer.Cleanup()
 	if active then
+		active.defending = false
 		active.folder:Destroy()
 		active = nil
 	end

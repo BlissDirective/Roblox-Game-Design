@@ -9,6 +9,13 @@ Pre-launch: each Phase A–I sub-phase gets its own entry under `[Unreleased]`.
 ## [Unreleased]
 
 ### Added
+- **Phase R2b — Raid defenders fight back + raid HUD.**
+  - `RaidBaseRenderer.StartDefense` — the snapshot's surviving turrets shoot the
+    attacker within `TurretRange` (DamageService + BeamPool tracer); destroyed
+    turrets stop firing.
+  - `RaidSession` ends the round on attacker death (they keep banked loot).
+  - `RaidProgress` Remote (S→C, ~1Hz) drives a live raid HUD (loot / extractors
+    N/M / timer) in `RaidController`; cleared on `RaidEnded`.
 - **Phase R2a — Loot-extraction raids** — closes audit §4.1 (the E1 raid round
   was an empty timer that always declared the attacker the winner).
   - `src/server/Modules/Raid/RaidBaseRenderer.luau` — renders the defender's

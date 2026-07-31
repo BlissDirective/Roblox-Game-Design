@@ -106,9 +106,11 @@ local function runRound(player: Player, joinData: any)
 	-- R2: render the defender's snapshot base into the arena and drop the
 	-- attacker in front of it. The weapon's structure-hit handler
 	-- (registered on WeaponService in the raid bootstrap) routes shots into
-	-- RaidBaseRenderer, which tracks the loot tally.
+	-- RaidBaseRenderer, which tracks the loot tally. R2b: the base's turrets
+	-- shoot back at the attacker.
 	RaidBaseRenderer.Render(snapshot)
 	RaidBaseRenderer.PositionAttacker(player)
+	RaidBaseRenderer.StartDefense(player)
 
 	-- Push StartInfo to the client (the client flips to Combat mode on this).
 	local startedRemote = Remotes.RaidStarted :: RemoteEvent
@@ -140,11 +142,30 @@ local function runRound(player: Player, joinData: any)
 			end
 		end
 	end)
+	local progressRemote = Remotes.RaidProgress :: RemoteEvent
+	local function pushProgress()
+		progressRemote:FireClient(player, {
+			extracted = RaidBaseRenderer.GetExtracted(),
+			extractorsDown = RaidBaseRenderer.GetExtractorsDown(),
+			totalExtractors = RaidBaseRenderer.GetTotalExtractors(),
+			endsAt = endsAt,
+		})
+	end
+	pushProgress()
+
 	while os.time() < endsAt and stillIn do
 		local total = RaidBaseRenderer.GetTotalExtractors()
 		if total > 0 and RaidBaseRenderer.GetExtractorsDown() >= total then
 			break -- nothing left to loot; end early
 		end
+		-- R2b: the attacker can be killed by the base's turrets — that ends
+		-- the round (they keep whatever they already extracted).
+		local character = player.Character
+		local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+		if humanoid and humanoid.Health <= 0 then
+			break
+		end
+		pushProgress()
 		task.wait(1)
 	end
 	if connection then

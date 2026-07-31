@@ -134,6 +134,49 @@ function RaidController.Init()
 		ModeController.SetMode(Enums.Mode.Combat)
 	end)
 
+	-- R2b: live raid HUD — loot banked, extractors smashed, round timer.
+	local function ensureProgressLabel(): TextLabel
+		local gui = ensureScreenGui()
+		local existing = gui:FindFirstChild("RaidProgress")
+		if existing and existing:IsA("TextLabel") then
+			return existing
+		end
+		local label = Instance.new("TextLabel")
+		label.Name = "RaidProgress"
+		label.Size = UDim2.fromOffset(360, 40)
+		label.Position = UDim2.new(0.5, -180, 0, 8)
+		label.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+		label.BorderSizePixel = 0
+		label.TextColor3 = Color3.fromRGB(255, 220, 120)
+		label.TextScaled = true
+		label.Font = Enum.Font.GothamBold
+		local stroke = Instance.new("UIStroke")
+		stroke.Thickness = 2
+		stroke.Color = Color3.fromRGB(220, 80, 90)
+		stroke.Parent = label
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 6)
+		corner.Parent = label
+		label.Parent = gui
+		return label
+	end
+
+	local progressRemote = Remotes.RaidProgress :: RemoteEvent
+	progressRemote.OnClientEvent:Connect(function(p: any)
+		if typeof(p) ~= "table" then
+			return
+		end
+		local secs = math.max(0, (p.endsAt or os.time()) - os.time())
+		ensureProgressLabel().Text = string.format(
+			"Loot: %d  |  Extractors %d/%d  |  %d:%02d",
+			p.extracted or 0,
+			p.extractorsDown or 0,
+			p.totalExtractors or 0,
+			math.floor(secs / 60),
+			secs % 60
+		)
+	end)
+
 	local stateRemote = Remotes.RaidQueueState :: RemoteEvent
 	stateRemote.OnClientEvent:Connect(function(state: any)
 		if typeof(state) ~= "table" then
@@ -152,6 +195,11 @@ function RaidController.Init()
 			return
 		end
 		local gui = ensureScreenGui()
+		-- Clear the R2b live raid HUD, if present.
+		local progressLabel = gui:FindFirstChild("RaidProgress")
+		if progressLabel then
+			progressLabel:Destroy()
+		end
 		local toast = Instance.new("TextLabel")
 		toast.Size = UDim2.fromOffset(360, 64)
 		toast.Position = UDim2.new(0.5, -180, 0, 80)

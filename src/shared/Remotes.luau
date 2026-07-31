@@ -304,6 +304,12 @@ local Remotes = {
 	-- defender on their home server when the outcome MessagingService
 	-- payload arrives (so they see a "Your colony was raided" toast).
 	RaidEnded = getOrCreate("RaidEnded", "RemoteEvent") :: RemoteEvent,
+	-- Phase R2b — raid HUD progress.
+	-- Server → Client. Args: (progress: RaidSession.Progress) — fired to the
+	-- attacker ~1Hz during a raid round. Carries `extracted`, `extractorsDown`,
+	-- `totalExtractors`, and `endsAt` so the client renders a live loot counter
+	-- + timer. Notification-only; the server owns the tally.
+	RaidProgress = getOrCreate("RaidProgress", "RemoteEvent") :: RemoteEvent,
 
 	-- Phase G4 — audio cue broadcast (one-shot SFX / music transitions).
 	-- Server → Client. Args: (cueId: string, opts: AudioCueOptions?).
