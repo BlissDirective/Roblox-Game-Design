@@ -9,6 +9,16 @@ Pre-launch: each Phase A–I sub-phase gets its own entry under `[Unreleased]`.
 ## [Unreleased]
 
 ### Added
+- **Phase H (code prep) — asset pipeline.**
+  - `src/shared/AssetIds.luau` — first-party asset-ID manifest (single source of
+    truth; 26 slots: icon, 3 thumbnails, 5 music, 14 SFX, 3 biome ambiences) with
+    an `isPlaceholder` helper so consumers no-op cleanly until assets upload.
+  - `tools/asset-import/upload-manifest.json` — file → manifest-key + asset-type map.
+  - `tools/scripts/upload-assets.sh` — Open Cloud uploader (idempotent; records IDs
+    + regenerates `AssetIds.luau`); previously referenced by `upload-assets.yml`
+    but missing, so that workflow would have failed.
+  - `docs/playbooks/PHASE_H_HANDOFF.md` — ordered human checklist (account, keys,
+    places, assets, listing, launch).
 - **Phase R4 — Emergency Shield + raid/build loose ends.**
   - **Emergency Shield** (closes audit §4.4 — was sellable-but-unimplemented,
     which would charge Robux and grant nothing): `ProfileSchema.shieldedUntil`;

@@ -1,0 +1,35 @@
+{
+  "$comment": "Outpost-7 asset upload manifest. Maps each binary under assets/ to its AssetIds.luau key + the Open Cloud asset type. tools/scripts/upload-assets.sh reads this, uploads files whose assetId is still 0, records the returned id here, and regenerates src/shared/AssetIds.luau. Hand-edit to ADD rows (new assets); let the script own the assetId field. assetType is a Roblox Open Cloud asset type: Decal (images/icons) or Audio.",
+  "version": 1,
+  "assets": {
+    "assets/icons/game_icon.png": { "key": "Icons.GameIcon", "assetType": "Decal", "assetId": 0 },
+    "assets/icons/thumb_transformation.png": { "key": "Thumbs.Transformation", "assetType": "Decal", "assetId": 0 },
+    "assets/icons/thumb_defense.png": { "key": "Thumbs.Defense", "assetType": "Decal", "assetId": 0 },
+    "assets/icons/thumb_raid.png": { "key": "Thumbs.Raid", "assetType": "Decal", "assetId": 0 },
+
+    "assets/audio/music/build.ogg": { "key": "Music.Build", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/music/combat.ogg": { "key": "Music.Combat", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/music/raid.ogg": { "key": "Music.Raid", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/music/victory.ogg": { "key": "Music.Victory", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/music/defeat.ogg": { "key": "Music.Defeat", "assetType": "Audio", "assetId": 0 },
+
+    "assets/audio/sfx/weapon_fire.ogg": { "key": "Sfx.WeaponFire", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/turret_fire.ogg": { "key": "Sfx.TurretFire", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/drone_fire.ogg": { "key": "Sfx.DroneFire", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/extractor_place.ogg": { "key": "Sfx.ExtractorPlace", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/wall_place.ogg": { "key": "Sfx.WallPlace", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/structure_breach.ogg": { "key": "Sfx.StructureBreach", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/repair_complete.ogg": { "key": "Sfx.RepairComplete", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/alien_growl.ogg": { "key": "Sfx.AlienGrowl", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/wave_alarm.ogg": { "key": "Sfx.WaveAlarm", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/claim_chime.ogg": { "key": "Sfx.ClaimChime", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/ui_click.ogg": { "key": "Sfx.UiClick", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/ui_panel_open.ogg": { "key": "Sfx.UiPanelOpen", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/ftue_intro_sting.ogg": { "key": "Sfx.FtueIntroSting", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/sfx/ftue_step_advance.ogg": { "key": "Sfx.FtueStepAdvance", "assetType": "Audio", "assetId": 0 },
+
+    "assets/audio/ambient/jungle.ogg": { "key": "Ambient.Jungle", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/ambient/volcanic.ogg": { "key": "Ambient.Volcanic", "assetType": "Audio", "assetId": 0 },
+    "assets/audio/ambient/ice.ogg": { "key": "Ambient.Ice", "assetType": "Audio", "assetId": 0 }
+  }
+}
