@@ -161,6 +161,45 @@ function RaidController.Init()
 		return label
 	end
 
+	-- R4: Emergency Shield indicator — a countdown while the colony is
+	-- raid-immune. Server pushes shieldedUntil on join + on purchase.
+	local shieldedUntil = 0
+	local shieldRemote = Remotes.ShieldState :: RemoteEvent
+	shieldRemote.OnClientEvent:Connect(function(until_: any)
+		if typeof(until_) == "number" then
+			shieldedUntil = until_
+		end
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			local gui = ensureScreenGui()
+			local existing = gui:FindFirstChild("ShieldIndicator")
+			local secs = shieldedUntil - os.time()
+			if secs > 0 then
+				local label = if existing and existing:IsA("TextLabel") then existing else nil
+				if not label then
+					label = Instance.new("TextLabel")
+					label.Name = "ShieldIndicator"
+					label.Size = UDim2.fromOffset(180, 32)
+					label.Position = UDim2.new(0, 16, 0, 96)
+					label.BackgroundColor3 = Color3.fromRGB(18, 30, 40)
+					label.BorderSizePixel = 0
+					label.TextColor3 = Color3.fromRGB(120, 220, 255)
+					label.TextScaled = true
+					label.Font = Enum.Font.GothamBold
+					local corner = Instance.new("UICorner")
+					corner.CornerRadius = UDim.new(0, 6)
+					corner.Parent = label
+					label.Parent = gui
+				end
+				label.Text = string.format("🛡 Shielded %d:%02d", math.floor(secs / 60), secs % 60)
+			elseif existing then
+				existing:Destroy()
+			end
+		end
+	end)
+
 	local progressRemote = Remotes.RaidProgress :: RemoteEvent
 	progressRemote.OnClientEvent:Connect(function(p: any)
 		if typeof(p) ~= "table" then

@@ -23,6 +23,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local BuildPalette = require(script.Parent.BuildPalette)
 local PlacementPreview = require(script.Parent.PlacementPreview)
 local ModeController = require(script.Parent.Parent.Core.ModeController)
+local ToastService = require(script.Parent.Parent.HUD.ToastService)
 
 local BuildController = {}
 
@@ -49,8 +50,28 @@ local function tryFireRemote()
 	remote:FireServer(selected, snap.x, snap.z)
 end
 
+-- R4: humanize server placement-failure reasons for the toast.
+local FAIL_MESSAGES: { [string]: string } = {
+	["insufficient credits"] = "Not enough Credits",
+	["cell already occupied"] = "That spot is taken",
+	["cell outside plot"] = "Outside your plot",
+	["no resource node at cell"] = "Extractors need a resource node",
+	["node already claimed"] = "That node is already claimed",
+	["no plot allocated"] = "No plot yet — hang tight",
+}
+
 function BuildController.Init()
 	BuildPalette.Init()
+
+	-- R4: toast placement failures (previously silent — audit §4.8).
+	local resultRemote = Remotes.PlacementResult :: RemoteEvent
+	resultRemote.OnClientEvent:Connect(function(result: any)
+		if typeof(result) ~= "table" or result.ok then
+			return
+		end
+		local reason = if typeof(result.reason) == "string" then result.reason else ""
+		ToastService.ShowError(FAIL_MESSAGES[reason] or "Can't build there")
+	end)
 	BuildPalette.OnSelectionChanged(function(buildableId: string?)
 		if buildableId then
 			PlacementPreview.Show(buildableId)

@@ -139,8 +139,34 @@ profiles reflect the credit move (B +haul, A −stolen +consolation).
 (health drops), destroying a turret stops its fire, dying ends the round, and
 the HUD counts loot + ticks the timer.
 
-## R4 — Shield + loose ends
+## R4 — Shield + loose ends (delivered)
 
-Emergency Shield (`shieldedUntil` + matchmaker filter + HUD), 2× Credits into
-offline grants, `PlacementResult` toast, quest pool → 30 incl. combat/raid
-objectives.
+- **Emergency Shield** (closes audit §4.4 — the product was sellable but
+  unimplemented, i.e. it would charge Robux and grant nothing):
+  `ProfileSchema.shieldedUntil`; `DevProductService` grants
+  `Constants.RAID.EmergencyShieldSeconds` of immunity (stacking on repeat
+  buys); `RaidMatchmaker` skips shielded colonies when building the raidable
+  pool; `ShieldState` Remote + a client countdown indicator.
+- **`PlacementResult` toast** (closes audit §4.8 — failures were silent):
+  `PlacementService` fires it on a rejected placement; `BuildController` shows a
+  humanized reason ("Not enough Credits", "That spot is taken", …).
+- **Raid/defend quests:** `RaidRewardService` emits `raid_attended` /
+  `raid_won`; the quest pool grew 10 → 18 with wave-survival, turret-build, and
+  raid objectives. (Full 30-quest variety remains Phase G balance/content
+  tuning.)
+- **Already done in D5:** the "2× Credits on the offline grant" audit item —
+  `OfflineProgression` applies `CurrencyService.GetMultiplier`.
+
+**R4 audit gate (Studio):** buy Emergency Shield via the Command Bar
+(`MarketplaceService` sandbox) → confirm the indicator counts down and the
+matchmaker won't target you; trigger a placement failure → confirm the toast;
+win a raid → confirm a `raid_won` quest advances.
+
+---
+
+## Phase R complete
+
+All three North-Star verbs — build, **fortify**, **raid** — are now
+mechanically real. Remaining before ship: run the Studio audit gates above, the
+one-time `stylua src/ tests/` formatter pass to green CI, then Phase H (assets +
+publishing) per `Fable5-Game-To-Fruition.md` §6.

@@ -35,6 +35,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
+local QuestObjectives = require(script.Parent.Parent.Retention.QuestObjectives)
 local RaidSession = require(script.Parent.RaidSession)
 
 type Outcome = RaidSession.Outcome
@@ -74,6 +75,11 @@ local function applyAttackerSide(player: Player, outcome: Outcome)
 		data.raidWins += 1
 	else
 		data.raidLosses += 1
+	end
+	-- R4: raid quest progress (the quest pool now has raid objectives).
+	QuestObjectives.Emit("raid_attended", player, 1)
+	if outcome.attackerWon then
+		QuestObjectives.Emit("raid_won", player, 1)
 	end
 	local endedRemote = Remotes.RaidEnded :: RemoteEvent
 	endedRemote:FireClient(player, outcome)

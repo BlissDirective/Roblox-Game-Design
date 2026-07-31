@@ -58,7 +58,7 @@ The minimum lovable game. Everything below must be live before public launch.
 - [x] R3: Player weapon (server-validated hitscan rifle)
 - [x] R2a: Raid gameplay — render snapshot base, weapon damages it, extraction loot, real win/loss + defender credit loss
 - [x] R2b: Raid defenders fight back (snapshot turrets shoot the attacker; death ends the round) + live raid HUD (loot/timer)
-- [ ] R4: Emergency Shield + 2× on offline grant + PlacementResult toast + quest pool → 30
+- [x] R4: Emergency Shield (implemented + matchmaker filter + HUD), PlacementResult toast, raid/defend quest events + expanded pool (2× on offline grant was already done in D5)
 
 ### Phase H — Ship prep
 - [ ] H1: 3 thumbnails + game icon

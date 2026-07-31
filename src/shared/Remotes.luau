@@ -57,6 +57,12 @@ local Remotes = {
 	-- add a paired PlacementResult event for UI feedback.
 	PlaceBuilding = getOrCreate("PlaceBuilding", "RemoteEvent") :: RemoteEvent,
 
+	-- Phase R4 — Build feedback:
+	-- Server → Client. Args: (result: { ok: boolean, reason: string? }).
+	-- Fired after a PlaceBuilding attempt fails server-side so the client can
+	-- toast the reason (previously placement failures were silent — audit §4.8).
+	PlacementResult = getOrCreate("PlacementResult", "RemoteEvent") :: RemoteEvent,
+
 	-- Phase B2 — Economy:
 	-- Server → Client. Args: (newCredits: number).
 	-- Notification only — the client renders this for HUD display; it
@@ -310,6 +316,11 @@ local Remotes = {
 	-- `totalExtractors`, and `endsAt` so the client renders a live loot counter
 	-- + timer. Notification-only; the server owns the tally.
 	RaidProgress = getOrCreate("RaidProgress", "RemoteEvent") :: RemoteEvent,
+	-- Phase R4 — Emergency Shield indicator.
+	-- Server → Client. Args: (shieldedUntil: number) — os.time() until which the
+	-- player's colony is raid-immune (0 = not shielded). Pushed on join and on
+	-- Emergency Shield purchase. Client renders a countdown indicator.
+	ShieldState = getOrCreate("ShieldState", "RemoteEvent") :: RemoteEvent,
 
 	-- Phase G4 — audio cue broadcast (one-shot SFX / music transitions).
 	-- Server → Client. Args: (cueId: string, opts: AudioCueOptions?).

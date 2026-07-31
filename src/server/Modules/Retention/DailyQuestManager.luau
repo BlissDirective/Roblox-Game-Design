@@ -162,6 +162,76 @@ local QUEST_POOL: { [string]: Quest } = {
 		rewardCredits = 1000,
 		rewardCores = 5,
 	},
+	-- R4: Defend objectives (PvE waves). `wave_survived` is emitted by
+	-- WaveDirector on a successful wave.
+	last_stand = {
+		id = "last_stand",
+		displayName = "Last Stand",
+		description = "Survive 1 alien wave.",
+		objective = { event = "wave_survived", target = 1 },
+		rewardCredits = 600,
+		rewardCores = 4,
+	},
+	night_watch = {
+		id = "night_watch",
+		displayName = "Night Watch",
+		description = "Survive 3 alien waves.",
+		objective = { event = "wave_survived", target = 3 },
+		rewardCredits = 1600,
+		rewardCores = 10,
+	},
+	-- R4: Turret build objectives (`place_turret` via the generic place_<id>).
+	turret_up = {
+		id = "turret_up",
+		displayName = "Turret Up",
+		description = "Place 1 turret.",
+		objective = { event = "place_turret", target = 1 },
+		rewardCredits = 500,
+		rewardCores = 4,
+	},
+	arsenal = {
+		id = "arsenal",
+		displayName = "Arsenal",
+		description = "Place 2 turrets.",
+		objective = { event = "place_turret", target = 2 },
+		rewardCredits = 1100,
+		rewardCores = 8,
+	},
+	-- R4: Raid objectives. `raid_attended` / `raid_won` are emitted by
+	-- RaidRewardService when the attacker's outcome lands on their home server.
+	infiltrator = {
+		id = "infiltrator",
+		displayName = "Infiltrator",
+		description = "Attempt 2 raids.",
+		objective = { event = "raid_attended", target = 2 },
+		rewardCredits = 900,
+		rewardCores = 6,
+	},
+	first_blood = {
+		id = "first_blood",
+		displayName = "First Blood",
+		description = "Win 1 raid.",
+		objective = { event = "raid_won", target = 1 },
+		rewardCredits = 1200,
+		rewardCores = 8,
+	},
+	raider = {
+		id = "raider",
+		displayName = "Raider",
+		description = "Win 2 raids.",
+		objective = { event = "raid_won", target = 2 },
+		rewardCredits = 2500,
+		rewardCores = 15,
+	},
+	-- R4: extra economy variety.
+	war_chest = {
+		id = "war_chest",
+		displayName = "War Chest",
+		description = "Invest 3000 Credits into your base.",
+		objective = { event = "credits_invested", target = 3000 },
+		rewardCredits = 1800,
+		rewardCores = 10,
+	},
 }
 
 -- F5: Tutorial quest pool. New players (ftueCompleted = true,

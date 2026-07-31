@@ -9,6 +9,20 @@ Pre-launch: each Phase A–I sub-phase gets its own entry under `[Unreleased]`.
 ## [Unreleased]
 
 ### Added
+- **Phase R4 — Emergency Shield + raid/build loose ends.**
+  - **Emergency Shield** (closes audit §4.4 — was sellable-but-unimplemented,
+    which would charge Robux and grant nothing): `ProfileSchema.shieldedUntil`;
+    `DevProductService` grants `Constants.RAID.EmergencyShieldSeconds` of raid
+    immunity (stacking); `RaidMatchmaker` skips shielded colonies in the
+    raidable-target pool; `ShieldState` Remote + client countdown indicator.
+  - **PlacementResult toast** (closes audit §4.8 — placement failures were
+    silent): `PlacementService` fires `PlacementResult` on failure;
+    `BuildController` toasts a humanized reason.
+  - **Raid/defend quests:** `RaidRewardService` emits `raid_attended` /
+    `raid_won`; quest pool expanded 10 → 18 with wave-survival, turret-build,
+    and raid objectives.
+  - Note: the "2× Credits on offline grant" audit item was already fixed in D5
+    (`OfflineProgression` applies `GetMultiplier`).
 - **Phase R2b — Raid defenders fight back + raid HUD.**
   - `RaidBaseRenderer.StartDefense` — the snapshot's surviving turrets shoot the
     attacker within `TurretRange` (DamageService + BeamPool tracer); destroyed

@@ -33,10 +33,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
+local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local PurchaseLedger = require(script.Parent.PurchaseLedger)
+
+local function pushShieldState(player: Player, shieldedUntil: number)
+	local remote = Remotes.ShieldState :: RemoteEvent
+	remote:FireClient(player, shieldedUntil)
+end
 
 local DevProductService = {}
 
@@ -71,10 +77,25 @@ local function applyEffect(player: Player, def: DevProductDef): boolean
 		CurrencyService.AddCores(player, def.grantCores)
 		applied = true
 	end
-	-- A product that grants nothing (all 0/nil) means we have a
-	-- catalog entry for a product we don't yet know how to handle —
-	-- Emergency Shield in V1 is in this state. Return false so the
-	-- receipt comes back as NotProcessedYet rather than silently
+	-- R4: Emergency Shield — grant raid immunity by stamping shieldedUntil
+	-- on the profile. The matchmaker skips shielded colonies; the client
+	-- shows a countdown. Closes audit §4.4 (previously sellable-but-
+	-- unimplemented, which would charge Robux and grant nothing).
+	if def.key == "EmergencyShield" then
+		local data = DataManager.GetData(player)
+		if data then
+			-- Stack from the later of now / current shield so a second
+			-- purchase extends rather than shortens protection.
+			local base = math.max(data.shieldedUntil or 0, os.time())
+			data.shieldedUntil = base + Constants.RAID.EmergencyShieldSeconds
+			pushShieldState(player, data.shieldedUntil)
+			applied = true
+			print(string.format("[DevProductService] %s shielded until %d", player.Name, data.shieldedUntil))
+		end
+	end
+	-- A product that grants nothing (all 0/nil) means we have a catalog
+	-- entry for a product we don't yet know how to handle. Return false so
+	-- the receipt comes back as NotProcessedYet rather than silently
 	-- granting nothing for real money.
 	if not applied then
 		warn(
@@ -157,6 +178,17 @@ function DevProductService.Init()
 	-- Roblox enforces "set once per server" — this is the only place
 	-- ProcessReceipt should be assigned in the entire game.
 	MarketplaceService.ProcessReceipt = DevProductService.ProcessReceipt
+
+	-- R4: push the current shield state on join so a returning shielded
+	-- player sees their remaining immunity.
+	Players.PlayerAdded:Connect(function(player)
+		task.spawn(function()
+			local data = DataManager.WaitForData(player)
+			if data and player:IsDescendantOf(Players) then
+				pushShieldState(player, data.shieldedUntil or 0)
+			end
+		end)
+	end)
 end
 
 return DevProductService

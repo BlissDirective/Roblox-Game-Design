@@ -151,6 +151,10 @@ export type PlayerData = {
 	raidLosses: number, -- offensive raids lost
 	raidsDefended: number, -- successful defenses (defender survived a raid)
 	raidsRaided: number, -- total times this player has been raided
+	-- Phase R4 — Emergency Shield (dev product): os.time() until which this
+	-- player's colony is raid-immune. 0 = not shielded. The matchmaker skips
+	-- shielded players when building the raidable-target pool.
+	shieldedUntil: number,
 	-- Phase E2 — PvE wave stats.
 	wavesSurvived: number, -- lifetime count of waves survived
 	-- Phase E2.5 — turret kill stats.
@@ -201,6 +205,7 @@ ProfileSchema.DEFAULT_DATA = {
 	raidLosses = 0,
 	raidsDefended = 0,
 	raidsRaided = 0,
+	shieldedUntil = 0,
 	wavesSurvived = 0,
 	turretsKilled = 0,
 	dronesKilled = 0,

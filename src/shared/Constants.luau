@@ -639,6 +639,9 @@ local Constants = {
 		RaidPlaceId = 0, -- REPLACE_BEFORE_LAUNCH
 		-- Round duration. Brainstorm §2.1: "queue into a 5-min round".
 		RoundSeconds = 5 * 60,
+		-- R4: Emergency Shield dev product grants this many seconds of raid
+		-- immunity (brainstorm §2.7 "Emergency Shield (5min)").
+		EmergencyShieldSeconds = 5 * 60,
 		-- After the round ends, give the player a brief grace window in
 		-- the raid place before forcing the home teleport.
 		PostRoundGraceSeconds = 8,

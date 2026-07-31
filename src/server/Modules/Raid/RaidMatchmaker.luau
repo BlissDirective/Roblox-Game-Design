@@ -62,6 +62,7 @@ local ReservedServerLauncher = require(script.Parent.ReservedServerLauncher)
 local AntiExploit = require(script.Parent.Parent.Security.AntiExploit)
 local AuditLog = require(script.Parent.Parent.Security.AuditLog)
 local RemoteValidator = require(script.Parent.Parent.Security.RemoteValidator)
+local DataManager = require(script.Parent.Parent.Player.DataManager)
 
 local RaidMatchmaker = {}
 
@@ -196,6 +197,11 @@ local function targetsHeartbeat()
 		for _, player in Players:GetPlayers() do
 			local localState = localQueueState[player]
 			if localState and localState.queued then
+				continue
+			end
+			-- R4: Emergency Shield — a shielded colony is not a raidable target.
+			local data = DataManager.GetData(player)
+			if data and (data.shieldedUntil or 0) > os.time() then
 				continue
 			end
 			local entry: TargetEntry = { userId = player.UserId, jobId = game.JobId }

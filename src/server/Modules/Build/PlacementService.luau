@@ -325,7 +325,14 @@ local function onRemote(player: Player, buildableId: any, cellX: any, cellZ: any
 		return
 	end
 
-	PlacementService.TryPlace(player, idValue :: string, xValue :: number, zValue :: number)
+	local result = PlacementService.TryPlace(player, idValue :: string, xValue :: number, zValue :: number)
+	-- R4: surface placement failures to the client (previously silent —
+	-- audit §4.8). Success is self-evident (the part appears), so only
+	-- failures toast.
+	if not result.ok then
+		local resultRemote = Remotes.PlacementResult :: RemoteEvent
+		resultRemote:FireClient(player, { ok = false, reason = result.error })
+	end
 end
 
 function PlacementService.Init()
