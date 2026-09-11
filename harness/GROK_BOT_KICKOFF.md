@@ -44,7 +44,9 @@
    PAUSED until Prompt 7. Confirm `python3 tools/harness/validate_manifest.py`
    passes on that ref (it does on `main` at merge commit `aa9f051`).
    The three labels are created by the `Harness bootstrap` workflow
-   (Actions → Harness bootstrap → Run workflow); it is idempotent.
+   (Actions → Harness bootstrap → Run workflow); it is idempotent. The
+   `[harness] status` board already exists as issue #10 — pin it; the
+   Orchestrator refreshes it rather than opening a new one.
 5. **Studio ground truth**: run the pending Studio audit gates from
    `docs/phases/PHASE_R_FORTIFY.md` at least once yourself. The harness
    can only prove an asset loads; it cannot fix a game that has never run.
