@@ -68,6 +68,10 @@ export type Buildable = {
 	color: Color3,
 	combatRole: string?,
 	maxHp: number?, -- Phase R1 structure HP; nil/0 = indestructible
+	-- H4: AssetIds.Models key. When the template has loaded, PlacementService /
+	-- RaidBaseRenderer layer it over the Part via VisualAttach; nil or a
+	-- placeholder id keeps the procedural Part visible.
+	modelKey: string?,
 	-- F0 V1.5 prep (all optional, additive — V1 callers ignore):
 	placementBehaviors: { string }?,
 	unlockTier: number?,
@@ -87,6 +91,7 @@ local BUILDABLES: { [string]: Buildable } = {
 		-- The income core. Lower HP than a wall so an unwalled extractor
 		-- is genuinely at risk — the whole point of R1 is that walls matter.
 		maxHp = 150,
+		modelKey = "BuildExtractor",
 	},
 	wall = {
 		id = "wall",
@@ -99,6 +104,7 @@ local BUILDABLES: { [string]: Buildable } = {
 		-- Highest HP — walls are the perimeter meant to soak the swarm so
 		-- turrets and extractors behind them survive. ~15 alien hits.
 		maxHp = 300,
+		modelKey = "BuildWall",
 	},
 	turret = {
 		id = "turret",
@@ -113,6 +119,7 @@ local BUILDABLES: { [string]: Buildable } = {
 		-- Between wall and extractor. A turret behind a wall outlasts the
 		-- wall; an exposed turret gets swarmed. Encourages layered defense.
 		maxHp = 250,
+		modelKey = "BuildTurretAuto",
 	},
 }
 

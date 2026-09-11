@@ -9,35 +9,33 @@ only allowlisted files. You never merge.
 1. `git fetch origin main && git checkout -B art/<element_id> origin/main`.
 2. Copy the validated files to their `assets/…` paths (from the Model
    Builder hand-off). Binary files only — no scripts, no `.rbxl`.
-3. Add rows to `tools/asset-import/upload-manifest.json`:
-   - 3D: `"assets/…/<id>.fbx": { "key": "Models.<PascalId>", "assetType": "Model", "assetId": 0 }`
-   - textures/icons/images: `"assetType": "Decal"`, key under `Icons.`,
-     `Textures.`, `Skyboxes.` (six rows `Skyboxes.JungleFt` … `Dn`), etc.
-   - audio: `"assetType": "Audio"` (rows already exist for V1 slots).
-   Keys must be unique and PascalCase after the category dot.
+3. Find the element's rows in `tools/asset-import/upload-manifest.json`.
+   **They already exist** — `tools/harness/seed_upload_rows.py` created one
+   row per element with the exact path and key (`Models.<PascalId>` for the
+   FBX, `Textures.<PascalId>` / `Icons.<PascalId>` / `Images.<PascalId>` for
+   2D, six `Skyboxes.<Biome><Face>` rows for a skybox). Copy each file to
+   the path its row names; leave `assetId` at `0` (the upload workflow
+   owns it). Only if a row is missing (a new element added to the design
+   manifest after seeding) run `python3 tools/harness/seed_upload_rows.py`
+   and commit the added rows — never hand-write a key.
 4. Append the validator's `assets_md_row` to `docs/playbooks/ASSETS.md` §6
    (append only; the guard rejects any other change in that file).
-5. Registry wiring — **only the field the manifest's `integration_target`
-   names**, and only if that field already exists in the file. Allowed
-   edits (see `tools/harness/check_art_pr.py` FIELD_PATTERNS):
-   - `iconAssetId = 0` → stays `0` in this PR (the upload workflow fills
-     `AssetIds.luau`; a follow-up PR from the Orchestrator writes the
-     numeric id after `uploaded`).
-   - `meshTemplate = nil` → `meshTemplate = AssetIds.Models.<PascalId>` only
-     when the target module already reads templates through `AssetIds`
-     (see `DESIGN_HARNESS.md` §3.4 H4 status). If the code path doesn't
-     exist yet, do not touch the registry; note `integration: pending H4`
-     in the PR body and stop after step 4.
-   Never add functions, Remotes, Constants sections, or change any line
-   that isn't an id/template field.
+5. **No Luau edits.** Every consumer already references the key by name
+   (`modelKey`, `floraModelKeys`, `assetKey`, `iconKey`, `TextureKeys`,
+   `skyboxKeyPrefix` — see `DESIGN_HARNESS.md` §3.4). When the upload
+   workflow's `[assets]` PR regenerates `src/shared/AssetIds.luau`, the
+   asset appears in-game on the next staging release with nothing else
+   changed. If you believe a consumer is missing, say so in the PR body
+   (`integration: consumer missing for <target>`) — that is a card for the
+   owner's coding agent, not something you fix.
 6. Update `harness/design_manifest.json` `artifacts` for this element with
    the final `assets/…` paths (the Orchestrator records the transition).
 7. Commit: `art(<element_id>): <name> — assets + manifest rows`.
    Push `art/<element_id>`. Open the PR with body:
    - element id, name, tier, approved variant (link to the approval issue)
    - validation JSON summary
-   - files added, manifest keys added, registry fields touched
-   - "integration: complete | pending H4"
+   - files added, manifest keys they map to
+   - "integration: complete" (or "consumer missing for <target>")
    Label `art/pr`. Request review from the owner.
 8. Watch checks. Red `ci.yml` (Selene/StyLua) on a file you touched → fix
    formatting only. Red `harness-guard` → you touched something outside

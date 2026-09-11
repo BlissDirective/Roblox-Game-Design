@@ -150,23 +150,25 @@ nicer UI, but adds a second system of record. Not recommended for v1.
 
 | Class | Integration target | Runtime path already exists? |
 |---|---|---|
-| Buildables (extractor, wall, turrets) | `BuildableRegistry.BuildPart` → clone `MeshPart` from `ServerStorage.BuildableTemplates`; head/base split for turrets | ⚠️ `BuildPart` builds a `Part` today — needs a `model` field + clone path (~40 lines) |
-| Aliens | `AlienRegistry.<id>.meshTemplate` | ✅ `AlienPool` already clones `meshTemplate` if set |
-| Drones | `DroneSwarmService` body part | ⚠️ builds a `Part` — needs template field |
-| Biome flora / cave overlay | `Constants.BIOME.Decorations.<biome>.floraTemplate` | ✅ `BiomeDecorationService` clones it if set |
-| Arches | `PlotManager.buildPlot` | ⚠️ no arch slot yet |
-| Operator skins | `CosmeticService.ApplyToCharacter` → BodyParts swap | ⚠️ tint placeholder today |
-| Helmet decals / trail textures / flair icons | `CosmeticRegistry.<id>.iconAssetId` + decal texture id | ✅ fields exist, `0` today |
-| Icons, thumbnails, UI glyphs | `AssetIds.Icons / Thumbs` | ✅ |
-| Particle + beam textures | `BeamPool`, `BiomeDecorationService` | ⚠️ hardcoded `rbxasset://` — move to `AssetIds` |
-| Skyboxes | `AssetIds.Skyboxes` (6 faces) | ⚠️ uploader must expand to 6 ids |
-| Audio | `AudioRegistry` / `AssetIds.Sfx|Music|Ambient` | ✅ (parallel track; not an "image" element) |
+| Buildables (extractor, wall, turrets) | `BuildableRegistry.<id>.modelKey` → `Models.Build*`; `VisualAttach` under the Part in `PlacementService` (fresh + restore) and `RaidBaseRenderer` | ✅ H4 |
+| Aliens | `AlienRegistry.<id>.modelKey` → `Models.Alien*`; rigged template (HumanoidRootPart + PrimaryPart) replaces the actor, static mesh overlays it | ✅ H4 |
+| Drones | `DroneSwarmRegistry.<id>.modelKey` → `Models.Drone*`; welded to the anchored root, faces travel | ✅ H4 |
+| Biome flora / cave overlay | `Constants.BIOME.Decorations.<biome>.floraModelKeys`, `caveOverlay.*ModelKey` | ✅ H4 |
+| Arches | `Constants.BIOME.Profiles.<biome>.archModelKey`; `PlotManager.buildArch` | ✅ H4 |
+| Resource node, plot floor | `Constants.NODES.ModelKey`; `Constants.ART.TextureKeys.PlotFloor` | ✅ H4 |
+| Operator skins | `CosmeticService.ApplyToCharacter` → BodyParts swap | ⚠️ rigged tier; tint placeholder until rig work (§5.5) |
+| Helmet decals / trail textures / flair icons | `CosmeticRegistry.<id>.iconKey` → `Icons.*`; textures `Textures.Decal*` / `Textures.Trail*` | ✅ keys; panel/decal consumers pending |
+| Icons, thumbnails, UI glyphs | `AssetIds.Icons / Thumbs / Images` | ✅ ids; HUD `ImageLabel` consumers pending |
+| Particle + beam textures | `Constants.ART.TextureKeys` + `Decorations.*.particleTextureKey` → `BeamPool`, `BiomeDecorationService` | ✅ H4 |
+| Skyboxes | `Profiles.<biome>.skyboxKeyPrefix` → six `AssetIds.Skyboxes.<Biome><Face>` → `Lighting.Sky` | ✅ H4 |
+| Audio | `AudioRegistry.<cue>.assetKey` → `AssetIds.Sfx|Music|Ambient`; `Decorations.*.ambientKey` | ✅ H4 (parallel track; not an "image" element) |
+| Weapon models, FTUE beacon, raid pads | `Models.Weapon*`, `Models.FtueRingBeacon`, `Models.Raid*` | ⚠️ upload slots exist; consumers not wired yet |
 
-The ⚠️ rows are the code work *I* do (small, additive, behind
-`Constants.FEATURES.artPipeline` so `main` stays shippable with procedural
-placeholders until each element is verified). The bots never write that
-code; they only fill in ids and template references on the allowlisted
-files.
+Every consumer is behind `Constants.FEATURES.artPipeline` and no-ops while
+an id is the placeholder, so `main` stays shippable with procedural
+placeholders until each element is verified. The bots never write Luau:
+`seed_upload_rows.py` fixed every key and path up front, so the Integrator
+only copies files onto paths the manifest already names.
 
 ---
 
@@ -349,8 +351,8 @@ later ones): 20-last, 1 → 5 → 7 → 2 → 8 → 9 → 4 → 6 → 16 → 18 
 | H0 | This doc; §8 decisions | You | ✅ 2026-09-11 |
 | H1 | `harness/README.md` (the loop), `design_manifest.json` (115 elements: 93 image-gated + 22 audio), `schemas/`, `prompts/` (6 roles + shared rules), `policies/SECURITY.md`, `studio/` (SETUP + `audit_element.luau` + `screenshot_rig.luau`), `STATE` (=PAUSED) | Me | ✅ |
 | H2 | `tools/harness/seed_manifest.py`, `validate_manifest.py` (state machine + evidence + budgets), `check_art_pr.py` (allowlist + fields-only diff), `.github/workflows/harness-guard.yml` | Me | ✅ tested: legal/illegal histories, allowed/blocked diffs |
-| H3 | `upload-assets.sh`: `Model` (FBX) rows already pass through the generic request; add skybox 6-face expansion + moderation-status poll; add `Models = {}` seed category to `AssetIds.luau` | Me | ⏳ next session |
-| H4 | Runtime template paths behind `FEATURES.artPipeline`: `BuildableRegistry.model` (Part → Model clone path touches `PlacementService`/`StructureHealthService` — needs a Studio-verified sub-phase), drone template, arch slot in `PlotManager`, particle/beam texture ids via `AssetIds`; `ArtTemplateLoader` that `InsertService:LoadAsset`s group-owned models into `ServerStorage.ArtTemplates` at boot with procedural fallback | Me | ⏳ plan → confirm → build, per `10_BUILD_PROTOCOL.md`; **Integrator stops after manifest rows until this lands** (`prompts/integrator.md` step 5) |
+| H3 | `tools/harness/seed_upload_rows.py` pre-seeds one `upload-manifest.json` row per element (110 rows: `Models.*` FBX, `Textures.*`, `Icons.*`, `Images.*`, six `Skyboxes.<Biome><Face>` per biome) so the Integrator only copies files to a path a row already names; `tools/scripts/regen-asset-ids.py` regenerates `AssetIds.luau` (CI `--check`); `upload-assets.sh` sends explicit MIME per type (Model/fbx, Decal, Audio), polls moderation and refuses to record a `Rejected` id | Me | ✅ 2026-09-11 |
+| H4 | Runtime template paths behind `FEATURES.artPipeline` (on; inert while ids are placeholders): `Server.World.ArtTemplateLoader` loads every real `AssetIds.Models` id via `InsertService:LoadAsset` into `ServerStorage.ArtTemplates` at boot; `Shared.Lib.VisualAttach` layers the model **under** the existing gameplay Part (Part stays the collision/raycast/attribute carrier and goes invisible) — wired for buildables (placement + restore + raid render), aliens (rigged template or static overlay), drones (welded, now face travel), resource nodes, biome flora (`floraModelKeys`), ice-cave overlay, plot arch + floor texture, skyboxes (6 faces), VFX/beam textures, audio cues (`assetKey`), cosmetic `iconKey`; client damage tint follows the visual | Me | ✅ 2026-09-11 — **not yet Studio-verified**; the auto-turret dry run (H6) is the audit |
 | H5 | GitHub: branch protection on `main` with required checks `CI`, `Harness guard / art-branch-guard`, `Harness guard / manifest-check`, `Docs sanity check`; rulesets limiting bot tokens to `art/*` + `harness/manifest`; fine-grained tokens per role; `production` environment reviewer = you; labels `art/approval`, `art/pr`, `harness/halt`. Roblox: staging experience, bot account, collaborator Edit on staging only (`harness/studio/SETUP.md` §1–2) | You | ⏳ ~1 hour |
 | H6 | Dry run on ONE element (`build_turret_auto`) end-to-end through staging + Studio audit + screenshots | Bots + you | ⏳ after H3–H5 |
 | H7 | WIP cap → 3; open the loop to the full manifest | Bots | ⏳ |

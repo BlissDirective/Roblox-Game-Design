@@ -41,6 +41,10 @@ export type AudioCue = {
 	id: string,
 	category: Category,
 	assetId: number,
+	-- H4: "Category.Name" key into AssetIds (e.g. "Sfx.TurretFire"). When the
+	-- upload has landed, the resolve pass at the bottom of this module fills
+	-- assetId from it; a hand-set non-zero assetId always wins.
+	assetKey: string?,
 	volume: number,
 	pitch: number,
 	rollOffMin: number?,
@@ -55,6 +59,7 @@ AudioRegistry.Catalog = {
 	turret_fire_tier1 = {
 		id = "turret_fire_tier1",
 		category = "sfx",
+		assetKey = "Sfx.TurretFire",
 		assetId = 0, -- REPLACE_BEFORE_LAUNCH — short pulse, ~120ms
 		volume = 0.7,
 		pitch = 1.0,
@@ -67,6 +72,7 @@ AudioRegistry.Catalog = {
 	turret_fire_tier2 = {
 		id = "turret_fire_tier2",
 		category = "sfx",
+		assetKey = "Sfx.TurretFire",
 		assetId = 0,
 		volume = 0.75,
 		pitch = 1.0,
@@ -79,6 +85,7 @@ AudioRegistry.Catalog = {
 	turret_fire_tier3 = {
 		id = "turret_fire_tier3",
 		category = "sfx",
+		assetKey = "Sfx.TurretFire",
 		assetId = 0,
 		volume = 0.85,
 		pitch = 1.0,
@@ -91,6 +98,7 @@ AudioRegistry.Catalog = {
 	drone_fire = {
 		id = "drone_fire",
 		category = "sfx",
+		assetKey = "Sfx.DroneFire",
 		assetId = 0,
 		volume = 0.55,
 		pitch = 1.0,
@@ -103,6 +111,7 @@ AudioRegistry.Catalog = {
 	alien_growl = {
 		id = "alien_growl",
 		category = "sfx",
+		assetKey = "Sfx.AlienGrowl",
 		assetId = 0,
 		volume = 0.7,
 		pitch = 1.0,
@@ -125,6 +134,7 @@ AudioRegistry.Catalog = {
 	building_placed = {
 		id = "building_placed",
 		category = "sfx",
+		assetKey = "Sfx.WallPlace",
 		assetId = 0,
 		volume = 0.6,
 		pitch = 1.0,
@@ -134,6 +144,7 @@ AudioRegistry.Catalog = {
 	building_destroyed = {
 		id = "building_destroyed",
 		category = "sfx",
+		assetKey = "Sfx.StructureBreach",
 		assetId = 0,
 		volume = 0.75,
 		pitch = 1.0,
@@ -156,6 +167,7 @@ AudioRegistry.Catalog = {
 	ui_button_click = {
 		id = "ui_button_click",
 		category = "ui",
+		assetKey = "Sfx.UiClick",
 		assetId = 0,
 		volume = 0.4,
 		pitch = 1.0,
@@ -165,6 +177,7 @@ AudioRegistry.Catalog = {
 	ui_panel_open = {
 		id = "ui_panel_open",
 		category = "ui",
+		assetKey = "Sfx.UiPanelOpen",
 		assetId = 0,
 		volume = 0.5,
 		pitch = 1.0,
@@ -192,6 +205,7 @@ AudioRegistry.Catalog = {
 	ui_claim_reward = {
 		id = "ui_claim_reward",
 		category = "ui",
+		assetKey = "Sfx.ClaimChime",
 		assetId = 0,
 		volume = 0.7,
 		pitch = 1.0,
@@ -219,6 +233,7 @@ AudioRegistry.Catalog = {
 	ftue_intro_sting = {
 		id = "ftue_intro_sting",
 		category = "ui",
+		assetKey = "Sfx.FtueIntroSting",
 		assetId = 0,
 		volume = 0.75,
 		pitch = 1.0,
@@ -228,6 +243,7 @@ AudioRegistry.Catalog = {
 	ftue_step_advance = {
 		id = "ftue_step_advance",
 		category = "ui",
+		assetKey = "Sfx.FtueStepAdvance",
 		assetId = 0,
 		volume = 0.5,
 		pitch = 1.0,
@@ -239,6 +255,7 @@ AudioRegistry.Catalog = {
 	music_main_loop = {
 		id = "music_main_loop",
 		category = "music",
+		assetKey = "Music.Build",
 		assetId = 0,
 		volume = 0.6,
 		pitch = 1.0,
@@ -248,6 +265,7 @@ AudioRegistry.Catalog = {
 	music_raid_attacker = {
 		id = "music_raid_attacker",
 		category = "music",
+		assetKey = "Music.Raid",
 		assetId = 0,
 		volume = 0.7,
 		pitch = 1.0,
@@ -257,6 +275,7 @@ AudioRegistry.Catalog = {
 	music_raid_defender = {
 		id = "music_raid_defender",
 		category = "music",
+		assetKey = "Music.Combat",
 		assetId = 0,
 		volume = 0.7,
 		pitch = 1.0,
@@ -266,6 +285,7 @@ AudioRegistry.Catalog = {
 	music_wave_victory = {
 		id = "music_wave_victory",
 		category = "music",
+		assetKey = "Music.Victory",
 		assetId = 0,
 		volume = 0.75,
 		pitch = 1.0,
@@ -283,6 +303,7 @@ AudioRegistry.Catalog = {
 	ambient_jungle = {
 		id = "ambient_jungle",
 		category = "ambient",
+		assetKey = "Ambient.Jungle",
 		assetId = 0,
 		volume = 1.0,
 		pitch = 1.0,
@@ -292,6 +313,7 @@ AudioRegistry.Catalog = {
 	ambient_volcanic = {
 		id = "ambient_volcanic",
 		category = "ambient",
+		assetKey = "Ambient.Volcanic",
 		assetId = 0,
 		volume = 1.0,
 		pitch = 1.0,
@@ -301,6 +323,7 @@ AudioRegistry.Catalog = {
 	ambient_ice = {
 		id = "ambient_ice",
 		category = "ambient",
+		assetKey = "Ambient.Ice",
 		assetId = 0,
 		volume = 1.0,
 		pitch = 1.0,
@@ -318,6 +341,28 @@ local _typed: { [string]: AudioCue } = AudioRegistry.Catalog :: any
 
 function AudioRegistry.Get(cueId: string): AudioCue?
 	return AudioRegistry.Catalog[cueId]
+end
+
+-- H4: resolve assetKey → assetId from the AssetIds manifest. Runs once at
+-- require time on both server and client (the manifest is shared). A cue
+-- whose upload hasn't landed keeps assetId 0 and stays a silent no-op.
+do
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local AssetIds = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("AssetIds"))
+	for _, cue in AudioRegistry.Catalog do
+		if cue.assetId == 0 and cue.assetKey then
+			local category, name = string.match(cue.assetKey, "^(%w+)%.(%w+)$")
+			local table_: { [string]: string }? = if category then (AssetIds :: any)[category] else nil
+			local uri = if table_ and name then table_[name] else nil
+			if not AssetIds.isPlaceholder(uri) then
+				local digits = string.match(uri :: string, "^rbxassetid://(%d+)$")
+				local id = if digits then tonumber(digits) else nil
+				if id and id > 0 then
+					cue.assetId = id
+				end
+			end
+		end
+	end
 end
 
 return AudioRegistry

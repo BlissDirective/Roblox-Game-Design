@@ -46,6 +46,19 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
+local AssetIds = require(Shared:WaitForChild("AssetIds"))
+
+-- H4: uploaded VFX sprite for a Constants.ART.TextureKeys entry, else the
+-- engine's stock sparkles / default beam texture.
+local ENGINE_SPARKLES = "rbxasset://textures/particles/sparkles_main.dds"
+local function textureOr(key: string, fallback: string): string
+	local textures: { [string]: string } = (AssetIds :: any).Textures or {}
+	local id = textures[key]
+	if AssetIds.isPlaceholder(id) then
+		return fallback
+	end
+	return id
+end
 
 local BeamPool = {}
 
@@ -73,7 +86,7 @@ local function buildMuzzleEmitter(parent: Attachment): ParticleEmitter
 	-- G6: short-lived muzzle flare. Emit-on-fire (no continuous Rate).
 	local p = Instance.new("ParticleEmitter")
 	p.Name = "Muzzle"
-	p.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	p.Texture = textureOr(Constants.ART.TextureKeys.MuzzleFlash, ENGINE_SPARKLES)
 	p.Rate = 0 -- only emits via :Emit()
 	p.Lifetime = NumberRange.new(0.08, 0.18)
 	p.Speed = NumberRange.new(2, 6)
@@ -100,7 +113,7 @@ local function buildImpactEmitter(parent: Attachment): ParticleEmitter
 	-- G6: impact spark — narrower spread, faster particles outward.
 	local p = Instance.new("ParticleEmitter")
 	p.Name = "Impact"
-	p.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	p.Texture = textureOr(Constants.ART.TextureKeys.ImpactSpark, ENGINE_SPARKLES)
 	p.Rate = 0
 	p.Lifetime = NumberRange.new(0.10, 0.25)
 	p.Speed = NumberRange.new(4, 10)
@@ -153,6 +166,12 @@ local function buildBeamHost(): BasePart
 	beam.LightEmission = 1
 	beam.LightInfluence = 0
 	beam.FaceCamera = true
+	-- H4: custom beam strip once uploaded (default Beam texture until then).
+	local beamTexture = textureOr(Constants.ART.TextureKeys.BeamTurret, "")
+	if beamTexture ~= "" then
+		beam.Texture = beamTexture
+		beam.TextureMode = Enum.TextureMode.Stretch
+	end
 	-- Fade in at start, fade out at end — quick visual punch.
 	beam.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.1),

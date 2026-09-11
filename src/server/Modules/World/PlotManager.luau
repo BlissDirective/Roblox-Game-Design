@@ -32,7 +32,11 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
+local AssetIds = require(Shared:WaitForChild("AssetIds"))
 local GridMath = require(Shared:WaitForChild("Modules"):WaitForChild("Math"):WaitForChild("GridMath"))
+local VisualAttach = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("VisualAttach"))
+
+local ArtTemplateLoader = require(script.Parent.ArtTemplateLoader)
 
 export type PlotInfo = {
 	id: number,
@@ -77,8 +81,35 @@ local function buildFloor(parent: Folder, plotId: number, center: Vector3, size:
 	floor.Color = PLOT_TINTS[((plotId - 1) % #PLOT_TINTS) + 1]
 	floor.TopSurface = Enum.SurfaceType.Smooth
 	floor.BottomSurface = Enum.SurfaceType.Smooth
+	-- H4: tiled landing-pad texture on the top face once uploaded; the
+	-- tile pitch matches the placement grid so panels line up with cells.
+	local textures: { [string]: string } = (AssetIds :: any).Textures or {}
+	local floorTextureId = textures[Constants.ART.TextureKeys.PlotFloor]
+	if not AssetIds.isPlaceholder(floorTextureId) then
+		local texture = Instance.new("Texture")
+		texture.Name = "FloorTexture"
+		texture.Face = Enum.NormalId.Top
+		texture.Texture = floorTextureId
+		texture.StudsPerTileU = Constants.GRID.Size
+		texture.StudsPerTileV = Constants.GRID.Size
+		texture.Parent = floor
+	end
 	floor.Parent = parent
 	return floor
+end
+
+-- H4: the biome's entry arch, standing just outside the plot's -Z edge and
+-- facing the plot center. Skipped until the arch model has been uploaded.
+local function buildArch(parent: Folder, center: Vector3, size: number)
+	local profile = Constants.BIOME.Profiles[Constants.BIOME.DefaultBiome]
+	local template = ArtTemplateLoader.Get(if profile then profile.archModelKey else nil)
+	if not template then
+		return
+	end
+	local position = center + Vector3.new(0, 0, -(size / 2 + Constants.ART.ArchOffsetStuds))
+	local arch = VisualAttach.Place(template, CFrame.lookAt(position, Vector3.new(center.X, position.Y, center.Z)))
+	arch.Name = "Arch"
+	arch.Parent = parent
 end
 
 -- F0 (V1.5 prep): plot stride uses PlotSlotSize (max-tier reservation),
@@ -141,6 +172,7 @@ local function buildPlot(plotsRoot: Folder, plotId: number, plotSize: number?): 
 
 	local floor = buildFloor(folder, plotId, center, size)
 	local spawn = buildSpawn(folder, center)
+	buildArch(folder, center, size)
 
 	local nodes = Instance.new("Folder")
 	nodes.Name = "Nodes"

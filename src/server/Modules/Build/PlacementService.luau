@@ -39,8 +39,10 @@ local GridMath = require(Shared:WaitForChild("Modules"):WaitForChild("Math"):Wai
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local BuildableRegistry =
 	require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("BuildableRegistry"))
+local VisualAttach = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("VisualAttach"))
 
 local PlotManager = require(script.Parent.Parent.World.PlotManager)
+local ArtTemplateLoader = require(script.Parent.Parent.World.ArtTemplateLoader)
 local BaseSerializer = require(script.Parent.BaseSerializer)
 local CurrencyService = require(script.Parent.Parent.Economy.CurrencyService)
 local DataManager = require(script.Parent.Parent.Player.DataManager)
@@ -167,6 +169,9 @@ function PlacementService.TryPlace(
 	part:SetAttribute("CellX", cellX)
 	part:SetAttribute("CellZ", cellZ)
 	part.Parent = plot.buildings
+	-- H4: layer the uploaded model over the placeholder once the Part is
+	-- positioned. No-op until the harness has uploaded this buildable.
+	VisualAttach.Attach(part, ArtTemplateLoader.Get(buildable.modelKey))
 
 	plotOcc[cellKey] = buildable.id
 
@@ -290,9 +295,7 @@ function PlacementService.RemoveStructure(player: Player, cellX: number, cellZ: 
 		target:Destroy()
 	end
 
-	print(
-		string.format("[PlacementService] Removed %s on Plot%d at %s", tostring(player.Name), plot.id, cellKey)
-	)
+	print(string.format("[PlacementService] Removed %s on Plot%d at %s", tostring(player.Name), plot.id, cellKey))
 	return true
 end
 

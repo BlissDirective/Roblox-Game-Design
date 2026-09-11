@@ -33,6 +33,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
 
@@ -48,23 +49,41 @@ local function dangerColor(): Color3
 	return Theme.GetActive().danger
 end
 
+local function tintOne(target: BasePart, ratio: number, downed: boolean)
+	local base = originalColor[target]
+	if not base then
+		base = target.Color
+		originalColor[target] = base
+	end
+	target.Color = base:Lerp(dangerColor(), 1 - ratio)
+	-- A downed structure (0 HP but still in the world — a disabled
+	-- extractor) reads as "offline": dimmed + non-emissive-looking.
+	target.Transparency = if downed then 0.35 else 0
+end
+
 -- Repaint a structure toward danger-red as its HP drops; dim it when downed.
+-- H4: when the server attached an uploaded model (HasVisual attribute), the
+-- placeholder Part is invisible and the tint goes on the visual's parts.
 local function applyDamageTint(part: BasePart)
 	local maxHp = part:GetAttribute("MaxHp")
 	local curHp = part:GetAttribute("CurrentHp")
 	if typeof(maxHp) ~= "number" or typeof(curHp) ~= "number" or maxHp <= 0 then
 		return
 	end
-	local base = originalColor[part]
-	if not base then
-		base = part.Color
-		originalColor[part] = base
-	end
 	local ratio = math.clamp(curHp / maxHp, 0, 1)
-	part.Color = base:Lerp(dangerColor(), 1 - ratio)
-	-- A downed structure (0 HP but still in the world — a disabled
-	-- extractor) reads as "offline": dimmed + non-emissive-looking.
-	part.Transparency = if curHp <= 0 then 0.35 else 0
+	local downed = curHp <= 0
+	local visual = if part:GetAttribute(Constants.ART.HasVisualAttribute) == true
+		then part:FindFirstChild(Constants.ART.VisualName)
+		else nil
+	if visual then
+		for _, descendant in visual:GetDescendants() do
+			if descendant:IsA("BasePart") then
+				tintOne(descendant, ratio, downed)
+			end
+		end
+		return
+	end
+	tintOne(part, ratio, downed)
 end
 
 local function watchStructure(part: BasePart)

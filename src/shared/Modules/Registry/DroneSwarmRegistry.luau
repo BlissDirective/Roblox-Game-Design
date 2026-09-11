@@ -29,6 +29,9 @@ export type SwarmPreset = {
 	-- V1 functional presets are gated on this flag. Recon + Engineering
 	-- ship false until Phase G wires their gameplay.
 	v1Active: boolean,
+	-- H4: AssetIds.Models key layered over the drone Part by VisualAttach
+	-- (dynamic mode — welded, follows the CFrame snap each Heartbeat).
+	modelKey: string?,
 }
 
 DroneSwarmRegistry.Catalog = {
@@ -38,6 +41,7 @@ DroneSwarmRegistry.Catalog = {
 		color = Color3.fromRGB(80, 160, 255),
 		behaviorTag = "spot" :: SwarmBehaviorTag,
 		v1Active = false,
+		modelKey = "DroneRecon",
 	},
 	combat = {
 		id = "combat",
@@ -45,6 +49,7 @@ DroneSwarmRegistry.Catalog = {
 		color = Color3.fromRGB(255, 70, 70),
 		behaviorTag = "attack" :: SwarmBehaviorTag,
 		v1Active = true,
+		modelKey = "DroneCombat",
 	},
 	engineering = {
 		id = "engineering",
@@ -52,6 +57,7 @@ DroneSwarmRegistry.Catalog = {
 		color = Color3.fromRGB(80, 220, 140),
 		behaviorTag = "repair" :: SwarmBehaviorTag,
 		v1Active = false,
+		modelKey = "DroneEngineering",
 	},
 } :: { [string]: SwarmPreset }
 
