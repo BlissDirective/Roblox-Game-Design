@@ -13,7 +13,7 @@
 | Placeholder | Value | Notes |
 |---|---|---|
 | `{{REPO}}` | `https://github.com/BlissDirective/Roblox-Game-Design` | |
-| `{{HARNESS_REF}}` | `claude/roblox-design-automation-yz949m` | The harness lives on this branch until you merge it. After merging, change to `main` and re-send Prompt 8 to every agent. |
+| `{{HARNESS_REF}}` | `main` | The harness is merged; `main` is the ref every agent pulls. Only change this if you deliberately stage a harness change on a branch first, and then re-send Prompt 8 to every agent when it lands back on `main`. |
 | `{{OWNER}}` | `BlissDirective` | Your GitHub login. Only this login can approve, verify, unlock, or halt. |
 | `{{STAGING_PLACE_NAME}}` | e.g. `Outpost-7 [STAGING]` | The experience name the Studio Operator must see in Studio's title bar. |
 | `{{STUDIO_HOST}}` | `grok-cloud` or `windows-vm` | Which option in `harness/studio/SETUP.md` you chose. |
@@ -42,7 +42,9 @@
    MCP beta on, `SETUP.md` §6 checklist green.
 4. **Repo**: `harness/STATE` is `PAUSED` on `{{HARNESS_REF}}`. Leave it
    PAUSED until Prompt 7. Confirm `python3 tools/harness/validate_manifest.py`
-   passes on that ref (it does at commit `ccc5e2f`).
+   passes on that ref (it does on `main` at merge commit `aa9f051`).
+   The three labels are created by the `Harness bootstrap` workflow
+   (Actions → Harness bootstrap → Run workflow); it is idempotent.
 5. **Studio ground truth**: run the pending Studio audit gates from
    `docs/phases/PHASE_R_FORTIFY.md` at least once yourself. The harness
    can only prove an asset loads; it cannot fix a game that has never run.

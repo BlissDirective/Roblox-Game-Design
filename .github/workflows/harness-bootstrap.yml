@@ -1,0 +1,40 @@
+name: Harness bootstrap
+
+# One-shot, idempotent repo setup for the design harness
+# (harness/GROK_BOT_KICKOFF.md §0 preconditions that a workflow token CAN do):
+#   - the three labels the Orchestrator and the owner use
+#
+# Things it deliberately does NOT do because GITHUB_TOKEN cannot: branch
+# protection / rulesets, environments and their reviewers, fine-grained PATs.
+# Those stay on the owner's checklist in GROK_BOT_KICKOFF.md §0.
+#
+# Re-run any time; existing labels are updated in place, never duplicated.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  labels:
+    name: Create harness labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh label create "art/approval" --repo "$REPO" --force \
+            --color "1D76DB" \
+            --description "Design harness: concept sheet awaiting the owner's approve/regenerate/drop"
+          gh label create "art/pr" --repo "$REPO" --force \
+            --color "0E8A16" \
+            --description "Design harness: asset PR from an art/<element_id> branch"
+          gh label create "harness/halt" --repo "$REPO" --force \
+            --color "B60205" \
+            --description "Design harness kill switch: every agent stops before its next action"
+          echo "labels ready"
