@@ -1,14 +1,25 @@
-# DESIGN_HARNESS.md — Autonomous art pipeline (proposal, v0.1)
+# DESIGN_HARNESS.md — Autonomous art pipeline (v0.2, decisions locked)
 
-> **Status: PROPOSAL — awaiting your answers to §8 before anything is built.**
-> Produced 2026-09-11 against `claude/roblox-design-automation-yz949m`
-> (head `b6271ae`, Phase H asset pipeline). This doc is the feasibility
+> **Status: H1–H2 BUILT (`harness/` + `tools/harness/` + `harness-guard.yml`).
+> H3–H5 pending — see §7.** Produced 2026-09-11 against
+> `claude/roblox-design-automation-yz949m`. This doc is the feasibility
 > assessment + architecture for the "Grok Bot group designs every custom
 > element, you approve images, the bots build them into the game" loop.
+> The loop the bots actually digest is `harness/README.md`; this doc is
+> the *why*.
+>
+> **Owner decisions (2026-09-11, §8):** (1) the build/verify step runs in
+> **Roblox Studio via Grok computer use + the built-in Studio MCP**, not
+> headless-only; (2) **two gates then one** — image approval + owner
+> merges each art PR for the first 10 verified elements, then auto-merge
+> may be enabled; (3) **verification = Grok Studio Operator** pulls
+> `harness/studio/*.luau` from the repo, runs the audit through MCP
+> `run_code`, and sends screenshots to the owner's chat; the owner replies
+> `verified`.
 >
 > Read order for a fresh session: §1 (verdict) → §3 (the loop) → §5 (risk
-> register) → §8 (open questions). §6 is the element inventory the bots
-> will be fed once the harness exists.
+> register) → §7 (what's built / what's next). §6 is the element inventory
+> the bots are fed (`harness/design_manifest.json` is the machine form).
 
 ---
 
@@ -22,24 +33,31 @@ two halves with very different risk profiles:
 | **A. Concept + 3D generation, your approval, validation, repo integration** | ✅ High. Fully headless. | Grok Bot agents have persistent cloud computers + browser; Grok Imagine API generates images (~$0.02 each); Meshy image-to-3D returns FBX; Roblox Open Cloud Assets API accepts `Model` (FBX), `Decal`, `Audio`. The repo already has the manifest + uploader + CI publish pipeline (Phase H). |
 | **B. "Connect into Roblox Studio and build them into the game"** | ⚠️ Low-to-medium *as literally described*. | Roblox Studio runs on Windows/macOS only. Grok Bot cloud computers are browser/desktop sandboxes; driving Studio by screen-clicking is brittle, and giving a bot a live login to your Roblox account on a cloud machine is the single largest security exposure in the whole plan. |
 
-**The correction:** make the build step *headless* instead of Studio-driven.
-Every custom element in this game is already wired to be data-driven
-(`AssetIds.luau`, `BuildableRegistry`, `AlienRegistry`, `CosmeticRegistry`,
-`Constants.BIOME.Decorations.floraTemplate`, `AlienDef.meshTemplate`).
-"Building it into the game" therefore means: upload the FBX via Open Cloud →
-get an asset id → write it into a registry via a PR → CI builds the `.rbxl`
-→ release workflow publishes to **staging**. No Studio in the loop. Studio
-is only used at the very end by a human (you, or a local Claude Code + Studio
-MCP session on your own machine) to eyeball the staging place.
+**The correction (as built):** the *integration* stays headless and the
+*verification* is where Studio comes in. Every custom element in this game
+is already wired to be data-driven (`AssetIds.luau`, `BuildableRegistry`,
+`AlienRegistry`, `CosmeticRegistry`, `Constants.BIOME.Decorations.floraTemplate`,
+`AlienDef.meshTemplate`). "Building it into the game" therefore means:
+upload the FBX via Open Cloud (CI, group-owned) → get an asset id → write it
+into a registry via a PR on `art/<id>` → CI builds the `.rbxl` → release
+workflow publishes to **staging**. Then — per your decision — a Grok
+**Studio Operator** agent, on a Studio host logged in as a throwaway bot
+account with Edit on the *staging experience only*, pulls the audit scripts
+from `harness/studio/`, runs them through the built-in Studio MCP
+(`run_code`), captures three screenshots with computer use, and posts them
+to you. You reply `verified`.
 
-That correction turns "nearly fully autonomous" from a hope into something
-enforceable by CI and branch protection, and it removes the need for any
-bot to ever hold a Roblox login.
+Why this split: it keeps every step that *changes* the game enforceable by
+CI and branch protection, and it confines the fragile part (a bot driving a
+desktop app) to a read-only audit on a place that CI overwrites anyway.
+The bot account never sees production, never publishes, and never holds a
+key. The risks that remain are in §5.5.
 
-**Where Studio MCP still fits:** the repo's `docs/08_MCP_SETUP.md` path
-(built-in Studio MCP: `run_code`, `insert_model`, `start_stop_play`,
-`run_script_in_play_mode`) is a *local* tool for the human verification
-step, not something the cloud bots drive. Keep it that way.
+**Studio host reality check:** Studio is Windows/macOS only. If the Grok
+Bot cloud computer is a Windows desktop, everything runs on it; if it is
+Linux-only, the Studio host is a Windows VM/PC you own reached over remote
+desktop + a private Tailscale MCP route. `harness/studio/SETUP.md` covers
+both. This is the one thing to confirm with xAI before the dry run.
 
 ---
 
@@ -265,7 +283,16 @@ Python guard that diffs the Luau AST-lite (line-level: only lines matching
 
 - **You still need to look at it.** Headless checks prove the file is
   well-formed and cheap; they cannot prove it looks good in the jungle at
-  dusk on a phone. The `staged → verified` step is where taste lives.
+  dusk on a phone. The Studio Operator's screenshots put it in front of
+  you; the `studio_audited → verified` reply is where taste lives.
+- **Computer-use fragility.** Studio dialogs move, updates change menus,
+  the MCP beta toggle can reset. The Operator prompt has a "when MCP is
+  down" path and posts a card instead of improvising. Expect the first
+  dry run to surface two or three of these; fix them in `SETUP.md`, not
+  by widening the bot's permissions.
+- **Studio host availability.** If the Grok cloud computer can't run
+  Studio, you're running a Windows VM. That's a cost and an attack surface
+  (§5.1 still applies: bot account only, staging only, Tailscale only).
 - **Studio-only asset types.** CSG unions, `EditableMesh`, `EditableImage`
   cannot be created from CI (`PUBLISHING.md` §3). The harness avoids them
   entirely — everything is `MeshPart` + `Decal` + `Audio`.
@@ -315,42 +342,29 @@ later ones): 20-last, 1 → 5 → 7 → 2 → 8 → 9 → 4 → 6 → 16 → 18 
 
 ---
 
-## 7. What gets built, in what order (once §8 is answered)
+## 7. Build status and what's next
 
-| Step | Deliverable | Owner |
-|---|---|---|
-| H0 | This doc approved; §8 answered | You |
-| H1 | `harness/` — `README.md` (the loop the bots digest), `design_manifest.json` (all §6 elements with briefs, budgets, state), `schemas/manifest.schema.json`, `prompts/<role>.md`, `policies/SECURITY.md`, `STATE` | Me |
-| H2 | `tools/harness/validate_manifest.py` + `check_art_pr.py` (allowlist + field-only diff guard) + `.github/workflows/harness-guard.yml` | Me |
-| H3 | `upload-assets.sh`: add `Model` (FBX) rows + skybox 6-face expansion + moderation-status poll | Me |
-| H4 | Runtime template paths behind `FEATURES.artPipeline`: `BuildableRegistry.model`, drone template, arch slot, particle/beam ids via `AssetIds` | Me |
-| H5 | GitHub: branch protection on `main`, `art/*` naming rule, fine-grained bot token, `production` environment reviewers, `art/approval` + `harness/halt` labels | You (I write the exact click-path) |
-| H6 | Dry run on ONE element (recommend the auto-turret: small, unrigged, already in `BuildableRegistry`) end-to-end through staging | Bots + you |
-| H7 | Open the loop to the full manifest | Bots |
+| Step | Deliverable | Owner | Status |
+|---|---|---|---|
+| H0 | This doc; §8 decisions | You | ✅ 2026-09-11 |
+| H1 | `harness/README.md` (the loop), `design_manifest.json` (115 elements: 93 image-gated + 22 audio), `schemas/`, `prompts/` (6 roles + shared rules), `policies/SECURITY.md`, `studio/` (SETUP + `audit_element.luau` + `screenshot_rig.luau`), `STATE` (=PAUSED) | Me | ✅ |
+| H2 | `tools/harness/seed_manifest.py`, `validate_manifest.py` (state machine + evidence + budgets), `check_art_pr.py` (allowlist + fields-only diff), `.github/workflows/harness-guard.yml` | Me | ✅ tested: legal/illegal histories, allowed/blocked diffs |
+| H3 | `upload-assets.sh`: `Model` (FBX) rows already pass through the generic request; add skybox 6-face expansion + moderation-status poll; add `Models = {}` seed category to `AssetIds.luau` | Me | ⏳ next session |
+| H4 | Runtime template paths behind `FEATURES.artPipeline`: `BuildableRegistry.model` (Part → Model clone path touches `PlacementService`/`StructureHealthService` — needs a Studio-verified sub-phase), drone template, arch slot in `PlotManager`, particle/beam texture ids via `AssetIds`; `ArtTemplateLoader` that `InsertService:LoadAsset`s group-owned models into `ServerStorage.ArtTemplates` at boot with procedural fallback | Me | ⏳ plan → confirm → build, per `10_BUILD_PROTOCOL.md`; **Integrator stops after manifest rows until this lands** (`prompts/integrator.md` step 5) |
+| H5 | GitHub: branch protection on `main` with required checks `CI`, `Harness guard / art-branch-guard`, `Harness guard / manifest-check`, `Docs sanity check`; rulesets limiting bot tokens to `art/*` + `harness/manifest`; fine-grained tokens per role; `production` environment reviewer = you; labels `art/approval`, `art/pr`, `harness/halt`. Roblox: staging experience, bot account, collaborator Edit on staging only (`harness/studio/SETUP.md` §1–2) | You | ⏳ ~1 hour |
+| H6 | Dry run on ONE element (`build_turret_auto`) end-to-end through staging + Studio audit + screenshots | Bots + you | ⏳ after H3–H5 |
+| H7 | WIP cap → 3; open the loop to the full manifest | Bots | ⏳ |
 
-Estimated: H1–H4 ≈ 2 sessions of agent work; H5 ≈ 1 hour of yours; H6 is
-the real test of the whole idea and should happen before H7.
+`STATE` ships as `PAUSED`. Flip it to `RUNNING` only after H5 and the
+`SETUP.md` §6 checklist pass.
 
 ---
 
-## 8. Open questions (answer these and I build H1–H4)
+## 8. Decisions log
 
-1. **Studio in the loop, or headless?** I recommend headless (§1). If you
-   specifically want Grok agents driving Studio on a cloud machine, say so
-   and I'll design that variant — but it needs a Windows VM you control,
-   an MCP tunnel, and a Roblox account that is *not* the game owner. My
-   honest read is that it's slower and riskier than the headless path for
-   zero visual gain.
-2. **How many gates do you want?** (a) One: image approval only; PRs
-   auto-merge when CI + allowlist guard pass. (b) Two: image approval +
-   you merge each art PR (a tap on mobile). I lean (b) for the first ~10
-   elements, then flip to (a) once the guard has proven itself.
-3. **Who verifies in Studio?** (a) You look at the staging place per batch
-   (say, every 10 elements). (b) Only headless checks; you look at launch.
-   (c) A local Claude Code + Studio MCP session on your machine runs the
-   Studio-side audit scripts and screenshots per element. (c) is the most
-   autonomous option that still has eyes on the result.
-
-Non-blocking but useful: monthly generation budget ceiling (I'll default
-to $150), and whether vehicles (group 21) should be produced now or held
-until the code scope decision.
+| Date | Question | Decision |
+|---|---|---|
+| 2026-09-11 | Build path | Studio via Grok computer use + built-in Studio MCP for audit/verification; integration stays headless (Open Cloud + CI). Concern about Studio-on-Linux and bot logins raised; owner reaffirmed; mitigations in §5.1 and `harness/studio/SETUP.md`. |
+| 2026-09-11 | Gates | Two (image approval + owner merges art PR) for the first 10 verified elements, then owner may enable auto-merge. |
+| 2026-09-11 | Verification | Grok Studio Operator runs `harness/studio/*.luau` via MCP, sends 3 screenshots to the owner's chat; owner replies `verified`. |
+| 2026-09-11 | Budget | $150/month cap in the manifest (owner can raise). Vehicles (group 21) seeded as `gated: true`; owner comments `unlock vehicle` on the status issue to dispatch. |
