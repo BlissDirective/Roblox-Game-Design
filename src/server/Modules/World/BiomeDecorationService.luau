@@ -41,9 +41,12 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
+local AssetIds = require(Shared:WaitForChild("AssetIds"))
 local PoissonDisk = require(Shared:WaitForChild("Modules"):WaitForChild("Math"):WaitForChild("PoissonDisk"))
+local VisualAttach = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("VisualAttach"))
 
 local PlotManager = require(script.Parent.PlotManager)
+local ArtTemplateLoader = require(script.Parent.ArtTemplateLoader)
 
 local BiomeDecorationService = {}
 
@@ -63,16 +66,52 @@ local function ensureFolder(): Folder
 	return folder
 end
 
-local function buildFloraPart(biomeDecor: any, position: Vector3): BasePart
-	-- V1 procedural: emissive cube with biome's flora color.
-	-- Phase G replaces with clone-from-template if biomeDecor.floraTemplate
-	-- is provided.
+-- H4: every loaded template named in the biome's floraModelKeys joins the
+-- random pick. Missing / not-yet-uploaded keys are simply absent.
+local function loadedFloraTemplates(biomeDecor: any): { Model }
+	local out: { Model } = {}
+	local keys: { string }? = biomeDecor.floraModelKeys
+	if keys then
+		for _, key in keys do
+			local template = ArtTemplateLoader.Get(key)
+			if template then
+				table.insert(out, template)
+			end
+		end
+	end
+	return out
+end
+
+-- H4: resolve a Textures key to an id, or nil while still a placeholder.
+local function textureIdFor(key: string?): string?
+	if not key then
+		return nil
+	end
+	local textures: { [string]: string } = (AssetIds :: any).Textures or {}
+	local id = textures[key]
+	if AssetIds.isPlaceholder(id) then
+		return nil
+	end
+	return id
+end
+
+local function buildFloraPart(biomeDecor: any, position: Vector3, rng: Random): Instance
+	-- H4: uploaded flora meshes win; then the legacy Studio-authored
+	-- floraTemplate hook; then the V1 procedural emissive cube.
+	local templates = loadedFloraTemplates(biomeDecor)
+	if #templates > 0 then
+		local template = templates[rng:NextInteger(1, #templates)]
+		local cframe = CFrame.new(position) * CFrame.Angles(0, math.rad(rng:NextNumber(0, 360)), 0)
+		local model = VisualAttach.Place(template, cframe)
+		model.Name = "Flora"
+		return model
+	end
 	if biomeDecor.floraTemplate then
 		local clone = (biomeDecor.floraTemplate :: Model):Clone()
 		if clone:IsA("Model") and clone.PrimaryPart then
 			clone:PivotTo(CFrame.new(position))
 		end
-		return (clone :: any) :: BasePart
+		return clone
 	end
 	local part = Instance.new("Part")
 	part.Name = "Flora"
@@ -87,7 +126,6 @@ local function buildFloraPart(biomeDecor: any, position: Vector3): BasePart
 	-- Anchor at the foot so the flora rises above ground.
 	part.CFrame = CFrame.new(position + Vector3.new(0, biomeDecor.floraSize.Y / 2, 0))
 	-- Small random rotation for natural variation.
-	local rng = Random.new()
 	part.CFrame = part.CFrame * CFrame.Angles(0, math.rad(rng:NextNumber(0, 360)), 0)
 
 	-- Accent emissive PointLight (shadows off for the 50-light mobile cap).
@@ -106,7 +144,8 @@ end
 local function buildParticleEmitter(biomeDecor: any, parent: BasePart)
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Name = "BiomeAmbient"
-	emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds" -- placeholder; Phase G replaces with custom upload
+	-- H4: biome particle sprite once uploaded; engine sparkles until then.
+	emitter.Texture = textureIdFor(biomeDecor.particleTextureKey) or "rbxasset://textures/particles/sparkles_main.dds"
 	emitter.Color = ColorSequence.new(biomeDecor.particleColor)
 	emitter.Transparency = NumberSequence.new(biomeDecor.particleTransparency)
 	emitter.Lifetime = NumberRange.new(biomeDecor.particleLifetimeMin, biomeDecor.particleLifetimeMax)
@@ -142,13 +181,22 @@ local function startAmbientSound(biomeDecor: any)
 	if existing then
 		existing:Destroy()
 	end
-	if biomeDecor.ambientSfxAssetId <= 0 then
-		-- Placeholder asset id; skip until Phase H upload.
+	-- H4: the AssetIds.Ambient upload wins; the legacy integer override is
+	-- kept for Studio experiments. Neither set → silent.
+	local soundId: string? = nil
+	local ambient: { [string]: string } = (AssetIds :: any).Ambient or {}
+	local uploaded = if biomeDecor.ambientKey then ambient[biomeDecor.ambientKey] else nil
+	if not AssetIds.isPlaceholder(uploaded) then
+		soundId = uploaded
+	elseif biomeDecor.ambientSfxAssetId and biomeDecor.ambientSfxAssetId > 0 then
+		soundId = string.format("rbxassetid://%d", biomeDecor.ambientSfxAssetId)
+	end
+	if not soundId then
 		return
 	end
 	local sound = Instance.new("Sound")
 	sound.Name = AMBIENT_SOUND_NAME
-	sound.SoundId = string.format("rbxassetid://%d", biomeDecor.ambientSfxAssetId)
+	sound.SoundId = soundId
 	sound.Volume = Constants.BIOME.AmbientSfxVolume
 	sound.Looped = true
 	sound.Parent = SoundService
@@ -171,12 +219,16 @@ end
 -- future cavern biomes can opt in). Stalactites + stalagmites use the
 -- same flora-pattern ring distribution as base flora; glacier walls
 -- sit further out at the horizon distance.
-local function buildIcicle(
-	cave: any,
-	position: Vector3,
-	size: Vector3,
-	pointDown: boolean
-): BasePart
+local function buildIcicle(cave: any, position: Vector3, size: Vector3, pointDown: boolean): Instance
+	-- H4: uploaded stalactite / stalagmite mesh, scaled to the configured
+	-- height. `position` is the placeholder Part's center, so the model's
+	-- bottom goes at center - height/2.
+	local template = ArtTemplateLoader.Get(if pointDown then cave.stalactiteModelKey else cave.stalagmiteModelKey)
+	if template then
+		local model = VisualAttach.Place(template, CFrame.new(position - Vector3.new(0, size.Y / 2, 0)), size.Y)
+		model.Name = if pointDown then "Stalactite" else "Stalagmite"
+		return model
+	end
 	local part = Instance.new("Part")
 	part.Name = if pointDown then "Stalactite" else "Stalagmite"
 	part.Anchored = true
@@ -207,7 +259,17 @@ local function buildIcicle(
 	return part
 end
 
-local function buildGlacierWall(cave: any, position: Vector3, lookAt: Vector3): BasePart
+local function buildGlacierWall(cave: any, position: Vector3, lookAt: Vector3): Instance
+	-- H4: uploaded glacier slab, scaled to the configured wall height and
+	-- turned to face the plot center like the procedural slab.
+	local template = ArtTemplateLoader.Get(cave.glacierWallModelKey)
+	if template then
+		local base = position - Vector3.new(0, cave.glacierWallSize.Y / 2, 0)
+		local target = Vector3.new(lookAt.X, base.Y, lookAt.Z)
+		local model = VisualAttach.Place(template, CFrame.lookAt(base, target), cave.glacierWallSize.Y)
+		model.Name = "GlacierWall"
+		return model
+	end
 	local part = Instance.new("Part")
 	part.Name = "GlacierWall"
 	part.Anchored = true
@@ -301,8 +363,8 @@ function BiomeDecorationService.Apply(biomeId: string)
 			local z = plot.center.Z + math.sin(angle) * dist
 			local y = plot.center.Y
 			local position = Vector3.new(x, y, z)
-			local part = buildFloraPart(biomeDecor, position)
-			part.Parent = plotFolder
+			local flora = buildFloraPart(biomeDecor, position, rng)
+			flora.Parent = plotFolder
 			placed += 1
 		end
 

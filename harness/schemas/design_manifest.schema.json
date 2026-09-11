@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Outpost-7 design harness manifest",
+  "type": "object",
+  "required": ["manifest_version", "project", "global_budget", "palettes", "elements"],
+  "properties": {
+    "manifest_version": { "type": "integer", "const": 1 },
+    "project": { "type": "string" },
+    "generated_by": { "type": "string" },
+    "global_budget": {
+      "type": "object",
+      "required": ["usd_cap_monthly", "usd_spent_month", "month"],
+      "properties": {
+        "usd_cap_monthly": { "type": "number", "minimum": 0 },
+        "usd_spent_month": { "type": "number", "minimum": 0 },
+        "month": { "type": "string", "description": "YYYY-MM the spent counter applies to; reset when it changes" }
+      }
+    },
+    "palettes": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" } } },
+    "elements": { "type": "array", "items": { "$ref": "#/definitions/element" } }
+  },
+  "definitions": {
+    "state": {
+      "type": "string",
+      "enum": [
+        "pending_brief",
+        "concepts_generated",
+        "awaiting_approval",
+        "approved",
+        "rejected",
+        "model_generated",
+        "validated",
+        "integrated",
+        "uploaded",
+        "staged",
+        "studio_audited",
+        "verified",
+        "parked",
+        "dropped"
+      ]
+    },
+    "tier": { "type": "string", "enum": ["static_mesh", "multi_mesh", "rigged", "texture", "icon", "image", "audio"] },
+    "element": {
+      "type": "object",
+      "required": ["id", "group", "group_id", "name", "tier", "class", "integration_target", "palette", "brief", "reference", "priority", "gated", "state", "artifacts", "asset_ids", "cost_usd", "attempts", "history", "budget"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "group": { "type": "string" },
+        "group_id": { "type": "string" },
+        "name": { "type": "string" },
+        "tier": { "$ref": "#/definitions/tier" },
+        "class": { "type": "string" },
+        "integration_target": { "type": "string" },
+        "dims_studs": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+        "tri_budget": { "type": ["array", "null"], "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+        "palette": { "type": "string" },
+        "brief": { "type": "string", "minLength": 20 },
+        "reference": { "type": "string" },
+        "priority": { "type": "integer", "minimum": 0 },
+        "gated": { "type": "boolean" },
+        "state": { "$ref": "#/definitions/state" },
+        "approved_variant": { "type": ["string", "null"], "description": "artifact key of the approved concept image" },
+        "artifacts": {
+          "type": "object",
+          "description": "artifact key → { path|url, sha256, kind, by, at }",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["kind", "sha256", "by", "at"],
+            "properties": {
+              "kind": { "type": "string", "enum": ["concept", "contact_sheet", "fbx", "glb", "texture", "audio", "screenshot", "audit_json", "rig_request"] },
+              "path": { "type": "string" },
+              "url": { "type": "string" },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "by": { "type": "string" },
+              "at": { "type": "string" }
+            }
+          }
+        },
+        "license": {
+          "type": ["object", "null"],
+          "required": ["source", "tier", "commercial_ok", "recorded_at"],
+          "properties": {
+            "source": { "type": "string" },
+            "tier": { "type": "string" },
+            "commercial_ok": { "type": "boolean", "const": true },
+            "recorded_at": { "type": "string" },
+            "assets_md_row": { "type": "boolean" }
+          }
+        },
+        "asset_ids": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "attempts": {
+          "type": "object",
+          "required": ["concept_rounds", "model_generations", "validations"],
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["at", "by", "from", "to"],
+            "properties": {
+              "at": { "type": "string" },
+              "by": { "type": "string" },
+              "from": { "$ref": "#/definitions/state" },
+              "to": { "$ref": "#/definitions/state" },
+              "note": { "type": "string" },
+              "cost_usd": { "type": "number", "minimum": 0 },
+              "approval_ref": { "type": "string", "description": "GitHub issue/comment URL that authorized an approve/reject" }
+            }
+          }
+        },
+        "budget": {
+          "type": "object",
+          "required": ["concept_images_per_round", "concept_rounds", "model_generations", "usd_cap"],
+          "additionalProperties": { "type": "number", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

@@ -106,13 +106,7 @@ local function isNew(acquiredAt: number): boolean
 	return os.time() - acquiredAt < Constants.COSMETIC.NewBadgeWindowSeconds
 end
 
-local function buildCosmeticRow(
-	parent: Instance,
-	cosmetic: any,
-	owned: boolean,
-	equipped: boolean,
-	acquiredAt: number?
-)
+local function buildCosmeticRow(parent: Instance, cosmetic: any, owned: boolean, equipped: boolean, acquiredAt: number?)
 	local raritySlot = RARITY_SLOT[cosmetic.rarity] or "textMuted"
 
 	local handle = Components.Button({
@@ -137,9 +131,7 @@ local function buildCosmeticRow(
 	nameLbl.Size = UDim2.new(0.7, -8, 1, 0)
 	nameLbl.Position = UDim2.fromOffset(8, 0)
 	nameLbl.BackgroundTransparency = 1
-	nameLbl.TextColor3 = if owned
-		then (Theme.GetActive() :: any)[raritySlot]
-		else Theme.GetActive().textMuted
+	nameLbl.TextColor3 = if owned then (Theme.GetActive() :: any)[raritySlot] else Theme.GetActive().textMuted
 	nameLbl.Font = Enum.Font.GothamBold
 	nameLbl.TextSize = 13
 	nameLbl.TextXAlignment = Enum.TextXAlignment.Left

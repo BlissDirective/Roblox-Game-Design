@@ -78,10 +78,13 @@ local function pushStateToClient(player: Player)
 		return
 	end
 	local remote = Remotes.CosmeticState :: RemoteEvent
-	remote:FireClient(player, {
-		owned = data.cosmeticsOwned,
-		equipped = data.equippedCosmetics,
-	} :: State)
+	remote:FireClient(
+		player,
+		{
+			owned = data.cosmeticsOwned,
+			equipped = data.equippedCosmetics,
+		} :: State
+	)
 end
 
 local function fireUnlockToast(player: Player, cosmeticId: string)
@@ -90,10 +93,13 @@ local function fireUnlockToast(player: Player, cosmeticId: string)
 		return
 	end
 	local remote = Remotes.CosmeticUnlocked :: RemoteEvent
-	remote:FireClient(player, {
-		cosmeticId = cosmeticId,
-		source = def.source,
-	} :: UnlockToast)
+	remote:FireClient(
+		player,
+		{
+			cosmeticId = cosmeticId,
+			source = def.source,
+		} :: UnlockToast
+	)
 end
 
 -- Apply cosmetic to the character. V1 placeholder: BodyColors tint for

@@ -24,6 +24,7 @@
 5. `docs/06_LUAU_REFERENCE.md` — code patterns
 6. `docs/REPO_STRUCTURE.md` — full repo tree (Phase A1 checklist)
 7. `docs/playbooks/PUBLISHING.md` — Open Cloud deployment pipeline (read before any release)
+8. `docs/playbooks/DESIGN_HARNESS.md` + `harness/README.md` — the autonomous art pipeline (only when working on assets or the harness)
 
 Pull other docs (`02`–`05`, `08`) on demand when the topic comes up.
 

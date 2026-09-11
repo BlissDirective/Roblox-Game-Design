@@ -37,12 +37,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
+local AssetIds = require(Shared:WaitForChild("AssetIds"))
 local Theme = require(Shared:WaitForChild("Modules"):WaitForChild("UI"):WaitForChild("Theme"))
 
 local BiomeLightingService = {}
 
 local ATMOSPHERE_NAME = "OutpostBiomeAtmosphere"
 local COLOR_CORRECTION_NAME = "OutpostBiomeGrade"
+local SKY_NAME = "OutpostBiomeSky"
+local SKY_FACES = { "Ft", "Bk", "Lf", "Rt", "Up", "Dn" }
 
 local currentBiome: string = Constants.BIOME.DefaultBiome
 
@@ -90,6 +93,47 @@ local function applyTechnology()
 	end)
 end
 
+-- H4: per-biome skybox from the six AssetIds.Skyboxes.<prefix><Face> uploads.
+-- All six must be real ids; otherwise any previous harness Sky is removed
+-- and the place's default sky shows.
+local function applySkybox(prefix: string?)
+	local existing = Lighting:FindFirstChild(SKY_NAME)
+	local ids: { [string]: string } = {}
+	if prefix then
+		for _, face in SKY_FACES do
+			local id = (AssetIds.Skyboxes :: any)[prefix .. face]
+			if AssetIds.isPlaceholder(id) then
+				ids = {}
+				break
+			end
+			ids[face] = id
+		end
+	end
+	if next(ids) == nil then
+		if existing then
+			existing:Destroy()
+		end
+		return
+	end
+	local sky: Sky
+	if existing and existing:IsA("Sky") then
+		sky = existing
+	else
+		if existing then
+			existing:Destroy()
+		end
+		sky = Instance.new("Sky")
+		sky.Name = SKY_NAME
+	end
+	sky.SkyboxFt = ids.Ft
+	sky.SkyboxBk = ids.Bk
+	sky.SkyboxLf = ids.Lf
+	sky.SkyboxRt = ids.Rt
+	sky.SkyboxUp = ids.Up
+	sky.SkyboxDn = ids.Dn
+	sky.Parent = Lighting
+end
+
 local function applyProfile(profile: any)
 	-- Lighting properties
 	Lighting.Ambient = profile.ambient
@@ -117,6 +161,8 @@ local function applyProfile(profile: any)
 	cc.Brightness = profile.colorBrightness
 	cc.Contrast = profile.colorContrast
 	cc.Saturation = profile.colorSaturation
+
+	applySkybox(profile.skyboxKeyPrefix)
 end
 
 function BiomeLightingService.Apply(biomeId: string)

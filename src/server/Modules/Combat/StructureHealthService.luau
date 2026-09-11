@@ -105,15 +105,18 @@ local function pushUpdate(record: Record, state: string)
 	-- Owner-only push in V1 PvE. Raids (R2) will push to the attacker as
 	-- well when the snapshot base takes damage.
 	if record.player and record.player:IsDescendantOf(Players) then
-		remote:FireClient(record.player, {
-			buildableId = record.buildable.id,
-			cellX = record.cellX,
-			cellZ = record.cellZ,
-			position = record.part.Position,
-			hp = record.hp,
-			maxHp = record.maxHp,
-			state = state,
-		} :: HealthUpdate)
+		remote:FireClient(
+			record.player,
+			{
+				buildableId = record.buildable.id,
+				cellX = record.cellX,
+				cellZ = record.cellZ,
+				position = record.part.Position,
+				hp = record.hp,
+				maxHp = record.maxHp,
+				state = state,
+			} :: HealthUpdate
+		)
 	end
 end
 

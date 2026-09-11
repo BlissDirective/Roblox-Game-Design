@@ -28,6 +28,30 @@ local Constants = {
 
 		-- Debug aids — leave true through Phase F4, flip false for ship.
 		debugModeToggle = true, -- B5: keybind to swap TP↔FP without combat present
+
+		-- H4: design-harness art pipeline. When true, ArtTemplateLoader
+		-- pulls every non-placeholder AssetIds.Models entry at boot and
+		-- VisualAttach layers it over the procedural placeholder. Safe to
+		-- leave on with every id at 0 — the loader is then a no-op.
+		artPipeline = true,
+	},
+
+	-- H4: art pipeline plumbing (docs/playbooks/DESIGN_HARNESS.md §3.4).
+	-- Keys name entries in AssetIds.Textures / .Models; the seed script
+	-- tools/harness/seed_upload_rows.py derives them from the element ids
+	-- in harness/design_manifest.json (PascalCase of the snake_case id).
+	ART = {
+		LoadTimeoutSeconds = 8, -- ArtTemplateLoader.Init yields at most this long
+		TemplatesFolderName = "ArtTemplates", -- under ServerStorage
+		VisualName = "Visual", -- child Model name VisualAttach parents under a placeholder Part
+		HasVisualAttribute = "HasVisual", -- stamped on the Part; client damage tint reads it
+		ArchOffsetStuds = 6, -- biome arch sits this far outside the plot's -Z edge
+		TextureKeys = {
+			MuzzleFlash = "WeaponMuzzleFlash",
+			ImpactSpark = "VfxImpactSpark",
+			BeamTurret = "VfxBeamTurret",
+			PlotFloor = "PropPlotFloor",
+		},
 	},
 
 	-- DataStore configuration. Read by DataManager.
@@ -414,6 +438,7 @@ local Constants = {
 		EdgeMargin = 4, -- nodes don't spawn within N studs of plot edges
 		HeightOffset = 0.5, -- node visual sits this far above plot floor
 		Radius = 1, -- node visual radius (studs)
+		ModelKey = "PropResourceNode", -- H4: AssetIds.Models key layered over the Ball placeholder
 	},
 
 	-- Placement validation. PlacementService enforces these.
@@ -475,8 +500,10 @@ local Constants = {
 				colorBrightness = 0.05,
 				colorContrast = 0.1,
 				colorSaturation = 0.15,
-				-- Skybox (per-biome optional override; nil = default skybox)
-				skyboxAssetId = nil, -- replaced in Phase G/H once authored
+				-- Skybox: H4 reads the six AssetIds.Skyboxes.<prefix><Face>
+				-- entries; all six must be uploaded or the default sky stays.
+				skyboxKeyPrefix = "Jungle",
+				archModelKey = "ArchJungle", -- H4: AssetIds.Models key for the plot arch
 				-- Fog (legacy support; modern Atmosphere does most of the work)
 				fogStart = 80,
 				fogEnd = 320,
@@ -500,7 +527,8 @@ local Constants = {
 				colorBrightness = 0.0,
 				colorContrast = 0.15,
 				colorSaturation = 0.2,
-				skyboxAssetId = nil,
+				skyboxKeyPrefix = "Volcanic",
+				archModelKey = "ArchVolcanic",
 				fogStart = 60,
 				fogEnd = 240,
 				fogColor = Color3.fromRGB(60, 30, 20),
@@ -523,7 +551,8 @@ local Constants = {
 				colorBrightness = 0.1,
 				colorContrast = 0.05,
 				colorSaturation = -0.1, -- desaturated for the frigid feel
-				skyboxAssetId = nil,
+				skyboxKeyPrefix = "Ice",
+				archModelKey = "ArchIce",
 				fogStart = 70,
 				fogEnd = 280,
 				fogColor = Color3.fromRGB(30, 50, 80),
@@ -554,39 +583,50 @@ local Constants = {
 				floraAccent = Color3.fromRGB(0, 232, 216), -- teal accent
 				floraEmissive = 0.9,
 				floraSize = Vector3.new(1, 4, 1),
-				floraTemplate = nil, -- procedural cube placeholder; Phase G replaces
+				floraTemplate = nil, -- legacy hook (Studio-authored Model); H4 prefers floraModelKeys
+				-- H4: AssetIds.Models keys; every loaded one joins the random pick,
+				-- missing ones fall back to the procedural cube.
+				floraModelKeys = { "FloraJungleVineTree", "FloraJungleGlowFern", "FloraJungleSporePod" },
 				particleColor = Color3.fromRGB(200, 100, 255),
 				particleTransparency = 0.4,
 				particleLifetimeMin = 4,
 				particleLifetimeMax = 8,
 				particleUpwardSpeed = 1.5,
-				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — jungle creature ambient loop
+				particleTextureKey = "VfxSporeJungle", -- H4: AssetIds.Textures key
+				ambientSfxAssetId = 0, -- legacy override; H4 resolves ambientKey first
+				ambientKey = "Jungle", -- H4: AssetIds.Ambient key
 			},
 			volcanic = {
 				floraColor = Color3.fromRGB(255, 106, 26), -- molten orange
 				floraAccent = Color3.fromRGB(255, 40, 24), -- lava red
 				floraEmissive = 1.0,
 				floraSize = Vector3.new(1.5, 3, 1.5),
-				floraTemplate = nil, -- procedural; Phase G replaces with obsidian fissure mesh
+				floraTemplate = nil, -- legacy hook; H4 prefers floraModelKeys
+				floraModelKeys = { "FloraVolcanicFissure", "FloraVolcanicAshTree" },
 				particleColor = Color3.fromRGB(60, 50, 45), -- ash grey-orange
 				particleTransparency = 0.2,
 				particleLifetimeMin = 6,
 				particleLifetimeMax = 12,
 				particleUpwardSpeed = 3.0, -- ash drifts up faster than jungle spores
-				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — volcanic rumble + ash hiss
+				particleTextureKey = "VfxAshVolcanic",
+				ambientSfxAssetId = 0, -- legacy override; H4 resolves ambientKey first
+				ambientKey = "Volcanic",
 			},
 			ice = {
 				floraColor = Color3.fromRGB(200, 232, 255), -- pale ice-blue crystal
 				floraAccent = Color3.fromRGB(150, 200, 230),
 				floraEmissive = 0.6,
 				floraSize = Vector3.new(0.8, 3.5, 0.8),
-				floraTemplate = nil, -- procedural; Phase G replaces with crystal cluster mesh
+				floraTemplate = nil, -- legacy hook; H4 prefers floraModelKeys
+				floraModelKeys = { "FloraIceCrystal", "FloraIceFrozenShrub" },
 				particleColor = Color3.fromRGB(230, 244, 255), -- frost mist
 				particleTransparency = 0.5,
 				particleLifetimeMin = 5,
 				particleLifetimeMax = 10,
 				particleUpwardSpeed = 0.5, -- frost drifts slowly
-				ambientSfxAssetId = 0, -- REPLACE_BEFORE_LAUNCH — glacial wind howl
+				particleTextureKey = "VfxFrostIce",
+				ambientSfxAssetId = 0, -- legacy override; H4 resolves ambientKey first
+				ambientKey = "Ice",
 				-- G3: Cave-specific overlay (only set on biomes that
 				-- have one — jungle/volcanic leave nil and the
 				-- BiomeDecorationService skips this branch). Stalactites
@@ -603,6 +643,10 @@ local Constants = {
 					glacierWallsPerPlot = 4, -- large flat walls at the horizon ring
 					glacierWallSize = Vector3.new(24, 16, 4),
 					glacierWallDistance = 120, -- studs from plot center (outside DecorationRadius)
+					-- H4: AssetIds.Models keys; scaled to the sizes above when loaded
+					stalactiteModelKey = "CaveStalactite",
+					stalagmiteModelKey = "CaveStalagmite",
+					glacierWallModelKey = "CaveGlacierWall",
 					emissive = 0.7,
 					crystalColor = Color3.fromRGB(170, 220, 255),
 					crystalAccent = Color3.fromRGB(120, 180, 220),

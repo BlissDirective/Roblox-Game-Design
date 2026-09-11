@@ -1,0 +1,4225 @@
+{
+  "manifest_version": 1,
+  "project": "Outpost-7",
+  "generated_by": "tools/harness/seed_manifest.py",
+  "global_budget": {
+    "usd_cap_monthly": 150.0,
+    "usd_spent_month": 0.0,
+    "month": ""
+  },
+  "palettes": {
+    "jungle": {
+      "corroded_titanium": "#3A3F48",
+      "jungle_vine": "#1A3320",
+      "neon_magenta": "#FF3EC8",
+      "bio_teal": "#00E8D8",
+      "chitin": "#22102E"
+    },
+    "volcanic": {
+      "obsidian": "#0D0D12",
+      "charcoal": "#1F1F24",
+      "molten_orange": "#FF6A1A",
+      "lava_red": "#FF2818",
+      "warning_amber": "#FFAA33",
+      "ash_grey": "#5A5A60"
+    },
+    "ice": {
+      "gunmetal": "#4A525C",
+      "glacial_ice": "#C8E8FF",
+      "deep_ice": "#5A8CC0",
+      "frost_blue": "#AAE0FF",
+      "edge_white": "#E8F4FF",
+      "shadow_blue": "#3A5078"
+    },
+    "military": {
+      "charcoal_black": "#1A1A22",
+      "steel_blue": "#5082B4",
+      "gunmetal": "#3A4048",
+      "base_shadow": "#2A3540",
+      "warning_red": "#FF3838",
+      "muzzle_red": "#FF5050",
+      "amber": "#FFAA33",
+      "tactical_white": "#DDE2E8",
+      "plasma_blue": "#00AAFF",
+      "recon_blue": "#5096E8",
+      "olive": "#5A7048",
+      "eng_green": "#88E060"
+    },
+    "ui": {
+      "industrial_bg": "#1C1E22",
+      "industrial_panel": "#26282C",
+      "text_primary": "#E6E6DC",
+      "accent_orange": "#FF9632",
+      "jungle_accent": "#78DCB4",
+      "ice_accent": "#78C8F0",
+      "volcanic_accent": "#FF783C",
+      "danger": "#DC3C3C"
+    }
+  },
+  "elements": [
+    {
+      "id": "build_turret_auto",
+      "group": "Buildables",
+      "group_id": "build",
+      "name": "Auto-Turret",
+      "tier": "multi_mesh",
+      "class": "buildable",
+      "integration_target": "BuildableRegistry.turret (model field, H4)",
+      "dims_studs": [
+        2,
+        4,
+        2
+      ],
+      "tri_budget": [
+        1500,
+        2500
+      ],
+      "palette": "military",
+      "brief": "Single-barrel auto-turret: square base plate with power cables, yaw joint, sensor-cluster head with a 3-stud barrel and faint red muzzle ring. Sub-meshes: Base, Head.",
+      "reference": "ASSETS.md §4.4.1",
+      "priority": 1,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "alien_stalker",
+      "group": "Aliens",
+      "group_id": "alien",
+      "name": "Stalker (jungle)",
+      "tier": "rigged",
+      "class": "alien",
+      "integration_target": "AlienRegistry.stalker.meshTemplate",
+      "dims_studs": [
+        6,
+        4,
+        2
+      ],
+      "tri_budget": [
+        5000,
+        7000
+      ],
+      "palette": "jungle",
+      "brief": "Quadruped predator: chitinous plates with magenta bioluminescent seams, 2x3 teal eye cluster, mandible mouth, spine frill, segmented glowing tail tip. Low predatory stance.",
+      "reference": "ASSETS.md §4.3.1",
+      "priority": 2,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "drone_combat",
+      "group": "Drones",
+      "group_id": "drone",
+      "name": "Combat drone",
+      "tier": "static_mesh",
+      "class": "drone",
+      "integration_target": "DroneSwarmRegistry.combat template (H4)",
+      "dims_studs": [
+        1.2,
+        0.4,
+        0.8
+      ],
+      "tri_budget": [
+        800,
+        1200
+      ],
+      "palette": "military",
+      "brief": "Wedge fighter drone, twin forward laser barrels, red sensor lens, red-orange thrusters, charcoal/red.",
+      "reference": "ASSETS.md §4.5.2",
+      "priority": 3,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "arch_jungle",
+      "group": "Biome arches",
+      "group_id": "arch",
+      "name": "Bioluminescent Jungle Arch",
+      "tier": "static_mesh",
+      "class": "world.arch",
+      "integration_target": "PlotManager arch slot (H4)",
+      "dims_studs": [
+        24,
+        18,
+        4
+      ],
+      "tri_budget": [
+        4000,
+        6000
+      ],
+      "palette": "jungle",
+      "brief": "Corroded military structural frame overgrown by alien jungle: glowing vines on weathered titanium beams, magenta/teal bioluminescent flora in the cracks.",
+      "reference": "ASSETS.md §4.1.1",
+      "priority": 10,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "build_extractor",
+      "group": "Buildables",
+      "group_id": "build",
+      "name": "Extractor",
+      "tier": "static_mesh",
+      "class": "buildable",
+      "integration_target": "BuildableRegistry.extractor (model field, H4)",
+      "dims_studs": [
+        3,
+        4,
+        3
+      ],
+      "tri_budget": [
+        1500,
+        2500
+      ],
+      "palette": "military",
+      "brief": "Compact resource extractor: drill column into a crystal node, spinning collar, side coolant tanks, teal intake glow at the base, credit-coil readout on top. Reads as the colony's income core.",
+      "reference": "BuildableRegistry.luau",
+      "priority": 11,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "build_wall",
+      "group": "Buildables",
+      "group_id": "build",
+      "name": "Wall segment",
+      "tier": "static_mesh",
+      "class": "buildable",
+      "integration_target": "BuildableRegistry.wall (model field, H4)",
+      "dims_studs": [
+        4,
+        5,
+        1
+      ],
+      "tri_budget": [
+        600,
+        1200
+      ],
+      "palette": "military",
+      "brief": "Modular 4-stud wall segment: layered armor plates over a titanium spine, energy-seam glow along the top edge, tileable ends so segments chain cleanly. Three damage states later (see dmg_*).",
+      "reference": "BuildableRegistry.luau",
+      "priority": 12,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "prop_resource_node",
+      "group": "World props",
+      "group_id": "prop",
+      "name": "Resource node (crystal cluster)",
+      "tier": "static_mesh",
+      "class": "world_prop",
+      "integration_target": "ResourceNodeSpawner template (H4)",
+      "dims_studs": [
+        4,
+        3,
+        4
+      ],
+      "tri_budget": [
+        600,
+        1200
+      ],
+      "palette": "jungle",
+      "brief": "Ground crystal cluster the extractor drills into: teal-core crystals in a rock collar with a faint pulse. Must read as 'place extractor here' from FTUE distance.",
+      "reference": "ResourceNodeSpawner.luau",
+      "priority": 13,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "weapon_rifle_world",
+      "group": "Player weapon",
+      "group_id": "weapon",
+      "name": "Hitscan rifle — world model",
+      "tier": "static_mesh",
+      "class": "weapon",
+      "integration_target": "WeaponController / character Tool (H4)",
+      "dims_studs": [
+        0.4,
+        0.8,
+        2.6
+      ],
+      "tri_budget": [
+        1500,
+        2500
+      ],
+      "palette": "military",
+      "brief": "Compact sci-fi carbine: charcoal body, steel-blue rails, teal energy cell window, short muzzle with a red emissive ring. Held R15 grip.",
+      "reference": "PHASE_R R3",
+      "priority": 14,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "weapon_rifle_view",
+      "group": "Player weapon",
+      "group_id": "weapon",
+      "name": "Hitscan rifle — first-person view model",
+      "tier": "static_mesh",
+      "class": "weapon",
+      "integration_target": "WeaponController FP viewmodel (H4)",
+      "dims_studs": [
+        0.4,
+        0.8,
+        2.6
+      ],
+      "tri_budget": [
+        2500,
+        3500
+      ],
+      "palette": "military",
+      "brief": "Same rifle with a higher-detail front half for first-person; consistent with the world model.",
+      "reference": "PHASE_R R3",
+      "priority": 15,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "weapon_muzzle_flash",
+      "group": "Player weapon",
+      "group_id": "weapon",
+      "name": "Muzzle flash texture",
+      "tier": "texture",
+      "class": "vfx",
+      "integration_target": "BeamPool muzzle emitter texture via AssetIds (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Star-burst flash sprite, teal-white core, red rim; 256x256 alpha.",
+      "reference": "BeamPool.luau",
+      "priority": 16,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "decal_op7_emblem",
+      "group": "Helmet decals",
+      "group_id": "decal",
+      "name": "Outpost-7 emblem",
+      "tier": "texture",
+      "class": "cosmetic_decal",
+      "integration_target": "CosmeticRegistry.decal_op7_emblem",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "The game's own emblem: a stylized '7' inside a hex outpost silhouette, teal/gold. Original mark — also used for listing branding.",
+      "reference": "CosmeticRegistry.luau",
+      "priority": 17,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "flora_jungle_vine_tree",
+      "group": "Biome flora",
+      "group_id": "flora",
+      "name": "Jungle — vine tree",
+      "tier": "static_mesh",
+      "class": "biome_flora",
+      "integration_target": "Constants.BIOME.Decorations.jungle.floraTemplate",
+      "dims_studs": [
+        3,
+        9,
+        3
+      ],
+      "tri_budget": [
+        1200,
+        2000
+      ],
+      "palette": "jungle",
+      "brief": "Twisted alien tree: dark trunk wrapped in glowing magenta vines, teal spore pods at the tips, roots gripping a rock. Silhouette-first; reads at distance.",
+      "reference": "PHASE_G G2",
+      "priority": 20,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "flora_jungle_glow_fern",
+      "group": "Biome flora",
+      "group_id": "flora",
+      "name": "Jungle — glow fern cluster",
+      "tier": "static_mesh",
+      "class": "biome_flora",
+      "integration_target": "Constants.BIOME.Decorations.jungle.floraTemplate",
+      "dims_studs": [
+        2,
+        2,
+        2
+      ],
+      "tri_budget": [
+        400,
+        900
+      ],
+      "palette": "jungle",
+      "brief": "Low fern cluster with bioluminescent leaf veins; the ground-cover filler placed 24x per plot.",
+      "reference": "PHASE_G G2",
+      "priority": 21,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "flora_jungle_spore_pod",
+      "group": "Biome flora",
+      "group_id": "flora",
+      "name": "Jungle — spore pod",
+      "tier": "static_mesh",
+      "class": "biome_flora",
+      "integration_target": "Constants.BIOME.Decorations.jungle.floraTemplate",
+      "dims_studs": [
+        1.5,
+        3,
+        1.5
+      ],
+      "tri_budget": [
+        400,
+        800
+      ],
+      "palette": "jungle",
+      "brief": "Bulbous stalk with a translucent pod full of drifting magenta motes; particle emitter host.",
+      "reference": "PHASE_G G2",
+      "priority": 22,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "prop_plot_floor",
+      "group": "World props",
+      "group_id": "prop",
+      "name": "Plot floor tile",
+      "tier": "texture",
+      "class": "world_prop",
+      "integration_target": "PlotManager floor material (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Tileable 4-stud landing-pad plate texture: hex panels, faint grid lines, worn edges; 4x4 grid must align to Constants.GRID.Size.",
+      "reference": "PlotManager.luau",
+      "priority": 23,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "prop_plot_border",
+      "group": "World props",
+      "group_id": "prop",
+      "name": "Plot border beacon",
+      "tier": "static_mesh",
+      "class": "world_prop",
+      "integration_target": "PlotManager border (H4)",
+      "dims_studs": [
+        1,
+        3,
+        1
+      ],
+      "tri_budget": [
+        200,
+        400
+      ],
+      "palette": "military",
+      "brief": "Corner post with a vertical light strip marking plot bounds; colored by biome accent.",
+      "reference": "PlotManager.luau",
+      "priority": 24,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "prop_dropship_pad",
+      "group": "World props",
+      "group_id": "prop",
+      "name": "Spawn dropship pad",
+      "tier": "static_mesh",
+      "class": "world_prop",
+      "integration_target": "PlotManager spawn (H4)",
+      "dims_studs": [
+        8,
+        1,
+        8
+      ],
+      "tri_budget": [
+        600,
+        1200
+      ],
+      "palette": "military",
+      "brief": "Circular landing pad with chevrons and blue edge lights; the player's spawn point and the raid 'extraction' anchor.",
+      "reference": "RaidBaseRenderer.luau",
+      "priority": 25,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "vfx_spore_jungle",
+      "group": "VFX textures",
+      "group_id": "vfx",
+      "name": "Jungle spore particle",
+      "tier": "texture",
+      "class": "vfx",
+      "integration_target": "BiomeDecorations.jungle particle texture via AssetIds (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "jungle",
+      "brief": "Soft magenta mote with teal core, 128x128 alpha.",
+      "reference": "BiomeDecorationService.luau",
+      "priority": 26,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "vfx_beam_turret",
+      "group": "VFX textures",
+      "group_id": "vfx",
+      "name": "Turret beam texture",
+      "tier": "texture",
+      "class": "vfx",
+      "integration_target": "BeamPool beam texture via AssetIds (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Horizontal beam strip with bright core and soft falloff, 512x64.",
+      "reference": "BeamPool.luau",
+      "priority": 27,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "vfx_beam_drone",
+      "group": "VFX textures",
+      "group_id": "vfx",
+      "name": "Drone beam texture",
+      "tier": "texture",
+      "class": "vfx",
+      "integration_target": "BeamPool (drone variant) (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Thinner, faster-looking strip with a dashed energy pattern, 512x64.",
+      "reference": "BeamPool.luau",
+      "priority": 28,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "vfx_impact_spark",
+      "group": "VFX textures",
+      "group_id": "vfx",
+      "name": "Impact spark particle",
+      "tier": "texture",
+      "class": "vfx",
+      "integration_target": "BeamPool impact emitter (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Sharp spark shard, white-hot core, 64x64 alpha.",
+      "reference": "BeamPool.luau",
+      "priority": 29,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "build_turret_heavy",
+      "group": "Buildables",
+      "group_id": "build",
+      "name": "Heavy Cannon Turret",
+      "tier": "multi_mesh",
+      "class": "buildable",
+      "integration_target": "BuildableRegistry (new row: turret_heavy)",
+      "dims_studs": [
+        2.5,
+        4,
+        2.5
+      ],
+      "tri_budget": [
+        2500,
+        3500
+      ],
+      "palette": "military",
+      "brief": "Twin-barrel siege turret: reinforced base with bracing struts, thick frontal armor, dual 4-stud barrels with heat-vent gills, red optic between barrels, visible ammo belt. Sub-meshes: Base, Head.",
+      "reference": "ASSETS.md §4.4.2",
+      "priority": 30,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "build_turret_laser",
+      "group": "Buildables",
+      "group_id": "build",
+      "name": "Burst Laser Turret",
+      "tier": "multi_mesh",
+      "class": "buildable",
+      "integration_target": "BuildableRegistry (new row: turret_laser)",
+      "dims_studs": [
+        1.8,
+        3.2,
+        1.8
+      ],
+      "tri_budget": [
+        2000,
+        3000
+      ],
+      "palette": "military",
+      "brief": "Sleek point-defense laser: flowing base, yaw+pitch joints, 2x3 emitter grid with blue plasma lenses, spinning radar element on top, blue emissive radiator seams. Sub-meshes: Base, Yaw, Head.",
+      "reference": "ASSETS.md §4.4.3",
+      "priority": 31,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "alien_magmaling",
+      "group": "Aliens",
+      "group_id": "alien",
+      "name": "Magmaling (volcanic)",
+      "tier": "rigged",
+      "class": "alien",
+      "integration_target": "AlienRegistry (new row: magmaling)",
+      "dims_studs": [
+        3,
+        5,
+        2
+      ],
+      "tri_budget": [
+        5000,
+        7000
+      ],
+      "palette": "volcanic",
+      "brief": "Hunched bipedal heavy: cracked obsidian armor over a molten core, arms to the ground ending in three-finger claws, featureless dome head with a glowing horizontal crack, back heat vents.",
+      "reference": "ASSETS.md §4.3.2",
+      "priority": 32,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "alien_cryowraith",
+      "group": "Aliens",
+      "group_id": "alien",
+      "name": "Cryowraith (ice)",
+      "tier": "rigged",
+      "class": "alien",
+      "integration_target": "AlienRegistry (new row: cryowraith)",
+      "dims_studs": [
+        1,
+        6,
+        1
+      ],
+      "tri_budget": [
+        4500,
+        6500
+      ],
+      "palette": "ice",
+      "brief": "Tall thin floating wraith of fractured translucent ice, blue emissive veins, three vertical eye slits, icicle-claw arms, lower body dissolving into frost mist.",
+      "reference": "ASSETS.md §4.3.3",
+      "priority": 33,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "drone_recon",
+      "group": "Drones",
+      "group_id": "drone",
+      "name": "Recon drone",
+      "tier": "static_mesh",
+      "class": "drone",
+      "integration_target": "DroneSwarmRegistry.recon template (H4)",
+      "dims_studs": [
+        1.2,
+        0.4,
+        0.8
+      ],
+      "tri_budget": [
+        600,
+        1000
+      ],
+      "palette": "military",
+      "brief": "Bird-like scout drone, single cyclopean sensor pod, pale blue silent thrusters, white/recon-blue.",
+      "reference": "ASSETS.md §4.5.1",
+      "priority": 34,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "drone_engineering",
+      "group": "Drones",
+      "group_id": "drone",
+      "name": "Engineering drone",
+      "tier": "multi_mesh",
+      "class": "drone",
+      "integration_target": "DroneSwarmRegistry.engineering template (H4)",
+      "dims_studs": [
+        1.2,
+        0.4,
+        0.8
+      ],
+      "tri_budget": [
+        700,
+        1100
+      ],
+      "palette": "military",
+      "brief": "Utility repair drone, olive/green, retracted manipulator arm under a tool bay, three status LEDs. Sub-meshes: Body, Arm.",
+      "reference": "ASSETS.md §4.5.3",
+      "priority": 35,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "raid_loot_core",
+      "group": "Raid",
+      "group_id": "raid",
+      "name": "Loot core (raid extractor variant)",
+      "tier": "static_mesh",
+      "class": "raid",
+      "integration_target": "RaidBaseRenderer extractor variant (H4)",
+      "dims_studs": [
+        3,
+        4,
+        3
+      ],
+      "tri_budget": [
+        1500,
+        2500
+      ],
+      "palette": "military",
+      "brief": "The extractor with an exposed glowing credit core and a 'crack me' vulnerability window; reads as the raid target.",
+      "reference": "RaidBaseRenderer.luau",
+      "priority": 36,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "raid_arena_floor",
+      "group": "Raid",
+      "group_id": "raid",
+      "name": "Raid arena floor",
+      "tier": "texture",
+      "class": "raid",
+      "integration_target": "RaidBaseRenderer floor (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Darker industrial variant of the plot floor tile for the reserved-server raid place.",
+      "reference": "RaidBaseRenderer.luau",
+      "priority": 37,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "raid_attacker_pad",
+      "group": "Raid",
+      "group_id": "raid",
+      "name": "Attacker spawn pad",
+      "tier": "static_mesh",
+      "class": "raid",
+      "integration_target": "RaidSession spawn (H4)",
+      "dims_studs": [
+        8,
+        1,
+        8
+      ],
+      "tri_budget": [
+        600,
+        1200
+      ],
+      "palette": "military",
+      "brief": "Red-lit variant of the dropship pad marking the attacker's entry / extraction point.",
+      "reference": "RaidSession.luau",
+      "priority": 38,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "arch_volcanic",
+      "group": "Biome arches",
+      "group_id": "arch",
+      "name": "Volcanic Arch",
+      "tier": "static_mesh",
+      "class": "world.arch",
+      "integration_target": "PlotManager arch slot (H4)",
+      "dims_studs": [
+        24,
+        18,
+        4
+      ],
+      "tri_budget": [
+        4000,
+        6000
+      ],
+      "palette": "volcanic",
+      "brief": "Obsidian-and-steel archway, hex-paneled crossbeam, molten lava fissures glowing inside cracked obsidian pillars, faded amber chevrons.",
+      "reference": "ASSETS.md §4.1.2",
+      "priority": 40,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "arch_ice",
+      "group": "Biome arches",
+      "group_id": "arch",
+      "name": "Ice Cave Arch",
+      "tier": "static_mesh",
+      "class": "world.arch",
+      "integration_target": "PlotManager arch slot (H4)",
+      "dims_studs": [
+        24,
+        18,
+        4
+      ],
+      "tri_budget": [
+        4000,
+        6000
+      ],
+      "palette": "ice",
+      "brief": "Titanium frame encased in translucent fractured ice with blue-white emissive veins, pale rune line along the inner edge, frost mist at the base.",
+      "reference": "ASSETS.md §4.1.3",
+      "priority": 41,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "flora_volcanic_fissure",
+      "group": "Biome flora",
+      "group_id": "flora",
+      "name": "Volcanic — obsidian fissure stub",
+      "tier": "static_mesh",
+      "class": "biome_flora",
+      "integration_target": "Constants.BIOME.Decorations.volcanic.floraTemplate",
+      "dims_studs": [
+        1.5,
+        3,
+        1.5
+      ],
+      "tri_budget": [
+        400,
+        900
+      ],
+      "palette": "volcanic",
+      "brief": "Jagged obsidian shard cluster split by a glowing lava crack; ember emitter host.",
+      "reference": "PHASE_G G2",
+      "priority": 42,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "flora_volcanic_ash_tree",
+      "group": "Biome flora",
+      "group_id": "flora",
+      "name": "Volcanic — ash-dead tree",
+      "tier": "static_mesh",
+      "class": "biome_flora",
+      "integration_target": "Constants.BIOME.Decorations.volcanic.floraTemplate",
+      "dims_studs": [
+        3,
+        8,
+        3
+      ],
+      "tri_budget": [
+        900,
+        1600
+      ],
+      "palette": "volcanic",
+      "brief": "Blackened leafless tree with glowing ember veins in the bark.",
+      "reference": "PHASE_G G2",
+      "priority": 43,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "flora_ice_crystal",
+      "group": "Biome flora",
+      "group_id": "flora",
+      "name": "Ice — crystal cluster",
+      "tier": "static_mesh",
+      "class": "biome_flora",
+      "integration_target": "Constants.BIOME.Decorations.ice.floraTemplate",
+      "dims_studs": [
+        0.8,
+        3.5,
+        0.8
+      ],
+      "tri_budget": [
+        400,
+        900
+      ],
+      "palette": "ice",
+      "brief": "Translucent blue crystal spikes with internal emissive veins; frost mist emitter host.",
+      "reference": "PHASE_G G2",
+      "priority": 44,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "flora_ice_frozen_shrub",
+      "group": "Biome flora",
+      "group_id": "flora",
+      "name": "Ice — frozen shrub",
+      "tier": "static_mesh",
+      "class": "biome_flora",
+      "integration_target": "Constants.BIOME.Decorations.ice.floraTemplate",
+      "dims_studs": [
+        2,
+        2,
+        2
+      ],
+      "tri_budget": [
+        400,
+        900
+      ],
+      "palette": "ice",
+      "brief": "Ice-glazed alien shrub, pale white edges, faint blue subsurface glow.",
+      "reference": "PHASE_G G2",
+      "priority": 45,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "vfx_ash_volcanic",
+      "group": "VFX textures",
+      "group_id": "vfx",
+      "name": "Volcanic ash particle",
+      "tier": "texture",
+      "class": "vfx",
+      "integration_target": "BiomeDecorations.volcanic particle texture (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "volcanic",
+      "brief": "Grey-orange ash flake with ember edge, 128x128 alpha.",
+      "reference": "BiomeDecorationService.luau",
+      "priority": 46,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "vfx_frost_ice",
+      "group": "VFX textures",
+      "group_id": "vfx",
+      "name": "Frost flake particle",
+      "tier": "texture",
+      "class": "vfx",
+      "integration_target": "BiomeDecorations.ice particle texture (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ice",
+      "brief": "Six-point frost flake, pale blue, 128x128 alpha.",
+      "reference": "BiomeDecorationService.luau",
+      "priority": 47,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_battle_pass",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Battle Pass widget",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Battle Pass widget', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_build",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Build mode toggle",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Build mode toggle', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_clan",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Clan",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Clan', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_combat",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Combat mode toggle",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Combat mode toggle', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_cores",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Cores currency glyph",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Cores currency glyph', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_cosmetics",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Cosmetics",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Cosmetics', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_credits",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Credits currency glyph",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Credits currency glyph', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_friends",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Friends",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Friends', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_leaderboard",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Leaderboard",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Leaderboard', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_quests",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Quests",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Quests', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_repair",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Repair",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Repair', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_shield",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Emergency Shield status",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Emergency Shield status', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_shop",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Shop",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Shop', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_store",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Store",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Store', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_voice",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Voice",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Voice', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ui_wave_alarm",
+      "group": "UI glyphs",
+      "group_id": "ui",
+      "name": "UI glyph — Wave alarm",
+      "tier": "icon",
+      "class": "ui_glyph",
+      "integration_target": "HUD / panels (ImageLabel via AssetIds.Icons, H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Flat angular sci-fi glyph for 'Wave alarm', single-color on transparent, 128x128, matches the Theme accent; the whole set is approved as one sheet first, then per glyph.",
+      "reference": "PHASE_G G5",
+      "priority": 48,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "dmg_wall_cracked",
+      "group": "Structure damage states",
+      "group_id": "dmg",
+      "name": "Wall — cracked decal",
+      "tier": "texture",
+      "class": "damage_state",
+      "integration_target": "StructureHealthController state 2 (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Alpha decal of fracture lines + scorch for the wall at 66-33% HP; readable at 20 studs on mobile.",
+      "reference": "PHASE_R R1b",
+      "priority": 50,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "dmg_wall_breached",
+      "group": "Structure damage states",
+      "group_id": "dmg",
+      "name": "Wall — breached/burning",
+      "tier": "texture",
+      "class": "damage_state",
+      "integration_target": "StructureHealthController state 3 (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "volcanic",
+      "brief": "Alpha decal of a breach gap with molten edges + ember emissive map; pairs with a particle burst.",
+      "reference": "PHASE_R R1b",
+      "priority": 51,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "dmg_turret_damaged",
+      "group": "Structure damage states",
+      "group_id": "dmg",
+      "name": "Turret — sparking damage",
+      "tier": "texture",
+      "class": "damage_state",
+      "integration_target": "StructureHealthController (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Exposed-wiring decal + spark emissive for a damaged turret head.",
+      "reference": "PHASE_R R1b",
+      "priority": 52,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "dmg_extractor_disabled",
+      "group": "Structure damage states",
+      "group_id": "dmg",
+      "name": "Extractor — disabled",
+      "tier": "texture",
+      "class": "damage_state",
+      "integration_target": "StructureHealthController (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Dead-glow variant: intake light off, warning-amber fault strip, oil-leak decal at the base.",
+      "reference": "PHASE_R R1b",
+      "priority": 53,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ftue_ring_beacon",
+      "group": "FTUE",
+      "group_id": "ftue",
+      "name": "Ring beacon",
+      "tier": "static_mesh",
+      "class": "ftue",
+      "integration_target": "FTUEController beacon (H4)",
+      "dims_studs": [
+        6,
+        0.5,
+        6
+      ],
+      "tri_budget": [
+        300,
+        600
+      ],
+      "palette": "ui",
+      "brief": "Rotating ground ring with chevrons pointing inward; accent-colored emissive; replaces the procedural segments.",
+      "reference": "PHASE_G G8",
+      "priority": 54,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ftue_pointer_arrow",
+      "group": "FTUE",
+      "group_id": "ftue",
+      "name": "HUD pointer arrow",
+      "tier": "icon",
+      "class": "ftue",
+      "integration_target": "FTUEController pointer (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Angular sci-fi arrow glyph used for on-screen pointers.",
+      "reference": "PHASE_G G8",
+      "priority": 55,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "ftue_intro_frame",
+      "group": "FTUE",
+      "group_id": "ftue",
+      "name": "Intro cinematic title card",
+      "tier": "image",
+      "class": "ftue",
+      "integration_target": "FTUEController cinematic (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "jungle",
+      "brief": "Wide 16:9 title frame: outpost silhouette against the bioluminescent jungle at dusk, emblem top-left, no text.",
+      "reference": "PHASE_G G8",
+      "priority": 56,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "sky_jungle",
+      "group": "Skyboxes",
+      "group_id": "sky",
+      "name": "Jungle skybox (6 faces)",
+      "tier": "texture",
+      "class": "skybox",
+      "integration_target": "AssetIds.Skyboxes.Jungle",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "jungle",
+      "brief": "Post-dusk deep-purple sky with a magenta nebula band and two moons; seamless cube map.",
+      "reference": "AssetIds.luau",
+      "priority": 57,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "sky_volcanic",
+      "group": "Skyboxes",
+      "group_id": "sky",
+      "name": "Volcanic skybox (6 faces)",
+      "tier": "texture",
+      "class": "skybox",
+      "integration_target": "AssetIds.Skyboxes.Volcanic",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "volcanic",
+      "brief": "Ash-orange sunset haze, distant eruption glow on one horizon.",
+      "reference": "AssetIds.luau",
+      "priority": 58,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "sky_ice",
+      "group": "Skyboxes",
+      "group_id": "sky",
+      "name": "Ice skybox (6 faces)",
+      "tier": "texture",
+      "class": "skybox",
+      "integration_target": "AssetIds.Skyboxes.Ice",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ice",
+      "brief": "Pre-dawn cold blue with aurora ribbons.",
+      "reference": "AssetIds.luau",
+      "priority": 59,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "cave_stalactite",
+      "group": "Ice cave overlay",
+      "group_id": "cave",
+      "name": "Stalactite",
+      "tier": "static_mesh",
+      "class": "cave_overlay",
+      "integration_target": "BiomeDecorationService.buildIcicle template (H4)",
+      "dims_studs": [
+        1,
+        4,
+        1
+      ],
+      "tri_budget": [
+        200,
+        500
+      ],
+      "palette": "ice",
+      "brief": "Hanging ice spike, faceted, subtle internal glow; tileable at three scales.",
+      "reference": "PHASE_G G3",
+      "priority": 60,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "cave_stalagmite",
+      "group": "Ice cave overlay",
+      "group_id": "cave",
+      "name": "Stalagmite",
+      "tier": "static_mesh",
+      "class": "cave_overlay",
+      "integration_target": "BiomeDecorationService.buildIcicle template (H4)",
+      "dims_studs": [
+        1.5,
+        4,
+        1.5
+      ],
+      "tri_budget": [
+        200,
+        500
+      ],
+      "palette": "ice",
+      "brief": "Floor ice spike ring element; wider base, frost at the foot.",
+      "reference": "PHASE_G G3",
+      "priority": 61,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "cave_glacier_wall",
+      "group": "Ice cave overlay",
+      "group_id": "cave",
+      "name": "Glacier wall slab",
+      "tier": "static_mesh",
+      "class": "cave_overlay",
+      "integration_target": "BiomeDecorationService.buildGlacierWall template (H4)",
+      "dims_studs": [
+        40,
+        24,
+        6
+      ],
+      "tri_budget": [
+        800,
+        1500
+      ],
+      "palette": "ice",
+      "brief": "Horizon-scale glacier slab with a titanium frame half-buried in it; the amphitheatre silhouette.",
+      "reference": "PHASE_G G3",
+      "priority": 62,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "decal_chevron_red",
+      "group": "Helmet decals",
+      "group_id": "decal",
+      "name": "Red Chevron decal",
+      "tier": "texture",
+      "class": "cosmetic_decal",
+      "integration_target": "CosmeticRegistry.decal_chevron_red (texture + iconAssetId)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Forward-facing chevron insignia, warning red on transparent; plus a 256x256 panel icon.",
+      "reference": "CosmeticRegistry.luau",
+      "priority": 63,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "decal_skull_amber",
+      "group": "Helmet decals",
+      "group_id": "decal",
+      "name": "Amber Skull decal",
+      "tier": "texture",
+      "class": "cosmetic_decal",
+      "integration_target": "CosmeticRegistry.decal_skull_amber",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Stylized non-gory skull insignia, amber glow; panel icon.",
+      "reference": "CosmeticRegistry.luau",
+      "priority": 64,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "trail_neon_red",
+      "group": "Drone trails",
+      "group_id": "trail",
+      "name": "Neon Red trail",
+      "tier": "texture",
+      "class": "cosmetic_trail",
+      "integration_target": "CosmeticRegistry.trail_neon_red (beam texture + icon)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Beam texture strip + panel icon, blood-red.",
+      "reference": "CosmeticRegistry.luau",
+      "priority": 65,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "trail_neon_blue",
+      "group": "Drone trails",
+      "group_id": "trail",
+      "name": "Neon Blue trail",
+      "tier": "texture",
+      "class": "cosmetic_trail",
+      "integration_target": "CosmeticRegistry.trail_neon_blue",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Beam texture strip + panel icon, electric blue.",
+      "reference": "CosmeticRegistry.luau",
+      "priority": 66,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "trail_neon_gold",
+      "group": "Drone trails",
+      "group_id": "trail",
+      "name": "Neon Gold trail",
+      "tier": "texture",
+      "class": "cosmetic_trail",
+      "integration_target": "CosmeticRegistry.trail_neon_gold",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Beam texture strip + panel icon, legendary gold with a subtle shimmer.",
+      "reference": "CosmeticRegistry.luau",
+      "priority": 67,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "flair_pioneer",
+      "group": "Nameplate flairs",
+      "group_id": "flair",
+      "name": "Pioneer flair",
+      "tier": "icon",
+      "class": "cosmetic_flair",
+      "integration_target": "CosmeticRegistry.flair_pioneer.iconAssetId",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Small gold badge glyph for early adopters.",
+      "reference": "CosmeticRegistry.luau",
+      "priority": 68,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "flair_op7_veteran",
+      "group": "Nameplate flairs",
+      "group_id": "flair",
+      "name": "Veteran flair",
+      "tier": "icon",
+      "class": "cosmetic_flair",
+      "integration_target": "CosmeticRegistry.flair_op7_veteran.iconAssetId",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Small teal/blue badge glyph for BP tier 25.",
+      "reference": "CosmeticRegistry.luau",
+      "priority": 69,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "skin_combatant",
+      "group": "Operator skins",
+      "group_id": "skin",
+      "name": "Combatant Operator (default)",
+      "tier": "rigged",
+      "class": "cosmetic_skin",
+      "integration_target": "CosmeticRegistry.skin_combatant BodyParts (H4)",
+      "dims_studs": null,
+      "tri_budget": [
+        8000,
+        10000
+      ],
+      "palette": "military",
+      "brief": "Medium frontline armor, charcoal black, red accent stripes, full-face helmet with a red visor band. The stock silhouette.",
+      "reference": "ASSETS.md §4.2.2",
+      "priority": 70,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "skin_recon",
+      "group": "Operator skins",
+      "group_id": "skin",
+      "name": "Recon Operator",
+      "tier": "rigged",
+      "class": "cosmetic_skin",
+      "integration_target": "CosmeticRegistry.skin_recon BodyParts (H4)",
+      "dims_studs": null,
+      "tri_budget": [
+        8000,
+        10000
+      ],
+      "palette": "military",
+      "brief": "Sleek scout armor, matte dark-grey, neon teal stripes, wraparound visor, asymmetric single pauldron.",
+      "reference": "ASSETS.md §4.2.1",
+      "priority": 71,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "skin_heavy_defender",
+      "group": "Operator skins",
+      "group_id": "skin",
+      "name": "Heavy Defender Operator",
+      "tier": "rigged",
+      "class": "cosmetic_skin",
+      "integration_target": "CosmeticRegistry.skin_heavy_defender BodyParts (H4)",
+      "dims_studs": null,
+      "tri_budget": [
+        9000,
+        11000
+      ],
+      "palette": "military",
+      "brief": "Bulky exoskeleton armor, gunmetal, amber glow seams, oversized pauldrons, vertical visor slit.",
+      "reference": "ASSETS.md §4.2.3",
+      "priority": 72,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "store_pass_2x_credits",
+      "group": "Store art",
+      "group_id": "store",
+      "name": "Game pass icon — 2× Credits",
+      "tier": "icon",
+      "class": "store_art",
+      "integration_target": "Creator Dashboard + AssetIds.Icons",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "512x512 square, credits glyph doubled with a gold burst.",
+      "reference": "Constants.MONETIZATION",
+      "priority": 73,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "store_pass_auto_collect",
+      "group": "Store art",
+      "group_id": "store",
+      "name": "Game pass icon — Auto-Collect",
+      "tier": "icon",
+      "class": "store_art",
+      "integration_target": "Creator Dashboard + AssetIds.Icons",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Extractor with a magnet/collect arrow motif.",
+      "reference": "Constants.MONETIZATION",
+      "priority": 74,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "store_pass_vip",
+      "group": "Store art",
+      "group_id": "store",
+      "name": "Game pass icon — VIP Operator",
+      "tier": "icon",
+      "class": "store_art",
+      "integration_target": "Creator Dashboard + AssetIds.Icons",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Heavy Defender helmet silhouette with amber glow.",
+      "reference": "Constants.MONETIZATION",
+      "priority": 75,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "store_pass_bp_premium",
+      "group": "Store art",
+      "group_id": "store",
+      "name": "Game pass icon — Battle Pass Premium",
+      "tier": "icon",
+      "class": "store_art",
+      "integration_target": "Creator Dashboard + AssetIds.Icons",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Emblem on a premium banner ribbon.",
+      "reference": "Constants.MONETIZATION",
+      "priority": 76,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "store_dp_shield",
+      "group": "Store art",
+      "group_id": "store",
+      "name": "Dev product icon — Emergency Shield",
+      "tier": "icon",
+      "class": "store_art",
+      "integration_target": "Creator Dashboard",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Hex shield over a plot silhouette, blue.",
+      "reference": "Constants.MONETIZATION",
+      "priority": 77,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "store_dp_credits_s",
+      "group": "Store art",
+      "group_id": "store",
+      "name": "Dev product icon — Credit Pack (Small)",
+      "tier": "icon",
+      "class": "store_art",
+      "integration_target": "Creator Dashboard",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Small stack of credit coils.",
+      "reference": "Constants.MONETIZATION",
+      "priority": 78,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "store_dp_credits_l",
+      "group": "Store art",
+      "group_id": "store",
+      "name": "Dev product icon — Credit Pack (Large)",
+      "tier": "icon",
+      "class": "store_art",
+      "integration_target": "Creator Dashboard",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Large crate of credit coils.",
+      "reference": "Constants.MONETIZATION",
+      "priority": 79,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "store_dp_cores",
+      "group": "Store art",
+      "group_id": "store",
+      "name": "Dev product icon — Core Pack",
+      "tier": "icon",
+      "class": "store_art",
+      "integration_target": "Creator Dashboard",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "ui",
+      "brief": "Cluster of glowing cores.",
+      "reference": "Constants.MONETIZATION",
+      "priority": 80,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "store_bp_banner",
+      "group": "Store art",
+      "group_id": "store",
+      "name": "Battle Pass premium banner",
+      "tier": "image",
+      "class": "store_art",
+      "integration_target": "BattlePassPanel header (H4)",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "jungle",
+      "brief": "Wide banner: Recon operator + drone over the jungle at dusk, season-one framing, no text.",
+      "reference": "BattlePassPanel.luau",
+      "priority": 81,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "listing_game_icon",
+      "group": "Listing",
+      "group_id": "listing",
+      "name": "Game icon",
+      "tier": "image",
+      "class": "listing",
+      "integration_target": "AssetIds.Icons.GameIcon",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "jungle",
+      "brief": "512x512: emblem + outpost silhouette; made from a real staging screenshot after the world art lands. LAST.",
+      "reference": "PHASE_H H1",
+      "priority": 90,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "listing_thumb_transformation",
+      "group": "Listing",
+      "group_id": "listing",
+      "name": "Thumbnail — Day 1 vs Day 30",
+      "tier": "image",
+      "class": "listing",
+      "integration_target": "AssetIds.Thumbs.Transformation",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "jungle",
+      "brief": "Split-frame transformation from real screenshots. LAST.",
+      "reference": "PHASE_H H1",
+      "priority": 91,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "listing_thumb_defense",
+      "group": "Listing",
+      "group_id": "listing",
+      "name": "Thumbnail — wave breach",
+      "tier": "image",
+      "class": "listing",
+      "integration_target": "AssetIds.Thumbs.Defense",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "jungle",
+      "brief": "The 'oh no, the east wall' moment from a real screenshot. LAST.",
+      "reference": "PHASE_H H1",
+      "priority": 92,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "listing_thumb_raid",
+      "group": "Listing",
+      "group_id": "listing",
+      "name": "Thumbnail — raid drama",
+      "tier": "image",
+      "class": "listing",
+      "integration_target": "AssetIds.Thumbs.Raid",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Attacker at the loot core, klaxon glow. LAST.",
+      "reference": "PHASE_H H1",
+      "priority": 93,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "vehicle_rover",
+      "group": "Vehicles (gated)",
+      "group_id": "vehicle",
+      "name": "All-terrain rover",
+      "tier": "multi_mesh",
+      "class": "vehicle",
+      "integration_target": "FEATURES gate — no module yet",
+      "dims_studs": [
+        14,
+        6,
+        7
+      ],
+      "tri_budget": [
+        6000,
+        8000
+      ],
+      "palette": "military",
+      "brief": "6-wheel armored exploration buggy, roll cage, cargo bed, plasma exhaust. Sub-meshes: Chassis, Wheel x6.",
+      "reference": "ASSETS.md §4.6.1",
+      "priority": 100,
+      "gated": true,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "vehicle_hover_bike",
+      "group": "Vehicles (gated)",
+      "group_id": "vehicle",
+      "name": "Hover bike",
+      "tier": "static_mesh",
+      "class": "vehicle",
+      "integration_target": "FEATURES gate — no module yet",
+      "dims_studs": [
+        8,
+        2.5,
+        3
+      ],
+      "tri_budget": [
+        4500,
+        6000
+      ],
+      "palette": "military",
+      "brief": "Single-rider hover bike, integrated twin plasma cannons, downforce wings, blue ground-effect glow. Original silhouette.",
+      "reference": "ASSETS.md §4.6.2",
+      "priority": 101,
+      "gated": true,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "vehicle_hover_tank",
+      "group": "Vehicles (gated)",
+      "group_id": "vehicle",
+      "name": "Hover tank",
+      "tier": "multi_mesh",
+      "class": "vehicle",
+      "integration_target": "FEATURES gate — no module yet",
+      "dims_studs": [
+        16,
+        5,
+        8
+      ],
+      "tri_budget": [
+        7000,
+        9500
+      ],
+      "palette": "military",
+      "brief": "Dual-crew hover tank, sloped glacis, ring-mount laser turret, plasma vents. Sub-meshes: Chassis, TurretRing, TurretHead.",
+      "reference": "ASSETS.md §4.6.3",
+      "priority": 102,
+      "gated": true,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_ambient_ice",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "Ambient — ice",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/ambient/ice.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_ambient_jungle",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "Ambient — jungle",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/ambient/jungle.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_ambient_volcanic",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "Ambient — volcanic",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/ambient/volcanic.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_music_build",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "Music — build loop",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/music/build.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_music_combat",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "Music — combat",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/music/combat.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_music_defeat",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "Music — defeat",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/music/defeat.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_music_raid",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "Music — raid",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/music/raid.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_music_victory",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "Music — victory",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/music/victory.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_alien_growl",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — alien growl",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/alien_growl.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_claim_chime",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — claim chime",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/claim_chime.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_drone_fire",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — drone fire",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/drone_fire.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_extractor_place",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — extractor place",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/extractor_place.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_ftue_intro_sting",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — FTUE intro sting",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/ftue_intro_sting.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_ftue_step_advance",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — FTUE step advance",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/ftue_step_advance.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_repair_complete",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — repair complete",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/repair_complete.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_structure_breach",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — structure breach",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/structure_breach.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_turret_fire",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — turret fire",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/turret_fire.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_ui_click",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — UI click",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/ui_click.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_ui_panel_open",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — UI panel open",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/ui_panel_open.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_wall_place",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — wall place",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/wall_place.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_wave_alarm",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — wave alarm",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/wave_alarm.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    },
+    {
+      "id": "audio_sfx_weapon_fire",
+      "group": "Audio (parallel track)",
+      "group_id": "audio",
+      "name": "SFX — weapon fire",
+      "tier": "audio",
+      "class": "audio",
+      "integration_target": "upload-manifest.json row assets/audio/sfx/weapon_fire.ogg",
+      "dims_studs": null,
+      "tri_budget": null,
+      "palette": "military",
+      "brief": "Synthwave / sci-fi per finalized-brainstorm.md §2.8; sourced or generated with a commercial-use license; no image gate — owner approves by listening.",
+      "reference": "PHASE_H_HANDOFF.md §5",
+      "priority": 110,
+      "gated": false,
+      "state": "pending_brief",
+      "approved_variant": null,
+      "artifacts": {},
+      "license": null,
+      "asset_ids": {},
+      "cost_usd": 0.0,
+      "attempts": {
+        "concept_rounds": 0,
+        "model_generations": 0,
+        "validations": 0
+      },
+      "history": [],
+      "budget": {
+        "concept_images_per_round": 8,
+        "concept_rounds": 3,
+        "model_generations": 3,
+        "usd_cap": 6.0
+      }
+    }
+  ]
+}

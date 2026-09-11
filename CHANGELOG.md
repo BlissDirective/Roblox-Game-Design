@@ -9,6 +9,27 @@ Pre-launch: each Phase A–I sub-phase gets its own entry under `[Unreleased]`.
 ## [Unreleased]
 
 ### Added
+- **Design harness (H1–H4) — autonomous art pipeline.** See
+  `docs/playbooks/DESIGN_HARNESS.md` and `harness/README.md`.
+  - `harness/` — the loop the Grok Bot agent group digests: README, 115-element
+    `design_manifest.json` (93 image-gated + 22 audio), role prompts, security
+    policy, Studio audit scripts, `GROK_BOT_KICKOFF.md` prompt series, `STATE`.
+  - `tools/harness/` — `seed_manifest.py`, `validate_manifest.py` (state
+    machine, owner-only approvals, evidence, budgets), `check_art_pr.py`
+    (allowlist + fields-only diff), `seed_upload_rows.py`;
+    `.github/workflows/harness-guard.yml` enforces them on `art/*` PRs.
+  - H3: `upload-manifest.json` pre-seeded with 110 rows (`Models`, `Textures`,
+    `Icons`, `Images`, six-face `Skyboxes`); `tools/scripts/regen-asset-ids.py`
+    generates `AssetIds.luau`; `upload-assets.sh` sends explicit MIME per type
+    (FBX `Model` uploads), polls moderation, refuses `Rejected` ids.
+  - H4: `Server.World.ArtTemplateLoader` (boot-time `InsertService:LoadAsset`
+    into `ServerStorage.ArtTemplates`) + `Shared.Lib.VisualAttach` (uploaded
+    model layered under the existing gameplay Part, which stays the collision /
+    raycast / attribute carrier). Wired: buildables (place, restore, raid),
+    aliens, drones (now face travel), resource nodes, biome flora, ice-cave
+    overlay, plot arch + floor texture, skyboxes, VFX/beam textures, audio cues
+    (`assetKey`), cosmetic `iconKey`; client damage tint follows the visual.
+    Gated by `Constants.FEATURES.artPipeline`; inert while ids are placeholders.
 - **Phase H (code prep) — asset pipeline.**
   - `src/shared/AssetIds.luau` — first-party asset-ID manifest (single source of
     truth; 26 slots: icon, 3 thumbnails, 5 music, 14 SFX, 3 biome ambiences) with

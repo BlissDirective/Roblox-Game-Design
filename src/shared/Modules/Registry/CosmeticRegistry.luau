@@ -28,6 +28,7 @@
 	  color        — primary color used for placeholder visuals (real assets land in Phase G art queue)
 	  accentColor  — secondary color for trim / accent
 	  iconAssetId  — Roblox asset id for the cosmetics-panel thumbnail; placeholder 0 until Phase H
+	  iconKey      — H4: AssetIds.Icons key (design-harness upload slot); nil where no art element exists
 --]]
 
 local CosmeticRegistry = {}
@@ -44,6 +45,9 @@ export type Cosmetic = {
 	color: Color3,
 	accentColor: Color3,
 	iconAssetId: number,
+	-- H4: AssetIds.Icons key for the panel thumbnail (nil = no upload slot
+	-- yet). The client prefers this over iconAssetId once the id is live.
+	iconKey: string?,
 }
 
 CosmeticRegistry.Catalog = {
@@ -104,6 +108,7 @@ CosmeticRegistry.Catalog = {
 		color = Color3.fromRGB(255, 56, 56),
 		accentColor = Color3.fromRGB(180, 30, 30),
 		iconAssetId = 0,
+		iconKey = "DecalChevronRed",
 	},
 	decal_skull_amber = {
 		id = "decal_skull_amber",
@@ -115,6 +120,7 @@ CosmeticRegistry.Catalog = {
 		color = Color3.fromRGB(255, 170, 51),
 		accentColor = Color3.fromRGB(180, 100, 20),
 		iconAssetId = 0,
+		iconKey = "DecalSkullAmber",
 	},
 	decal_op7_emblem = {
 		id = "decal_op7_emblem",
@@ -126,6 +132,7 @@ CosmeticRegistry.Catalog = {
 		color = Color3.fromRGB(120, 220, 255),
 		accentColor = Color3.fromRGB(255, 215, 100),
 		iconAssetId = 0,
+		iconKey = "DecalOp7Emblem",
 	},
 
 	-- ============ DRONE TRAIL slot ============
@@ -150,6 +157,7 @@ CosmeticRegistry.Catalog = {
 		color = Color3.fromRGB(255, 30, 30),
 		accentColor = Color3.fromRGB(180, 0, 0),
 		iconAssetId = 0,
+		iconKey = "TrailNeonRed",
 	},
 	trail_neon_blue = {
 		id = "trail_neon_blue",
@@ -161,6 +169,7 @@ CosmeticRegistry.Catalog = {
 		color = Color3.fromRGB(30, 150, 255),
 		accentColor = Color3.fromRGB(0, 100, 200),
 		iconAssetId = 0,
+		iconKey = "TrailNeonBlue",
 	},
 	trail_neon_gold = {
 		id = "trail_neon_gold",
@@ -172,6 +181,7 @@ CosmeticRegistry.Catalog = {
 		color = Color3.fromRGB(255, 215, 100),
 		accentColor = Color3.fromRGB(200, 160, 30),
 		iconAssetId = 0,
+		iconKey = "TrailNeonGold",
 	},
 
 	-- ============ NAMEPLATE FLAIR slot ============
@@ -196,6 +206,7 @@ CosmeticRegistry.Catalog = {
 		color = Color3.fromRGB(255, 215, 100),
 		accentColor = Color3.fromRGB(200, 160, 30),
 		iconAssetId = 0,
+		iconKey = "FlairPioneer",
 	},
 	flair_op7_veteran = {
 		id = "flair_op7_veteran",
@@ -207,6 +218,7 @@ CosmeticRegistry.Catalog = {
 		color = Color3.fromRGB(120, 220, 255),
 		accentColor = Color3.fromRGB(50, 130, 200),
 		iconAssetId = 0,
+		iconKey = "FlairOp7Veteran",
 	},
 } :: { [string]: Cosmetic }
 

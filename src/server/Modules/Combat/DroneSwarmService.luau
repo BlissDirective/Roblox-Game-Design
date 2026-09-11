@@ -43,7 +43,9 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
 local DroneSwarmRegistry =
 	require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("DroneSwarmRegistry"))
+local VisualAttach = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("VisualAttach"))
 
+local ArtTemplateLoader = require(script.Parent.Parent.World.ArtTemplateLoader)
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local DamageService = require(script.Parent.DamageService)
 local BeamPool = require(script.Parent.BeamPool)
@@ -118,6 +120,9 @@ local function buildDronePart(preset: SwarmPreset): BasePart
 	part.Material = Enum.Material.Neon
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
+	-- H4: uploaded drone mesh welded to the anchored root (dynamic mode) so
+	-- it follows the per-Heartbeat CFrame snap.
+	VisualAttach.Attach(part, ArtTemplateLoader.Get(preset.modelKey), true)
 	return part
 end
 
@@ -191,8 +196,7 @@ local function orbitSlotPosition(playerPos: Vector3, slotIndex: number, totalSlo
 	local slotPhase = (slotIndex - 1) * (2 * math.pi / totalSlots)
 	local angle = baseAngleRad + slotPhase
 	local r = Constants.COMBAT.DroneOrbitRadius
-	return playerPos
-		+ Vector3.new(math.cos(angle) * r, Constants.COMBAT.DroneOrbitHeight, math.sin(angle) * r)
+	return playerPos + Vector3.new(math.cos(angle) * r, Constants.COMBAT.DroneOrbitHeight, math.sin(angle) * r)
 end
 
 local function getCharacterRoot(player: Player): BasePart?
@@ -214,12 +218,7 @@ function DroneSwarmService.DeploySwarm(player: Player)
 	local presetId = DroneSwarmRegistry.DefaultV1Preset
 	local preset = DroneSwarmRegistry.Get(presetId)
 	if not preset or not preset.v1Active then
-		warn(
-			string.format(
-				"[DroneSwarmService] Default preset %s missing / not v1Active",
-				tostring(presetId)
-			)
-		)
+		warn(string.format("[DroneSwarmService] Default preset %s missing / not v1Active", tostring(presetId)))
 		return
 	end
 
@@ -249,14 +248,7 @@ function DroneSwarmService.DeploySwarm(player: Player)
 		drones = drones,
 		deployedAt = os.clock(),
 	}
-	print(
-		string.format(
-			"[DroneSwarmService] Deployed %s swarm (%d drones) for %s",
-			preset.id,
-			count,
-			player.Name
-		)
-	)
+	print(string.format("[DroneSwarmService] Deployed %s swarm (%d drones) for %s", preset.id, count, player.Name))
 end
 
 function DroneSwarmService.RecallSwarm(player: Player)
@@ -306,7 +298,15 @@ local function steerSwarm(swarm: Swarm, dt: number)
 		local distance = toGoal.Magnitude
 		if distance > 0.01 then
 			local step = math.min(distance, moveStep)
-			drone.part.CFrame = CFrame.new(current + toGoal.Unit * step)
+			local nextPos = current + toGoal.Unit * step
+			-- Face the direction of travel (flat yaw) so an attached mesh
+			-- reads as flying forward instead of sliding sideways.
+			local heading = Vector3.new(toGoal.X, 0, toGoal.Z)
+			if heading.Magnitude > 0.01 then
+				drone.part.CFrame = CFrame.lookAt(nextPos, nextPos + heading.Unit)
+			else
+				drone.part.CFrame = CFrame.new(nextPos)
+			end
 		end
 	end
 end

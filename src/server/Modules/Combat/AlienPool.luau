@@ -29,8 +29,10 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
-local AlienRegistry =
-	require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("AlienRegistry"))
+local AlienRegistry = require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("AlienRegistry"))
+local VisualAttach = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("VisualAttach"))
+
+local ArtTemplateLoader = require(script.Parent.Parent.World.ArtTemplateLoader)
 
 type AlienDef = AlienRegistry.AlienDef
 
@@ -115,11 +117,22 @@ end
 local function buildActor(def: AlienDef): Model
 	-- F0 V2 prep: dispatch on meshTemplate. V1 defs all leave nil →
 	-- programmatic. V2 defs ship with template references → clone path.
+	-- H4: `modelKey` resolves an uploaded template at runtime. A rigged
+	-- template (HumanoidRootPart + PrimaryPart authored) takes the full
+	-- clone path; a static mesh is layered over the procedural root so
+	-- AlienAI's MoveTo / Touched contract on the root Part is untouched.
+	local template: Model? = def.meshTemplate or ArtTemplateLoader.Get(def.modelKey)
+	local isRigged = template ~= nil
+		and template.PrimaryPart ~= nil
+		and template:FindFirstChild("HumanoidRootPart") ~= nil
 	local model: Model
-	if def.meshTemplate then
-		model = buildFromTemplate(def, def.meshTemplate)
+	if template and isRigged then
+		model = buildFromTemplate(def, template)
 	else
 		model = buildProcedural(def)
+		if template and model.PrimaryPart then
+			VisualAttach.Attach(model.PrimaryPart :: BasePart, template, true)
+		end
 	end
 
 	-- Humanoid is universal — both procedural and template paths get one.

@@ -436,8 +436,7 @@ local function buildBeaconAtNode(nodePart: BasePart): Folder
 		segment.Color = accentColor
 		segment.Size = Vector3.new(1.6, 0.3, 0.4)
 		local offset = Vector3.new(math.cos(theta) * RADIUS, 0, math.sin(theta) * RADIUS)
-		segment.CFrame = pivot.CFrame * CFrame.new(offset)
-			* CFrame.fromEulerAnglesYXZ(0, -theta + math.pi * 0.5, 0)
+		segment.CFrame = pivot.CFrame * CFrame.new(offset) * CFrame.fromEulerAnglesYXZ(0, -theta + math.pi * 0.5, 0)
 		segment.Parent = folder
 	end
 
@@ -486,8 +485,7 @@ local function startBeaconAnimation()
 			local idx = tonumber(string.sub(child.Name, 5)) or 0
 			local theta = (idx / 12) * math.pi * 2 + rotAngle
 			local offset = Vector3.new(math.cos(theta) * 4, 0, math.sin(theta) * 4)
-			child.CFrame = baseCFrame * CFrame.new(offset)
-				* CFrame.fromEulerAnglesYXZ(0, -theta + math.pi * 0.5, 0)
+			child.CFrame = baseCFrame * CFrame.new(offset) * CFrame.fromEulerAnglesYXZ(0, -theta + math.pi * 0.5, 0)
 		end
 		-- Pulse: Brightness via Transparency (Neon's intensity proxy).
 		local pulsePhase = (elapsed / BEACON_PULSE_PERIOD) % 1.0

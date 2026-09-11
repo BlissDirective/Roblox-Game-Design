@@ -103,13 +103,7 @@ local function ensureSubscribed(clanId: string)
 	if ok and connection then
 		subscriptions[clanId] = connection
 	else
-		warn(
-			string.format(
-				"[ClanChatService] SubscribeAsync(chat.%s) failed: %s",
-				clanId,
-				tostring(connection)
-			)
-		)
+		warn(string.format("[ClanChatService] SubscribeAsync(chat.%s) failed: %s", clanId, tostring(connection)))
 	end
 end
 
@@ -188,7 +182,7 @@ local function refreshMembershipFor(player: Player)
 	if current then
 		refMember(current)
 	end
-	;(player :: any):SetAttribute("ClanChatRef", current)
+	(player :: any):SetAttribute("ClanChatRef", current)
 end
 
 local function membershipPollLoop()

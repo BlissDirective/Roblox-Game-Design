@@ -36,6 +36,10 @@ export type AlienDef = {
 	-- MeshPart rigs from `assets/characters/`. V1 leaves nil and uses
 	-- the visualSize/visualColor fields for procedural construction.
 	meshTemplate: Model?,
+	-- H4: AssetIds.Models key resolved server-side by ArtTemplateLoader.
+	-- A rigged template (has HumanoidRootPart + PrimaryPart) replaces the
+	-- procedural actor; a static mesh is layered over it via VisualAttach.
+	modelKey: string?,
 }
 
 AlienRegistry.Catalog = {
@@ -50,6 +54,7 @@ AlienRegistry.Catalog = {
 		-- Bioluminescent magenta/cyan combo — brainstorm aesthetic.
 		visualColor = Color3.fromRGB(200, 60, 240),
 		emissive = 0.6,
+		modelKey = "AlienStalker",
 	},
 } :: { [string]: AlienDef }
 

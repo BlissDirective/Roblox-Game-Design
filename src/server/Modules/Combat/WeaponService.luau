@@ -82,10 +82,7 @@ local function onFire(player: Player, direction: any)
 		return
 	end
 	local magnitude = direction.Magnitude
-	if
-		magnitude < Constants.COMBAT.WeaponDirMinMagnitude
-		or magnitude > Constants.COMBAT.WeaponDirMaxMagnitude
-	then
+	if magnitude < Constants.COMBAT.WeaponDirMinMagnitude or magnitude > Constants.COMBAT.WeaponDirMaxMagnitude then
 		AuditLog.Record(player, "validation_failed", "FireWeapon: direction magnitude out of range")
 		return
 	end

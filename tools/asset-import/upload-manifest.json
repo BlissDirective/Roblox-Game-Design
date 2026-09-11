@@ -2,34 +2,685 @@
   "$comment": "Outpost-7 asset upload manifest. Maps each binary under assets/ to its AssetIds.luau key + the Open Cloud asset type. tools/scripts/upload-assets.sh reads this, uploads files whose assetId is still 0, records the returned id here, and regenerates src/shared/AssetIds.luau. Hand-edit to ADD rows (new assets); let the script own the assetId field. assetType is a Roblox Open Cloud asset type: Decal (images/icons) or Audio.",
   "version": 1,
   "assets": {
-    "assets/icons/game_icon.png": { "key": "Icons.GameIcon", "assetType": "Decal", "assetId": 0 },
-    "assets/icons/thumb_transformation.png": { "key": "Thumbs.Transformation", "assetType": "Decal", "assetId": 0 },
-    "assets/icons/thumb_defense.png": { "key": "Thumbs.Defense", "assetType": "Decal", "assetId": 0 },
-    "assets/icons/thumb_raid.png": { "key": "Thumbs.Raid", "assetType": "Decal", "assetId": 0 },
-
-    "assets/audio/music/build.ogg": { "key": "Music.Build", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/music/combat.ogg": { "key": "Music.Combat", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/music/raid.ogg": { "key": "Music.Raid", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/music/victory.ogg": { "key": "Music.Victory", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/music/defeat.ogg": { "key": "Music.Defeat", "assetType": "Audio", "assetId": 0 },
-
-    "assets/audio/sfx/weapon_fire.ogg": { "key": "Sfx.WeaponFire", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/turret_fire.ogg": { "key": "Sfx.TurretFire", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/drone_fire.ogg": { "key": "Sfx.DroneFire", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/extractor_place.ogg": { "key": "Sfx.ExtractorPlace", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/wall_place.ogg": { "key": "Sfx.WallPlace", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/structure_breach.ogg": { "key": "Sfx.StructureBreach", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/repair_complete.ogg": { "key": "Sfx.RepairComplete", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/alien_growl.ogg": { "key": "Sfx.AlienGrowl", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/wave_alarm.ogg": { "key": "Sfx.WaveAlarm", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/claim_chime.ogg": { "key": "Sfx.ClaimChime", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/ui_click.ogg": { "key": "Sfx.UiClick", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/ui_panel_open.ogg": { "key": "Sfx.UiPanelOpen", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/ftue_intro_sting.ogg": { "key": "Sfx.FtueIntroSting", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/sfx/ftue_step_advance.ogg": { "key": "Sfx.FtueStepAdvance", "assetType": "Audio", "assetId": 0 },
-
-    "assets/audio/ambient/jungle.ogg": { "key": "Ambient.Jungle", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/ambient/volcanic.ogg": { "key": "Ambient.Volcanic", "assetType": "Audio", "assetId": 0 },
-    "assets/audio/ambient/ice.ogg": { "key": "Ambient.Ice", "assetType": "Audio", "assetId": 0 }
+    "assets/icons/game_icon.png": {
+      "key": "Icons.GameIcon",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/icons/thumb_transformation.png": {
+      "key": "Thumbs.Transformation",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/icons/thumb_defense.png": {
+      "key": "Thumbs.Defense",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/icons/thumb_raid.png": {
+      "key": "Thumbs.Raid",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/audio/music/build.ogg": {
+      "key": "Music.Build",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/music/combat.ogg": {
+      "key": "Music.Combat",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/music/raid.ogg": {
+      "key": "Music.Raid",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/music/victory.ogg": {
+      "key": "Music.Victory",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/music/defeat.ogg": {
+      "key": "Music.Defeat",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/weapon_fire.ogg": {
+      "key": "Sfx.WeaponFire",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/turret_fire.ogg": {
+      "key": "Sfx.TurretFire",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/drone_fire.ogg": {
+      "key": "Sfx.DroneFire",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/extractor_place.ogg": {
+      "key": "Sfx.ExtractorPlace",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/wall_place.ogg": {
+      "key": "Sfx.WallPlace",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/structure_breach.ogg": {
+      "key": "Sfx.StructureBreach",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/repair_complete.ogg": {
+      "key": "Sfx.RepairComplete",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/alien_growl.ogg": {
+      "key": "Sfx.AlienGrowl",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/wave_alarm.ogg": {
+      "key": "Sfx.WaveAlarm",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/claim_chime.ogg": {
+      "key": "Sfx.ClaimChime",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/ui_click.ogg": {
+      "key": "Sfx.UiClick",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/ui_panel_open.ogg": {
+      "key": "Sfx.UiPanelOpen",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/ftue_intro_sting.ogg": {
+      "key": "Sfx.FtueIntroSting",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/sfx/ftue_step_advance.ogg": {
+      "key": "Sfx.FtueStepAdvance",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/ambient/jungle.ogg": {
+      "key": "Ambient.Jungle",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/ambient/volcanic.ogg": {
+      "key": "Ambient.Volcanic",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/audio/ambient/ice.ogg": {
+      "key": "Ambient.Ice",
+      "assetType": "Audio",
+      "assetId": 0
+    },
+    "assets/world/buildables/build_turret_auto.fbx": {
+      "key": "Models.BuildTurretAuto",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/characters/alien_stalker.fbx": {
+      "key": "Models.AlienStalker",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/effects/drone_combat.fbx": {
+      "key": "Models.DroneCombat",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/arch/arch_jungle.fbx": {
+      "key": "Models.ArchJungle",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/buildables/build_extractor.fbx": {
+      "key": "Models.BuildExtractor",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/buildables/build_wall.fbx": {
+      "key": "Models.BuildWall",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/props/prop_resource_node.fbx": {
+      "key": "Models.PropResourceNode",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/effects/weapon_rifle_world.fbx": {
+      "key": "Models.WeaponRifleWorld",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/effects/weapon_rifle_view.fbx": {
+      "key": "Models.WeaponRifleView",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/effects/weapon_muzzle_flash.png": {
+      "key": "Textures.WeaponMuzzleFlash",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/decal_op7_emblem.png": {
+      "key": "Textures.DecalOp7Emblem",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/decal_op7_emblem_icon.png": {
+      "key": "Icons.DecalOp7Emblem",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/flora_jungle_vine_tree.fbx": {
+      "key": "Models.FloraJungleVineTree",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/flora_jungle_glow_fern.fbx": {
+      "key": "Models.FloraJungleGlowFern",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/flora_jungle_spore_pod.fbx": {
+      "key": "Models.FloraJungleSporePod",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/props/prop_plot_floor.png": {
+      "key": "Textures.PropPlotFloor",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/props/prop_plot_border.fbx": {
+      "key": "Models.PropPlotBorder",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/props/prop_dropship_pad.fbx": {
+      "key": "Models.PropDropshipPad",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/effects/vfx_spore_jungle.png": {
+      "key": "Textures.VfxSporeJungle",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/vfx_beam_turret.png": {
+      "key": "Textures.VfxBeamTurret",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/vfx_beam_drone.png": {
+      "key": "Textures.VfxBeamDrone",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/vfx_impact_spark.png": {
+      "key": "Textures.VfxImpactSpark",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/buildables/build_turret_heavy.fbx": {
+      "key": "Models.BuildTurretHeavy",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/buildables/build_turret_laser.fbx": {
+      "key": "Models.BuildTurretLaser",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/characters/alien_magmaling.fbx": {
+      "key": "Models.AlienMagmaling",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/characters/alien_cryowraith.fbx": {
+      "key": "Models.AlienCryowraith",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/effects/drone_recon.fbx": {
+      "key": "Models.DroneRecon",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/effects/drone_engineering.fbx": {
+      "key": "Models.DroneEngineering",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/buildables/raid_loot_core.fbx": {
+      "key": "Models.RaidLootCore",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/buildables/raid_arena_floor.png": {
+      "key": "Textures.RaidArenaFloor",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/buildables/raid_attacker_pad.fbx": {
+      "key": "Models.RaidAttackerPad",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_volcanic/arch/arch_volcanic.fbx": {
+      "key": "Models.ArchVolcanic",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/arch/arch_ice.fbx": {
+      "key": "Models.ArchIce",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_volcanic/flora_volcanic_fissure.fbx": {
+      "key": "Models.FloraVolcanicFissure",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_volcanic/flora_volcanic_ash_tree.fbx": {
+      "key": "Models.FloraVolcanicAshTree",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/flora_ice_crystal.fbx": {
+      "key": "Models.FloraIceCrystal",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/flora_ice_frozen_shrub.fbx": {
+      "key": "Models.FloraIceFrozenShrub",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/effects/vfx_ash_volcanic.png": {
+      "key": "Textures.VfxAshVolcanic",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/vfx_frost_ice.png": {
+      "key": "Textures.VfxFrostIce",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_battle_pass.png": {
+      "key": "Icons.UiBattlePass",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_build.png": {
+      "key": "Icons.UiBuild",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_clan.png": {
+      "key": "Icons.UiClan",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_combat.png": {
+      "key": "Icons.UiCombat",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_cores.png": {
+      "key": "Icons.UiCores",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_cosmetics.png": {
+      "key": "Icons.UiCosmetics",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_credits.png": {
+      "key": "Icons.UiCredits",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_friends.png": {
+      "key": "Icons.UiFriends",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_leaderboard.png": {
+      "key": "Icons.UiLeaderboard",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_quests.png": {
+      "key": "Icons.UiQuests",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_repair.png": {
+      "key": "Icons.UiRepair",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_shield.png": {
+      "key": "Icons.UiShield",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_shop.png": {
+      "key": "Icons.UiShop",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_store.png": {
+      "key": "Icons.UiStore",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_voice.png": {
+      "key": "Icons.UiVoice",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/ui_wave_alarm.png": {
+      "key": "Icons.UiWaveAlarm",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/dmg_wall_cracked.png": {
+      "key": "Textures.DmgWallCracked",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/dmg_wall_breached.png": {
+      "key": "Textures.DmgWallBreached",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/dmg_turret_damaged.png": {
+      "key": "Textures.DmgTurretDamaged",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/dmg_extractor_disabled.png": {
+      "key": "Textures.DmgExtractorDisabled",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/ftue_ring_beacon.fbx": {
+      "key": "Models.FtueRingBeacon",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/effects/ftue_pointer_arrow.png": {
+      "key": "Icons.FtuePointerArrow",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/effects/ftue_intro_frame.png": {
+      "key": "Images.FtueIntroFrame",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/sky/sky_jungle_ft.png": {
+      "key": "Skyboxes.JungleFt",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/sky/sky_jungle_bk.png": {
+      "key": "Skyboxes.JungleBk",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/sky/sky_jungle_lf.png": {
+      "key": "Skyboxes.JungleLf",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/sky/sky_jungle_rt.png": {
+      "key": "Skyboxes.JungleRt",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/sky/sky_jungle_up.png": {
+      "key": "Skyboxes.JungleUp",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_jungle/sky/sky_jungle_dn.png": {
+      "key": "Skyboxes.JungleDn",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_volcanic/sky/sky_volcanic_ft.png": {
+      "key": "Skyboxes.VolcanicFt",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_volcanic/sky/sky_volcanic_bk.png": {
+      "key": "Skyboxes.VolcanicBk",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_volcanic/sky/sky_volcanic_lf.png": {
+      "key": "Skyboxes.VolcanicLf",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_volcanic/sky/sky_volcanic_rt.png": {
+      "key": "Skyboxes.VolcanicRt",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_volcanic/sky/sky_volcanic_up.png": {
+      "key": "Skyboxes.VolcanicUp",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_volcanic/sky/sky_volcanic_dn.png": {
+      "key": "Skyboxes.VolcanicDn",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/sky/sky_ice_ft.png": {
+      "key": "Skyboxes.IceFt",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/sky/sky_ice_bk.png": {
+      "key": "Skyboxes.IceBk",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/sky/sky_ice_lf.png": {
+      "key": "Skyboxes.IceLf",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/sky/sky_ice_rt.png": {
+      "key": "Skyboxes.IceRt",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/sky/sky_ice_up.png": {
+      "key": "Skyboxes.IceUp",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/sky/sky_ice_dn.png": {
+      "key": "Skyboxes.IceDn",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/cave_stalactite.fbx": {
+      "key": "Models.CaveStalactite",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/cave_stalagmite.fbx": {
+      "key": "Models.CaveStalagmite",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/world/biome_ice/cave_glacier_wall.fbx": {
+      "key": "Models.CaveGlacierWall",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/ui/decal_chevron_red.png": {
+      "key": "Textures.DecalChevronRed",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/decal_chevron_red_icon.png": {
+      "key": "Icons.DecalChevronRed",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/decal_skull_amber.png": {
+      "key": "Textures.DecalSkullAmber",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/decal_skull_amber_icon.png": {
+      "key": "Icons.DecalSkullAmber",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/trail_neon_red.png": {
+      "key": "Textures.TrailNeonRed",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/trail_neon_red_icon.png": {
+      "key": "Icons.TrailNeonRed",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/trail_neon_blue.png": {
+      "key": "Textures.TrailNeonBlue",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/trail_neon_blue_icon.png": {
+      "key": "Icons.TrailNeonBlue",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/trail_neon_gold.png": {
+      "key": "Textures.TrailNeonGold",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/trail_neon_gold_icon.png": {
+      "key": "Icons.TrailNeonGold",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/flair_pioneer.png": {
+      "key": "Icons.FlairPioneer",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/flair_op7_veteran.png": {
+      "key": "Icons.FlairOp7Veteran",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/characters/skin_combatant.fbx": {
+      "key": "Models.SkinCombatant",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/characters/skin_recon.fbx": {
+      "key": "Models.SkinRecon",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/characters/skin_heavy_defender.fbx": {
+      "key": "Models.SkinHeavyDefender",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/ui/store_pass_2x_credits.png": {
+      "key": "Icons.StorePass2xCredits",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/store_pass_auto_collect.png": {
+      "key": "Icons.StorePassAutoCollect",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/store_pass_vip.png": {
+      "key": "Icons.StorePassVip",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/store_pass_bp_premium.png": {
+      "key": "Icons.StorePassBpPremium",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/store_dp_shield.png": {
+      "key": "Icons.StoreDpShield",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/store_dp_credits_s.png": {
+      "key": "Icons.StoreDpCreditsS",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/store_dp_credits_l.png": {
+      "key": "Icons.StoreDpCreditsL",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/store_dp_cores.png": {
+      "key": "Icons.StoreDpCores",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/ui/store_bp_banner.png": {
+      "key": "Images.StoreBpBanner",
+      "assetType": "Decal",
+      "assetId": 0
+    },
+    "assets/vehicles/vehicle_rover.fbx": {
+      "key": "Models.VehicleRover",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/vehicles/vehicle_hover_bike.fbx": {
+      "key": "Models.VehicleHoverBike",
+      "assetType": "Model",
+      "assetId": 0
+    },
+    "assets/vehicles/vehicle_hover_tank.fbx": {
+      "key": "Models.VehicleHoverTank",
+      "assetType": "Model",
+      "assetId": 0
+    }
   }
 }

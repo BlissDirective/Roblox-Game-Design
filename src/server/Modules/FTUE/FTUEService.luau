@@ -187,7 +187,13 @@ local function checkTimeouts()
 		if now >= deadline and player:IsDescendantOf(Players) then
 			local data = DataManager.GetData(player)
 			if data and not data.ftueCompleted then
-				print(string.format("[FTUEService] %s timed out at step %s — force-completing", player.Name, tostring(data.ftueStep)))
+				print(
+					string.format(
+						"[FTUEService] %s timed out at step %s — force-completing",
+						player.Name,
+						tostring(data.ftueStep)
+					)
+				)
 				data.ftueStep = nil
 				data.ftueCompleted = true
 				stepTimeouts[player] = nil

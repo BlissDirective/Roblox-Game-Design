@@ -26,8 +26,10 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
 local PoissonDisk = require(Shared:WaitForChild("Modules"):WaitForChild("Math"):WaitForChild("PoissonDisk"))
 local GridMath = require(Shared:WaitForChild("Modules"):WaitForChild("Math"):WaitForChild("GridMath"))
+local VisualAttach = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("VisualAttach"))
 
 local PlotManager = require(script.Parent.PlotManager)
+local ArtTemplateLoader = require(script.Parent.ArtTemplateLoader)
 
 local ResourceNodeSpawner = {}
 
@@ -63,6 +65,8 @@ local function buildNodePart(parent: Folder, worldPos: Vector3, cellX: number, c
 	part:SetAttribute("CellZ", cellZ)
 	part:SetAttribute("Claimed", false)
 	part.Parent = parent
+	-- H4: crystal-cluster model over the Ball placeholder when uploaded.
+	VisualAttach.Attach(part, ArtTemplateLoader.Get(Constants.NODES.ModelKey))
 	return part
 end
 

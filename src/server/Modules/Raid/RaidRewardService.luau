@@ -104,13 +104,7 @@ local function applyDefenderSide(player: Player, outcome: Outcome)
 	local stolen = outcome.defenderCreditsStolen or 0
 	if stolen > 0 then
 		local taken = CurrencyService.Drain(player, stolen)
-		print(
-			string.format(
-				"[RaidRewardService] Defender %s lost %d credits to a raid",
-				player.Name,
-				taken
-			)
-		)
+		print(string.format("[RaidRewardService] Defender %s lost %d credits to a raid", player.Name, taken))
 	end
 	if outcome.defenderCreditsDelta > 0 then
 		CurrencyService.Add(player, outcome.defenderCreditsDelta)

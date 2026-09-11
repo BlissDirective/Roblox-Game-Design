@@ -136,9 +136,7 @@ local function rebuildList()
 		local dot = Instance.new("Frame")
 		dot.Size = UDim2.fromOffset(8, 8)
 		dot.Position = UDim2.fromOffset(2, 7)
-		dot.BackgroundColor3 = if friend.inThisServer
-			then Theme.GetActive().secondary
-			else Theme.GetActive().textMuted
+		dot.BackgroundColor3 = if friend.inThisServer then Theme.GetActive().secondary else Theme.GetActive().textMuted
 		dot.BorderSizePixel = 0
 		local dotCorner = Instance.new("UICorner")
 		dotCorner.CornerRadius = UDim.new(1, 0)
@@ -149,9 +147,7 @@ local function rebuildList()
 		lbl.Size = UDim2.new(1, -16, 1, 0)
 		lbl.Position = UDim2.fromOffset(16, 0)
 		lbl.BackgroundTransparency = 1
-		lbl.TextColor3 = if friend.inThisServer
-			then Theme.GetActive().textPrimary
-			else Theme.GetActive().textMuted
+		lbl.TextColor3 = if friend.inThisServer then Theme.GetActive().textPrimary else Theme.GetActive().textMuted
 		lbl.Font = Enum.Font.Gotham
 		lbl.TextSize = 13
 		lbl.TextXAlignment = Enum.TextXAlignment.Left

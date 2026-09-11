@@ -42,10 +42,14 @@ if IS_RAID_SERVER then
 	local WeaponService = require(script.Modules.Combat.WeaponService)
 	local VoiceGate = require(script.Modules.Voice.VoiceGate)
 	local BiomeLightingService = require(script.Modules.World.BiomeLightingService)
+	local ArtTemplateLoader = require(script.Modules.World.ArtTemplateLoader)
 	local AudioService = require(script.Modules.Audio.AudioService)
 	-- G4: Audio dispatch service initialised early so RaidSession can
 	-- broadcast round-start music as soon as the round timer arms.
 	AudioService.Init()
+	-- H4: uploaded art templates must be resident before RaidBaseRenderer
+	-- renders the first snapshot base (yields ≤ ART.LoadTimeoutSeconds).
+	ArtTemplateLoader.Init()
 	-- R2/R3: the attacker needs the weapon in the raid place too. BeamPool
 	-- backs the tracer; WeaponService wires the FireWeapon Remote; the
 	-- structure-hit handler routes shots into the rendered defender base so
@@ -72,6 +76,7 @@ if IS_RAID_SERVER then
 	)
 else
 	-- Main place: full chain.
+	local ArtTemplateLoader = require(script.Modules.World.ArtTemplateLoader)
 	local PlotManager = require(script.Modules.World.PlotManager)
 	local BiomeLightingService = require(script.Modules.World.BiomeLightingService)
 	local BiomeDecorationService = require(script.Modules.World.BiomeDecorationService)
@@ -108,6 +113,12 @@ else
 	-- broadcast surface. The service is stateless; Init is a no-op
 	-- in V1 but ordering keeps the dependency explicit.
 	AudioService.Init()
+
+	-- H4: load uploaded art templates BEFORE anything builds world geometry
+	-- (PlotManager arches, ResourceNodeSpawner nodes, decorations, and every
+	-- placement / restore read them). Yields ≤ ART.LoadTimeoutSeconds; a
+	-- no-op while every AssetIds.Models entry is still the placeholder.
+	ArtTemplateLoader.Init()
 
 	-- G1: biome lighting profile applied at boot before plot build so
 	-- the world Lighting state is set before players see anything.

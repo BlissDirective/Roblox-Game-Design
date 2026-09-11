@@ -43,8 +43,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
-local AlienRegistry =
-	require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("AlienRegistry"))
+local AlienRegistry = require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("AlienRegistry"))
 
 local DataManager = require(script.Parent.Parent.Player.DataManager)
 local PlotManager = require(script.Parent.Parent.World.PlotManager)

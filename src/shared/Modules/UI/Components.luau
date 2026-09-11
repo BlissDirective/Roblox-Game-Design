@@ -456,7 +456,8 @@ function Components.Panel(opts: PanelOpts): PanelHandle
 			root.BackgroundTransparency = 0.4
 			local openInfo = easingInfoFor("PanelOpen")
 			TweenService:Create(scale, openInfo, { Scale = 1.0 }):Play()
-			TweenService:Create(root, openInfo, { BackgroundTransparency = Constants.UI.Frame.BackgroundTransparency }):Play()
+			TweenService:Create(root, openInfo, { BackgroundTransparency = Constants.UI.Frame.BackgroundTransparency })
+				:Play()
 			playLocalCue("ui_panel_open")
 		end,
 		Hide = function(self)

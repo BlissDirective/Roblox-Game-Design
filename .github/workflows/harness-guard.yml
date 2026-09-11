@@ -1,0 +1,93 @@
+name: Harness guard
+
+# Two jobs:
+#   art-branch-guard — on PRs from `art/*` branches (the design harness bots),
+#     enforce the file allowlist + fields-only diff rule in
+#     tools/harness/check_art_pr.py. This is the mechanical fence that keeps
+#     an autonomous art agent out of gameplay/security/monetization code.
+#   manifest-check — on any PR touching harness/ or tools/harness/, validate
+#     design_manifest.json (state machine, evidence, budgets) and confirm the
+#     seed script is in sync.
+#
+# Make `art-branch-guard` and `manifest-check` REQUIRED checks in branch
+# protection for `main` (docs/playbooks/DESIGN_HARNESS.md §7 step H5).
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harness-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  art-branch-guard:
+    name: Art branch allowlist + fields-only diff
+    if: startsWith(github.head_ref, 'art/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch --no-tags origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+
+      - name: Enforce allowlist
+        run: python3 tools/harness/check_art_pr.py --base "origin/${{ github.base_ref }}" --head HEAD
+
+      - name: Validate manifest
+        run: python3 tools/harness/validate_manifest.py
+
+      - name: Upload-manifest rows + AssetIds.luau in sync
+        run: |
+          python3 tools/harness/seed_upload_rows.py --check
+          python3 tools/scripts/regen-asset-ids.py --check
+
+      - name: Block workflow / harness-tool edits from art branches
+        run: |
+          set -e
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '^(\.github/|tools/harness/|harness/(README|prompts|policies|studio|schemas|STATE))' ; then
+            echo "::error::art branches may not modify workflows, harness tooling, prompts, policies, or STATE"
+            exit 1
+          fi
+
+  manifest-check:
+    name: Manifest validity + seed sync
+    if: ${{ !startsWith(github.head_ref, 'art/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect harness changes
+        id: changed
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '^(harness/|tools/harness/)' ; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate manifest
+        if: steps.changed.outputs.run == 'true'
+        run: python3 tools/harness/validate_manifest.py
+
+      - name: Seed script in sync
+        if: steps.changed.outputs.run == 'true'
+        run: python3 tools/harness/seed_manifest.py --check
+
+      - name: Upload-manifest rows + AssetIds.luau in sync
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          python3 tools/harness/seed_upload_rows.py --check
+          python3 tools/scripts/regen-asset-ids.py --check
+
+      - name: Nothing to check
+        if: steps.changed.outputs.run != 'true'
+        run: echo "no harness changes"

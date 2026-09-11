@@ -42,7 +42,9 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(Shared:WaitForChild("Constants"))
 local BuildableRegistry =
 	require(Shared:WaitForChild("Modules"):WaitForChild("Registry"):WaitForChild("BuildableRegistry"))
+local VisualAttach = require(Shared:WaitForChild("Modules"):WaitForChild("Lib"):WaitForChild("VisualAttach"))
 
+local ArtTemplateLoader = require(script.Parent.Parent.World.ArtTemplateLoader)
 local DamageService = require(script.Parent.Parent.Combat.DamageService)
 local BeamPool = require(script.Parent.Parent.Combat.BeamPool)
 
@@ -142,6 +144,8 @@ function RaidBaseRenderer.Render(snapshot: any)
 			table.insert(turrets, part)
 		end
 		part.Parent = folder
+		-- H4: same uploaded model the defender sees at home.
+		VisualAttach.Attach(part, ArtTemplateLoader.Get(buildable.modelKey))
 	end
 
 	active = {
@@ -246,12 +250,12 @@ function RaidBaseRenderer.StartDefense(attacker: Player)
 						if dist <= Constants.COMBAT.TurretRange then
 							if now - (lastFire[turret] or 0) >= Constants.COMBAT.TurretFireSeconds then
 								lastFire[turret] = now
-								DamageService.ApplyToHumanoid(
-									humanoid,
-									Constants.COMBAT.TurretDamage,
-									"raid_turret"
+								DamageService.ApplyToHumanoid(humanoid, Constants.COMBAT.TurretDamage, "raid_turret")
+								BeamPool.Acquire(
+									turret.Position + Vector3.new(0, 2, 0),
+									hrp.Position,
+									TURRET_BEAM_COLOR
 								)
-								BeamPool.Acquire(turret.Position + Vector3.new(0, 2, 0), hrp.Position, TURRET_BEAM_COLOR)
 							end
 						end
 					end
