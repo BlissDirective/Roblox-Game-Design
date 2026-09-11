@@ -120,20 +120,16 @@ local function actionBarAnchor(): (Vector2, UDim2)
 	-- Right-thumb default: action bar bottom-LEFT (mode toggle right).
 	-- Left-thumb override: action bar bottom-RIGHT (mode toggle left).
 	if dominantThumb == "left" then
-		return Vector2.new(1, 1),
-			UDim2.new(1, -MODE_PADDING, 1, -BOTTOM_OFFSET)
+		return Vector2.new(1, 1), UDim2.new(1, -MODE_PADDING, 1, -BOTTOM_OFFSET)
 	end
-	return Vector2.new(0, 1),
-		UDim2.new(0, MODE_PADDING, 1, -BOTTOM_OFFSET)
+	return Vector2.new(0, 1), UDim2.new(0, MODE_PADDING, 1, -BOTTOM_OFFSET)
 end
 
 local function modeBtnAnchor(): (Vector2, UDim2)
 	if dominantThumb == "left" then
-		return Vector2.new(0, 1),
-			UDim2.new(0, MODE_PADDING, 1, -BOTTOM_OFFSET)
+		return Vector2.new(0, 1), UDim2.new(0, MODE_PADDING, 1, -BOTTOM_OFFSET)
 	end
-	return Vector2.new(1, 1),
-		UDim2.new(1, -MODE_PADDING, 1, -BOTTOM_OFFSET)
+	return Vector2.new(1, 1), UDim2.new(1, -MODE_PADDING, 1, -BOTTOM_OFFSET)
 end
 
 local function applyLayout()
@@ -285,7 +281,10 @@ local function showSocialMenu(clanBtn: GuiObject)
 			end
 			return
 		end
-		if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+		if
+			input.UserInputType ~= Enum.UserInputType.MouseButton1
+			and input.UserInputType ~= Enum.UserInputType.Touch
+		then
 			return
 		end
 		-- Tap inside the menu? Let the menu buttons handle it.

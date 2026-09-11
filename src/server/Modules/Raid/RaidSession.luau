@@ -114,11 +114,14 @@ local function runRound(player: Player, joinData: any)
 
 	-- Push StartInfo to the client (the client flips to Combat mode on this).
 	local startedRemote = Remotes.RaidStarted :: RemoteEvent
-	startedRemote:FireClient(player, {
-		defenderName = defenderName,
-		roundSeconds = roundSeconds,
-		endsAt = endsAt,
-	} :: StartInfo)
+	startedRemote:FireClient(
+		player,
+		{
+			defenderName = defenderName,
+			roundSeconds = roundSeconds,
+			endsAt = endsAt,
+		} :: StartInfo
+	)
 
 	print(
 		string.format(
@@ -211,21 +214,13 @@ function RaidSession.Init()
 		local joinData = player:GetJoinData().TeleportData
 		if typeof(joinData) ~= "table" then
 			warn(
-				string.format(
-					"[RaidSession] %s joined raid place without teleport data — kicking home",
-					player.Name
-				)
+				string.format("[RaidSession] %s joined raid place without teleport data — kicking home", player.Name)
 			)
 			teleportAttackerHome(player)
 			return
 		end
 		if typeof(joinData.snapshotId) ~= "string" or typeof(joinData.defenderUserId) ~= "number" then
-			warn(
-				string.format(
-					"[RaidSession] %s teleport data malformed — kicking home",
-					player.Name
-				)
-			)
+			warn(string.format("[RaidSession] %s teleport data malformed — kicking home", player.Name))
 			teleportAttackerHome(player)
 			return
 		end

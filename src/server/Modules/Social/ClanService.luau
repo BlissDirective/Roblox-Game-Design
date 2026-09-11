@@ -331,11 +331,7 @@ local function validateName(name: any): (boolean, string?)
 	end
 	if #name < Constants.CLAN.NameMinLength or #name > Constants.CLAN.NameMaxLength then
 		return false,
-			string.format(
-				"name must be %d-%d chars",
-				Constants.CLAN.NameMinLength,
-				Constants.CLAN.NameMaxLength
-			)
+			string.format("name must be %d-%d chars", Constants.CLAN.NameMinLength, Constants.CLAN.NameMaxLength)
 	end
 	if not string.match(name, NAME_PATTERN) then
 		return false, "name has invalid characters"
@@ -348,12 +344,7 @@ local function validateTag(tag: any): (boolean, string?)
 		return false, "tag must be a string"
 	end
 	if #tag < Constants.CLAN.TagMinLength or #tag > Constants.CLAN.TagMaxLength then
-		return false,
-			string.format(
-				"tag must be %d-%d chars",
-				Constants.CLAN.TagMinLength,
-				Constants.CLAN.TagMaxLength
-			)
+		return false, string.format("tag must be %d-%d chars", Constants.CLAN.TagMinLength, Constants.CLAN.TagMaxLength)
 	end
 	if not string.match(tag, TAG_PATTERN) then
 		return false, "tag must be alphanumeric"

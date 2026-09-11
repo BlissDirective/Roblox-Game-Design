@@ -281,9 +281,7 @@ function ClanStashLedger.TryApprove(leader: Player, withdrawalId: any, approve: 
 			)
 		)
 	else
-		print(
-			string.format("[ClanStashLedger] %s DENIED withdrawal %s", leader.Name, withdrawalId)
-		)
+		print(string.format("[ClanStashLedger] %s DENIED withdrawal %s", leader.Name, withdrawalId))
 	end
 	ClanService.PushStateForClanMembers(clanId)
 	return { ok = true, status = if approve then "instant" else "denied" }

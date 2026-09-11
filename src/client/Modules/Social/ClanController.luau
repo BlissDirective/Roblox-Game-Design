@@ -240,12 +240,7 @@ local function buildClanPanel(panel: Frame, state: State)
 	roleLbl.TextSize = 12
 
 	-- Members list
-	local membersFrame = styledFrame(
-		"Members",
-		panel,
-		UDim2.new(1, -16, 0, 92),
-		UDim2.fromOffset(8, headerY + 48)
-	)
+	local membersFrame = styledFrame("Members", panel, UDim2.new(1, -16, 0, 92), UDim2.fromOffset(8, headerY + 48))
 	local memberLayout = Instance.new("UIListLayout")
 	memberLayout.FillDirection = Enum.FillDirection.Vertical
 	memberLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -348,10 +343,7 @@ local function buildClanPanel(panel: Frame, state: State)
 			row.BackgroundTransparency = 1
 			row.Parent = panel
 
-			local lbl = styledLabel(
-				row,
-				string.format("%s: %d", pending.requesterName, pending.amount)
-			)
+			local lbl = styledLabel(row, string.format("%s: %d", pending.requesterName, pending.amount))
 			lbl.Size = UDim2.new(1, -110, 1, 0)
 			lbl.TextSize = 12
 
