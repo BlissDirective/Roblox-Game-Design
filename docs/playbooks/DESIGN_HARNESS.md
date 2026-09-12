@@ -370,3 +370,5 @@ later ones): 20-last, 1 → 5 → 7 → 2 → 8 → 9 → 4 → 6 → 16 → 18 
 | 2026-09-11 | Gates | Two (image approval + owner merges art PR) for the first 10 verified elements, then owner may enable auto-merge. |
 | 2026-09-11 | Verification | Grok Studio Operator runs `harness/studio/*.luau` via MCP, sends 3 screenshots to the owner's chat; owner replies `verified`. |
 | 2026-09-11 | Budget | $150/month cap in the manifest (owner can raise). Vehicles (group 21) seeded as `gated: true`; owner comments `unlock vehicle` on the status issue to dispatch. |
+
+<!-- required-check surface: no behavior change -->

@@ -1,7 +1,7 @@
 # Grok Bot kickoff — prompt series for the Outpost-7 design harness
 
 > Paste-ready prompts that stand up the Grok Bot agent group and start the
-> loop in `harness/README.md`. Work top to bottom. Every prompt is
+> loop in `harness/README.md`. (Required-check surface: no behavior change.) Work top to bottom. Every prompt is
 > self-contained; the agents learn the details from the repo, not from
 > chat. Fill the placeholders in §0 once, then find-and-replace before
 > pasting.
