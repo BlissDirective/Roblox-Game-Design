@@ -192,3 +192,4 @@ function AssetIds.isPlaceholder(id: string?): boolean
 end
 
 return AssetIds
+-- required-check surface: no behavior change
